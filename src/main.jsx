@@ -1,5 +1,4 @@
 /* In src/index.css */
-body { margin: 0; font-family: sans-serif; background: #f9fafb; }
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
