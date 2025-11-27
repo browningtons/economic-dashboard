@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { Upload, Info, ExternalLink, Activity, CheckSquare, Square, TrendingUp, BarChart2 } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, ComposedChart } from 'recharts';
+import { Upload, Info, ExternalLink, Activity, CheckSquare, Square, TrendingUp, BarChart2, ArrowRightLeft, Minus } from 'lucide-react';
 
 // --- Configuration & Metadata ---
 const INDICATOR_CONFIG = {
@@ -140,10 +140,12 @@ const parseCSV = (csvText) => {
 
 export default function App() {
   const [data, setData] = useState([]);
-  const [selectedKeys, setSelectedKeys] = useState(new Set(["unemployment_rate"]));
+  // UPDATED: Default to "job_openings" and "S&P 500"
+  const [selectedKeys, setSelectedKeys] = useState(new Set(["job_openings", "S&P 500"]));
   const [loading, setLoading] = useState(false);
-  // 'absolute' or 'indexed' (normalized to 100)
   const [chartMode, setChartMode] = useState("absolute");
+  // Toggle for showing the spread line
+  const [showSpread, setShowSpread] = useState(false);
 
   useEffect(() => {
     const parsed = parseCSV(INITIAL_CSV_DATA);
@@ -178,16 +180,17 @@ export default function App() {
     setSelectedKeys(newSet);
   };
 
-  // --- Data Transformation for "Indexed" Mode ---
+  const selectedKeysArray = Array.from(selectedKeys);
+  const isComparisonEligible = chartMode === "indexed" && selectedKeys.size === 2;
+
+  // --- Data Transformation ---
   const processedData = useMemo(() => {
     if (chartMode === "absolute") return data;
 
-    // Normalization Logic: Find the first valid value for each key and set it as base (100)
+    // 1. Find Baselines (first valid value for each selected key)
     const baselines = {};
-    
-    // Find baselines
     data.forEach(row => {
-      Array.from(selectedKeys).forEach(key => {
+      selectedKeysArray.forEach(key => {
         const configKey = INDICATOR_CONFIG[key].dataKey;
         if (!baselines[key] && row[configKey] !== null && row[configKey] !== undefined) {
           baselines[key] = row[configKey];
@@ -195,28 +198,101 @@ export default function App() {
       });
     });
 
-    // Create new rows
+    // 2. Normalize Data & Calculate Spread
     return data.map(row => {
       const newRow = { ...row };
-      Array.from(selectedKeys).forEach(key => {
+      
+      // Calculate Indexed Values
+      selectedKeysArray.forEach(key => {
         const configKey = INDICATOR_CONFIG[key].dataKey;
         const val = row[configKey];
         if (val !== null && baselines[key]) {
-          // Calculate percentage relative to baseline (Index = 100)
           newRow[configKey] = (val / baselines[key]) * 100;
         }
       });
+
+      // Calculate Spread if eligible (Value 2 - Value 1)
+      if (isComparisonEligible) {
+        const key1 = selectedKeysArray[0];
+        const key2 = selectedKeysArray[1];
+        const val1 = newRow[INDICATOR_CONFIG[key1].dataKey];
+        const val2 = newRow[INDICATOR_CONFIG[key2].dataKey];
+        
+        if (val1 && val2) {
+          // Absolute difference between the two indexes
+          newRow.spread = Math.abs(val1 - val2);
+          // Ratio (e.g., 2.0x)
+          newRow.ratio = val1 > val2 ? val1 / val2 : val2 / val1;
+          // Direction
+          newRow.higherKey = val1 > val2 ? key1 : key2;
+        }
+      }
+
       return newRow;
     });
-  }, [data, selectedKeys, chartMode]);
+  }, [data, selectedKeys, chartMode, isComparisonEligible]);
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
+      // Logic for Comparison Mode Tooltip
+      if (isComparisonEligible) {
+         const row = payload[0].payload;
+         const key1 = selectedKeysArray[0];
+         const key2 = selectedKeysArray[1];
+         const config1 = INDICATOR_CONFIG[key1];
+         const config2 = INDICATOR_CONFIG[key2];
+         
+         // Helper to safely get value from payload or row
+         const getValue = (key) => row[INDICATOR_CONFIG[key].dataKey];
+         const val1 = getValue(key1);
+         const val2 = getValue(key2);
+
+         if (!val1 || !val2) return null;
+
+         const diff = Math.abs(val1 - val2).toFixed(1);
+         const ratio = (Math.max(val1, val2) / Math.min(val1, val2)).toFixed(2);
+         const higherLabel = val1 > val2 ? config1.label : config2.label;
+
+         return (
+           <div className="bg-white p-4 border border-gray-200 shadow-xl rounded-lg z-50 min-w-[250px]">
+             <p className="font-bold text-gray-800 mb-2 border-b pb-1">{label}</p>
+             
+             {/* Lines */}
+             <div className="space-y-1 mb-3">
+               <div className="flex justify-between items-center">
+                 <span className="text-sm font-medium" style={{color: config1.color}}>{config1.label}:</span>
+                 <span className="text-sm font-bold">{val1.toFixed(1)}</span>
+               </div>
+               <div className="flex justify-between items-center">
+                 <span className="text-sm font-medium" style={{color: config2.color}}>{config2.label}:</span>
+                 <span className="text-sm font-bold">{val2.toFixed(1)}</span>
+               </div>
+             </div>
+
+             {/* Comparison Stats */}
+             <div className="bg-gray-50 p-2 rounded text-xs space-y-1 border border-gray-100">
+               <div className="flex justify-between font-semibold text-gray-700">
+                 <span>Gap (Points):</span>
+                 <span>{diff}</span>
+               </div>
+               <div className="flex justify-between font-semibold text-gray-700">
+                 <span>Ratio:</span>
+                 <span>{ratio}x</span>
+               </div>
+               <div className="text-gray-500 mt-1 italic">
+                 {higherLabel} is {ratio}x higher
+               </div>
+             </div>
+           </div>
+         );
+      }
+
+      // Default Tooltip for other modes
       return (
         <div className="bg-white p-3 border border-gray-200 shadow-xl rounded-lg z-50">
           <p className="font-bold text-gray-700 mb-2 border-b pb-1">{label}</p>
           {payload.map((entry, idx) => {
-            // Find config for this entry
+            if (entry.dataKey === 'spread') return null; // Don't show spread line in default list
             const key = Object.keys(INDICATOR_CONFIG).find(k => INDICATOR_CONFIG[k].dataKey === entry.dataKey) || entry.name;
             const config = INDICATOR_CONFIG[key];
             const isIndexed = chartMode === "indexed";
@@ -325,16 +401,42 @@ export default function App() {
               </div>
             </div>
             
-            {/* Contextual Hint */}
-            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-sm text-blue-800">
-               <p className="font-semibold mb-1 flex items-center gap-2">
-                 <Info className="w-4 h-4" />
-                 Pro Tip:
-               </p>
-               <p className="opacity-90">
-                 Use <strong>Relative Growth</strong> mode when comparing items with very different scales (like Interest Rates vs. Stock Prices).
-               </p>
-            </div>
+            {/* Analysis Control Panel (Only in Comparison Mode) */}
+            {isComparisonEligible && (
+              <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 transition-all duration-500 animate-in fade-in slide-in-from-top-2">
+                 <h3 className="font-semibold text-indigo-900 text-sm flex items-center gap-2 mb-2">
+                   <ArrowRightLeft className="w-4 h-4" />
+                   Spread Analysis
+                 </h3>
+                 <p className="text-xs text-indigo-700 mb-3 leading-relaxed">
+                   Comparing <strong>{INDICATOR_CONFIG[selectedKeysArray[0]].label}</strong> vs <strong>{INDICATOR_CONFIG[selectedKeysArray[1]].label}</strong>
+                 </p>
+                 
+                 <button
+                    onClick={() => setShowSpread(!showSpread)}
+                    className={`w-full text-xs flex items-center justify-center gap-2 px-3 py-2 rounded-md font-medium transition-all ${
+                      showSpread
+                        ? "bg-indigo-600 text-white shadow-sm"
+                        : "bg-white text-indigo-600 border border-indigo-200 hover:bg-indigo-50"
+                    }`}
+                  >
+                    {showSpread ? "Hide Difference" : "Show Difference Line"}
+                  </button>
+              </div>
+            )}
+
+            {/* Contextual Hint (Default) */}
+            {!isComparisonEligible && (
+              <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-sm text-blue-800">
+                 <p className="font-semibold mb-1 flex items-center gap-2">
+                   <Info className="w-4 h-4" />
+                   Pro Tip:
+                 </p>
+                 <p className="opacity-90">
+                   Select <strong>Relative Growth</strong> and exactly <strong>two indicators</strong> to unlock the Comparison & Spread Analysis tools.
+                 </p>
+              </div>
+            )}
           </div>
 
           {/* Main Chart Area */}
@@ -344,11 +446,16 @@ export default function App() {
                 <h3 className="text-lg font-semibold text-gray-800">
                   {chartMode === "indexed" ? "Relative Performance (Base = 100)" : "Historical Data"}
                 </h3>
+                {isComparisonEligible && showSpread && (
+                   <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-1 rounded flex items-center gap-1">
+                     <Minus className="w-3 h-3" strokeDasharray="4 4" /> Difference (Spread)
+                   </span>
+                )}
               </div>
               
               <div className="flex-1 w-full min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={processedData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <ComposedChart data={processedData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                     <XAxis 
                       dataKey="observation_date" 
@@ -411,7 +518,24 @@ export default function App() {
                         />
                       );
                     })}
-                  </LineChart>
+
+                    {/* Spread Line (Only in Comparison Mode + Toggled On) */}
+                    {isComparisonEligible && showSpread && (
+                      <Line
+                        type="monotone"
+                        dataKey="spread"
+                        name="Spread (Diff)"
+                        stroke="#4f46e5"
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        dot={false}
+                        activeDot={false}
+                        animationDuration={500}
+                        opacity={0.6}
+                      />
+                    )}
+
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
             </div>
