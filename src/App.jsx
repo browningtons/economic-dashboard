@@ -1,8 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea, ComposedChart } from 'recharts';
-import { Upload, ExternalLink, Activity, CheckSquare, Square, TrendingUp, BarChart2, ArrowRightLeft, Minus, Calculator } from 'lucide-react';
-import { useTheme } from './ThemeContext'; // Import the hook
-import ThemeToggle from './ThemeToggle';   // Import the button
+import { 
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, 
+  ReferenceArea, ComposedChart, ScatterChart, Scatter, ZAxis, AreaChart, Area
+} from 'recharts';
+import { 
+  Upload, Info, ExternalLink, Activity, CheckSquare, Square, TrendingUp, 
+  BarChart2, ArrowRightLeft, Minus, Calculator, ScatterPlot, Home, Briefcase, 
+  AlertTriangle, Frown, DollarSign, TrendingDown
+} from 'lucide-react';
 
 // --- Configuration & Metadata ---
 const INDICATOR_CONFIG = {
@@ -82,10 +87,10 @@ const INDICATOR_CONFIG = {
 
 // --- Economic Events (Recessions & AI) ---
 const REFERENCE_ZONES = [
-  { label: "Dot Com", start: "2001-03-01", end: "2001-11-01", color: "#9ca3af", opacity: 0.2, labelPos: 'insideTopLeft' },
-  { label: "Great Recession", start: "2007-12-01", end: "2009-06-01", color: "#9ca3af", opacity: 0.2, labelPos: 'insideTopLeft' },
-  { label: "COVID-19", start: "2020-02-01", end: "2020-04-01", color: "#9ca3af", opacity: 0.3, labelPos: 'insideTop' },
-  { label: "ChatGPT", start: "2022-11-01", end: "2023-01-01", color: "#6366f1", opacity: 0.2, labelPos: 'insideBottom' } 
+  { label: "Dot Com", start: "2001-03-01", end: "2001-11-01", color: "#e5e7eb", opacity: 0.5, labelPos: 'insideTopLeft' },
+  { label: "Great Recession", start: "2007-12-01", end: "2009-06-01", color: "#e5e7eb", opacity: 0.5, labelPos: 'insideTopLeft' },
+  { label: "COVID-19", start: "2020-02-01", end: "2020-04-01", color: "#e5e7eb", opacity: 0.8, labelPos: 'insideTop' },
+  { label: "ChatGPT", start: "2022-11-01", end: "2023-01-01", color: "#dbeafe", opacity: 0.6, labelPos: 'insideBottom' } 
 ];
 
 // --- UPDATED Data from File 5 (Fixed Column Shift in Last Row) ---
@@ -404,8 +409,6 @@ const normalizeDate = (dateStr) => {
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return dateStr;
   
-  // Fix 2-digit year issue (1900 vs 2000)
-  // If year is < 1980 (arbitrary cutoff), add 100 years to map 00 -> 2000
   if (d.getFullYear() < 1980) {
     d.setFullYear(d.getFullYear() + 100);
   }
@@ -425,7 +428,6 @@ const parseCSV = (csvText) => {
         entry[header] = normalizeDate(value);
       } else {
         const num = parseFloat(value);
-        // Clean data logic: Treat 0 in specific fields as null to avoid chart drops
         if ((header === 'unemployed_count' || header === 'Housing Price Index') && num === 0) {
            entry[header] = null;
         } else {
@@ -437,52 +439,81 @@ const parseCSV = (csvText) => {
   }).filter(item => item !== null);
 };
 
-// --- Utility: Pearson Correlation ---
-const calculateCorrelation = (data, key1, key2) => {
-  const n = data.length;
-  if (n === 0) return 0;
-  
-  // Get data keys from config
-  const dataKey1 = INDICATOR_CONFIG[key1]?.dataKey;
-  const dataKey2 = INDICATOR_CONFIG[key2]?.dataKey;
-  
-  if (!dataKey1 || !dataKey2) return 0;
-
-  // Filter for valid pairs only
-  const validPairs = data.filter(row => 
-    row[dataKey1] != null && row[dataKey2] != null
-  );
-  
-  const count = validPairs.length;
-  if (count === 0) return 0;
-
-  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
-
-  validPairs.forEach(row => {
-    const x = row[dataKey1];
-    const y = row[dataKey2];
-    sumX += x;
-    sumY += y;
-    sumXY += x * y;
-    sumX2 += x * x;
-    sumY2 += y * y;
-  });
-
-  const numerator = (count * sumXY) - (sumX * sumY);
-  const denominator = Math.sqrt(((count * sumX2) - (sumX * sumX)) * ((count * sumY2) - (sumY * sumY)));
-  
-  return denominator === 0 ? 0 : numerator / denominator;
+// --- Advanced Calculation: Philips Curve (Inflation Rate vs Unemployment) ---
+const calculatePhilipsData = (data) => {
+  return data.map((row, index) => {
+    // Need previous year's CPI to calculate inflation
+    if (index < 12) return null;
+    const prevCPI = data[index - 12]['CPI'];
+    const currCPI = row['CPI'];
+    if (!prevCPI || !currCPI) return null;
+    
+    const inflationRate = ((currCPI - prevCPI) / prevCPI) * 100;
+    
+    return {
+      x: row['unemployment_rate'], // X-axis
+      y: inflationRate,            // Y-axis
+      date: row['observation_date'],
+      cpi: currCPI
+    };
+  }).filter(item => item !== null && item.x != null && item.y != null);
 };
+
+// --- Advanced Calculation: Beveridge Curve (Unemployment vs Job Openings Rate) ---
+const calculateBeveridgeData = (data) => {
+  return data.map(row => {
+    if (!row['unemployment_rate'] || !row['job_openings']) return null;
+    
+    // Convert Job Openings Level to a Rate approximation or normalized value
+    // For simplicity, we use level, but typically rate = openings / (employment + openings)
+    // Here we stick to level for raw visualization
+    return {
+      x: row['unemployment_rate'],
+      y: row['job_openings'],
+      date: row['observation_date']
+    };
+  }).filter(item => item !== null);
+};
+
+// --- Advanced Calculation: Housing Affordability ---
+const calculateHousingAffordability = (data) => {
+  // Normalize everything to start at 100 for comparison
+  const baseHPI = data.find(d => d['Housing Price Index'])?.['Housing Price Index'] || 100;
+  const baseSP = data.find(d => d['S&P 500'])?.['S&P 500'] || 100;
+  
+  return data.map(row => {
+    const hpi = row['Housing Price Index'];
+    const rate = row['30 year mortgage'];
+    const sp = row['S&P 500'];
+    
+    if (!hpi || !rate) return { ...row, affordability: null, assetPrice: null };
+
+    // Rough "Payment Burden" proxy: Price * Rate (Conceptually, P*r ~ Interest Payment)
+    // We index this to start at 100
+    const burdenRaw = hpi * rate; 
+    
+    // Find first valid burden to normalize
+    // (This logic ideally runs once outside, but simplified here for the map)
+    
+    return {
+      ...row,
+      // Just return raw values for the chart to handle via indexing, 
+      // or we can pre-calculate a specialized "Burden Index" here.
+      // Let's create a "Monthly Payment Proxy"
+      paymentProxy: (hpi * (rate / 100)), // Very simplified P*r
+      spIndexed: (sp / baseSP) * 100
+    };
+  });
+};
+
 
 export default function App() {
   const [data, setData] = useState([]);
   const [selectedKeys, setSelectedKeys] = useState(new Set(["job_openings", "S&P 500"]));
+  const [viewMode, setViewMode] = useState("dashboard"); // 'dashboard', 'philips', 'beveridge', 'housing'
   const [loading, setLoading] = useState(false);
   const [chartMode, setChartMode] = useState("absolute");
   const [showSpread, setShowSpread] = useState(false);
-  
-  // Theme Hook: Used to determine colors for Recharts (which doesn't support CSS vars easily)
-  const { theme } = useTheme(); 
 
   useEffect(() => {
     const parsed = parseCSV(INITIAL_CSV_DATA);
@@ -517,15 +548,14 @@ export default function App() {
     setSelectedKeys(newSet);
   };
 
+  // --- Derived Data for Advanced Views ---
+  const philipsData = useMemo(() => calculatePhilipsData(data), [data]);
+  const beveridgeData = useMemo(() => calculateBeveridgeData(data), [data]);
+  const housingData = useMemo(() => calculateHousingAffordability(data), [data]);
+
+  // --- Main Dashboard Data Logic ---
   const selectedKeysArray = Array.from(selectedKeys);
   const isComparisonEligible = chartMode === "indexed" && selectedKeys.size === 2;
-  const isCorrelationEligible = selectedKeys.size === 2;
-
-  // --- Dynamic Calculations ---
-  const correlation = useMemo(() => {
-    if (!isCorrelationEligible) return null;
-    return calculateCorrelation(data, selectedKeysArray[0], selectedKeysArray[1]);
-  }, [data, selectedKeysArray, isCorrelationEligible]);
 
   const processedData = useMemo(() => {
     if (chartMode === "absolute") return data;
@@ -559,141 +589,186 @@ export default function App() {
         
         if (val1 && val2) {
           newRow.spread = Math.abs(val1 - val2);
-          newRow.ratio = val1 > val2 ? val1 / val2 : val2 / val1;
-          newRow.higherKey = val1 > val2 ? key1 : key2;
         }
       }
-
       return newRow;
     });
   }, [data, selectedKeys, chartMode, isComparisonEligible]);
 
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      if (isComparisonEligible) {
-          const row = payload[0].payload;
-          const key1 = selectedKeysArray[0];
-          const key2 = selectedKeysArray[1];
-          const config1 = INDICATOR_CONFIG[key1];
-          const config2 = INDICATOR_CONFIG[key2];
-          
-          const val1 = row[config1.dataKey];
-          const val2 = row[config2.dataKey];
+  // --- Render Helpers ---
+  const renderDashboard = () => (
+    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-[500px] flex flex-col relative">
+      <div className="mb-2 flex justify-between items-center z-10">
+        <h3 className="text-lg font-semibold text-gray-800">
+          {chartMode === "indexed" ? "Relative Performance (Base = 100)" : "Historical Data"}
+        </h3>
+        {isComparisonEligible && showSpread && (
+            <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-1 rounded flex items-center gap-1">
+              <Minus className="w-3 h-3" strokeDasharray="4 4" /> Difference (Spread)
+            </span>
+        )}
+      </div>
+      
+      <div className="flex-1 w-full min-h-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={processedData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+            <XAxis 
+              dataKey="observation_date" 
+              tick={{fill: '#9ca3af', fontSize: 12}}
+              tickLine={false}
+              axisLine={{stroke: '#e5e7eb'}}
+              minTickGap={60}
+            />
+            {chartMode === "indexed" ? (
+              <YAxis tick={{fill: '#9ca3af', fontSize: 12}} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
+            ) : (
+              <>
+                <YAxis yAxisId="left" tick={{fill: '#9ca3af', fontSize: 12}} tickLine={false} axisLine={false} orientation="left" />
+                <YAxis yAxisId="right" orientation="right" tick={{fill: '#9ca3af', fontSize: 12}} tickLine={false} axisLine={false} />
+              </>
+            )}
+            {REFERENCE_ZONES.map((zone, idx) => (
+              <ReferenceArea 
+                key={idx}
+                x1={zone.start} 
+                x2={zone.end} 
+                yAxisId={chartMode === "indexed" ? undefined : "left"}
+                fill={zone.color} 
+                fillOpacity={zone.opacity}
+                ifOverflow="extendDomain"
+                label={{ value: zone.label, position: zone.labelPos || 'insideTop', fontSize: 10, fill: '#6b7280' }}
+              />
+            ))}
+            <Tooltip 
+              contentStyle={{backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
+              itemStyle={{fontSize: '12px'}}
+              labelStyle={{fontWeight: 'bold', color: '#374151', marginBottom: '4px'}}
+            />
+            <Legend wrapperStyle={{paddingTop: '20px'}} />
+            {Array.from(selectedKeys).map((key, index) => {
+              const config = INDICATOR_CONFIG[key];
+              const axisId = (chartMode === "absolute" && index > 0) ? "right" : "left";
+              return (
+                <Line
+                  key={key}
+                  yAxisId={chartMode === "indexed" ? undefined : axisId}
+                  type="monotone"
+                  dataKey={config.dataKey}
+                  name={config.label}
+                  stroke={config.color}
+                  strokeWidth={2.5}
+                  dot={false}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                  connectNulls={true}
+                  animationDuration={800}
+                />
+              );
+            })}
+            {isComparisonEligible && showSpread && (
+              <Line type="monotone" dataKey="spread" name="Spread (Diff)" stroke="#4f46e5" strokeWidth={2} strokeDasharray="5 5" dot={false} activeDot={false} opacity={0.6} />
+            )}
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
 
-          if (!val1 || !val2) return null;
+  const renderPhilipsCurve = () => (
+    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-[500px] flex flex-col">
+      <div className="mb-4">
+        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+          <Activity className="w-5 h-5 text-purple-600" />
+          The Philips Curve (Inflation vs. Unemployment)
+        </h3>
+        <p className="text-sm text-gray-500">Each point represents a month in history. Theory suggests lower unemployment leads to higher inflation.</p>
+      </div>
+      <ResponsiveContainer width="100%" height="100%">
+        <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis type="number" dataKey="x" name="Unemployment" unit="%" label={{ value: 'Unemployment Rate (%)', position: 'insideBottom', offset: -10 }} />
+          <YAxis type="number" dataKey="y" name="Inflation" unit="%" label={{ value: 'Inflation Rate (YoY %)', angle: -90, position: 'insideLeft' }} />
+          <ZAxis type="category" dataKey="date" name="Date" />
+          <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+          <Scatter name="Economic Cycles" data={philipsData} fill="#8884d8" />
+        </ScatterChart>
+      </ResponsiveContainer>
+    </div>
+  );
 
-          const diff = Math.abs(val1 - val2).toFixed(1);
-          const ratio = (Math.max(val1, val2) / Math.min(val1, val2)).toFixed(2);
-          const higherLabel = val1 > val2 ? config1.label : config2.label;
+  const renderBeveridgeCurve = () => (
+    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-[500px] flex flex-col">
+      <div className="mb-4">
+        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+          <Briefcase className="w-5 h-5 text-orange-500" />
+          The Beveridge Curve (Job Openings vs. Unemployment)
+        </h3>
+        <p className="text-sm text-gray-500">Measures labor market efficiency. Outward shifts indicate structural changes (e.g. post-COVID).</p>
+      </div>
+      <ResponsiveContainer width="100%" height="100%">
+        <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis type="number" dataKey="x" name="Unemployment" unit="%" label={{ value: 'Unemployment Rate (%)', position: 'insideBottom', offset: -10 }} />
+          <YAxis type="number" dataKey="y" name="Job Openings" unit="" label={{ value: 'Job Openings (Thousands)', angle: -90, position: 'insideLeft' }} />
+          <ZAxis type="category" dataKey="date" name="Date" />
+          <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+          <Scatter name="Labor Market Health" data={beveridgeData} fill="#ff7300" line shape="circle" />
+        </ScatterChart>
+      </ResponsiveContainer>
+    </div>
+  );
 
-          return (
-            <div className="bg-bg-secondary p-4 border border-brand-secondary/30 shadow-xl rounded-lg z-50 min-w-[250px] text-text-main">
-              <p className="font-bold text-text-main mb-2 border-b border-brand-secondary/20 pb-1">{label}</p>
-              
-              <div className="space-y-1 mb-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium" style={{color: config1.color}}>{config1.label}:</span>
-                  <span className="text-sm font-bold text-text-main">{val1.toFixed(1)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium" style={{color: config2.color}}>{config2.label}:</span>
-                  <span className="text-sm font-bold text-text-main">{val2.toFixed(1)}</span>
-                </div>
-              </div>
-
-              <div className="bg-bg-primary p-2 rounded text-xs space-y-1 border border-brand-secondary/20">
-                <div className="flex justify-between font-semibold text-text-main">
-                  <span>Gap (Points):</span>
-                  <span>{diff}</span>
-                </div>
-                <div className="flex justify-between font-semibold text-text-main">
-                  <span>Ratio:</span>
-                  <span>{ratio}x</span>
-                </div>
-                <div className="text-text-muted mt-1 italic">
-                  {higherLabel} is {ratio}x higher
-                </div>
-              </div>
-            </div>
-          );
-      }
-
-      return (
-        <div className="bg-bg-secondary p-3 border border-brand-secondary/30 shadow-xl rounded-lg z-50 text-text-main">
-          <p className="font-bold text-text-main mb-2 border-b border-brand-secondary/20 pb-1">{label}</p>
-          {payload.map((entry, idx) => {
-            if (entry.dataKey === 'spread') return null; 
-            const key = Object.keys(INDICATOR_CONFIG).find(k => INDICATOR_CONFIG[k].dataKey === entry.dataKey) || entry.name;
-            const config = INDICATOR_CONFIG[key];
-            const isIndexed = chartMode === "indexed";
-            
-            return (
-              <div key={idx} className="flex items-center gap-2 mb-1">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.stroke }}></div>
-                <span className="text-sm font-medium text-text-muted">
-                  {config ? config.label : entry.name}: 
-                </span>
-                <span className="text-sm font-bold text-text-main">
-                  {isIndexed 
-                    ? `${entry.value.toFixed(1)} (Index)` 
-                    : `${entry.value.toLocaleString()}${config ? config.unit : ''}`}
-                </span>
-              </div>
-            );
-          })}
-          {chartMode === "indexed" && (
-            <p className="text-xs text-text-muted mt-2 italic">Values indexed to start date = 100</p>
-          )}
-        </div>
-      );
-    }
-    return null;
-  };
+  const renderHousingAffordability = () => (
+    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-[500px] flex flex-col">
+      <div className="mb-4">
+        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+          <Home className="w-5 h-5 text-brown-600" />
+          Housing Affordability Proxy
+        </h3>
+        <p className="text-sm text-gray-500">Calculated as (Home Price Index * Mortgage Rate). Higher = Less Affordable.</p>
+      </div>
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={housingData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="observation_date" tickFormatter={(str) => str.substring(0, 4)} />
+          <YAxis />
+          <Tooltip />
+          <Legend />
+          <Line type="monotone" dataKey="paymentProxy" name="Monthly Payment Burden (Proxy)" stroke="#d62728" strokeWidth={3} dot={false} />
+          <Line type="monotone" dataKey="Housing Price Index" name="Home Prices Only" stroke="#8d6e63" strokeWidth={1} dot={false} strokeDasharray="5 5" />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-bg-primary text-text-main p-6 font-sans transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 text-gray-800 p-6 font-sans">
       <div className="max-w-6xl mx-auto space-y-6">
         
-        {/* Header */}
-        <div className="bg-bg-secondary p-6 rounded-xl shadow-sm border border-brand-secondary/30 flex flex-col md:flex-row justify-between items-center gap-4 transition-colors duration-300">
+        {/* Main Header */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-text-main flex items-center gap-2">
-              <Activity className="h-6 w-6 text-brand-primary" />
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <Activity className="h-6 w-6 text-blue-600" />
               Economic Indicators Dashboard
             </h1>
-            <p className="text-text-muted text-sm mt-1">
-              Analyze correlations between Fed Rate, Jobs, and Markets
+            <p className="text-gray-500 text-sm mt-1">
+              Explore correlations, inflation curves, and market health.
             </p>
           </div>
           
           <div className="flex gap-3 items-center">
-            {/* Theme Toggle Button */}
-            <ThemeToggle />
+             {/* View Mode Selector */}
+             <div className="flex bg-gray-100 p-1 rounded-lg">
+                <button onClick={() => setViewMode('dashboard')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'dashboard' ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>Timeline</button>
+                <button onClick={() => setViewMode('philips')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'philips' ? 'bg-white shadow text-purple-600' : 'text-gray-500'}`}>Philips Curve</button>
+                <button onClick={() => setViewMode('beveridge')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'beveridge' ? 'bg-white shadow text-orange-600' : 'text-gray-500'}`}>Beveridge</button>
+                <button onClick={() => setViewMode('housing')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'housing' ? 'bg-white shadow text-red-600' : 'text-gray-500'}`}>Housing</button>
+             </div>
 
-             <div className="flex bg-bg-primary border border-brand-secondary/30 p-1 rounded-lg">
-              <button
-                onClick={() => setChartMode("absolute")}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                  chartMode === "absolute" ? "bg-bg-secondary text-brand-primary shadow-sm" : "text-text-muted hover:text-text-main"
-                }`}
-              >
-                <BarChart2 className="w-4 h-4" />
-                Raw Values
-              </button>
-              <button
-                onClick={() => setChartMode("indexed")}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                  chartMode === "indexed" ? "bg-bg-secondary text-brand-primary shadow-sm" : "text-text-muted hover:text-text-main"
-                }`}
-              >
-                <TrendingUp className="w-4 h-4" />
-                Relative Growth
-              </button>
-            </div>
-
-            <div className="relative">
+            <div className="relative h-full">
               <input type="file" accept=".csv" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-              <button className="flex items-center gap-2 px-4 py-2 bg-bg-secondary border border-brand-secondary/30 hover:bg-bg-primary text-text-main rounded-lg transition-colors shadow-sm text-sm font-medium h-full">
+              <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg transition-colors shadow-sm text-sm font-medium h-full">
                 <Upload className="h-4 w-4" />
                 Upload CSV
               </button>
@@ -701,226 +776,146 @@ export default function App() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          
-          {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-4">
-            <div className="bg-bg-secondary p-4 rounded-xl shadow-sm border border-brand-secondary/30 transition-colors duration-300">
-              <h2 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
-                Indicators
-              </h2>
-              <div className="space-y-1">
-                {Object.keys(INDICATOR_CONFIG).map((key) => {
-                  const config = INDICATOR_CONFIG[key];
-                  const isSelected = selectedKeys.has(key);
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => toggleIndicator(key)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 border ${
-                        isSelected
-                          ? "bg-brand-secondary/20 border-brand-primary/20 text-brand-primary font-medium"
-                          : "bg-transparent border-transparent hover:bg-bg-primary text-text-muted"
+        {/* View Logic */}
+        {viewMode === 'dashboard' && (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            
+            {/* Sidebar Controls */}
+            <div className="lg:col-span-1 space-y-4">
+              {/* Chart Mode Toggle */}
+              <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Chart Mode</h3>
+                 <div className="flex bg-gray-100 p-1 rounded-lg mb-4">
+                  <button
+                    onClick={() => setChartMode("absolute")}
+                    className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-xs font-medium transition-all ${
+                      chartMode === "absolute" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    <BarChart2 className="w-3 h-3" /> Raw
+                  </button>
+                  <button
+                    onClick={() => setChartMode("indexed")}
+                    className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-xs font-medium transition-all ${
+                      chartMode === "indexed" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    <TrendingUp className="w-3 h-3" /> Relative
+                  </button>
+                </div>
+
+                <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                  Indicators
+                </h2>
+                <div className="space-y-1">
+                  {Object.keys(INDICATOR_CONFIG).map((key) => {
+                    const config = INDICATOR_CONFIG[key];
+                    const isSelected = selectedKeys.has(key);
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => toggleIndicator(key)}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 border ${
+                          isSelected
+                            ? "bg-blue-50 border-blue-200 text-blue-800 font-medium"
+                            : "bg-transparent border-transparent hover:bg-gray-50 text-gray-600"
+                        }`}
+                      >
+                        {isSelected 
+                          ? <CheckSquare className="w-5 h-5 text-blue-600" /> 
+                          : <Square className="w-5 h-5 text-gray-300" />}
+                        <span className="flex-1 text-left truncate">{config.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              
+              {/* Analysis Tools */}
+              {isComparisonEligible && (
+                <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 transition-all duration-500 animate-in fade-in slide-in-from-top-2">
+                   <h3 className="font-semibold text-indigo-900 text-sm flex items-center gap-2 mb-2">
+                     <ArrowRightLeft className="w-4 h-4" />
+                     Spread Analysis
+                   </h3>
+                   <button
+                      onClick={() => setShowSpread(!showSpread)}
+                      className={`w-full text-xs flex items-center justify-center gap-2 px-3 py-2 rounded-md font-medium transition-all ${
+                        showSpread
+                          ? "bg-indigo-600 text-white shadow-sm"
+                          : "bg-white text-indigo-600 border border-indigo-200 hover:bg-indigo-50"
                       }`}
                     >
-                      {isSelected 
-                        ? <CheckSquare className="w-5 h-5 text-brand-primary" /> 
-                        : <Square className="w-5 h-5 text-text-muted/50" />}
-                      <span className="flex-1 text-left">{config.label}</span>
+                      {showSpread ? "Hide Difference" : "Show Difference Line"}
                     </button>
+                </div>
+              )}
+            </div>
+
+            {/* Main Dashboard Chart */}
+            <div className="lg:col-span-3 space-y-6">
+              {renderDashboard()}
+              
+              {/* Dynamic Definitions */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Array.from(selectedKeys).map(key => {
+                  const config = INDICATOR_CONFIG[key];
+                  return (
+                    <div key={key} className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-start gap-3">
+                      <div className="mt-1 w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: config.color }} />
+                      <div>
+                        <h4 className="font-semibold text-gray-900">{config.label}</h4>
+                        <p className="text-sm text-gray-600 mt-1 mb-2 leading-relaxed">
+                          {config.definition}
+                        </p>
+                        <a 
+                          href={config.source} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+                        >
+                          View Source <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
             </div>
-            
-            {/* Correlation Score Card */}
-            {isCorrelationEligible && correlation !== null && (
-              <div className="bg-bg-secondary p-4 rounded-xl shadow-sm border border-brand-secondary/30 transition-all">
-                <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2 flex items-center gap-2">
-                  <Calculator className="w-4 h-4" /> Correlation
-                </h3>
-                <div className="flex items-end gap-2">
-                  <span className={`text-3xl font-bold ${correlation > 0.5 ? 'text-zone-fit' : correlation < -0.5 ? 'text-zone-weak' : 'text-zone-average'}`}>
-                    {correlation.toFixed(2)}
-                  </span>
-                  <span className="text-xs text-text-muted mb-1">
-                    (Pearson r)
-                  </span>
-                </div>
-                <p className="text-xs text-text-muted mt-1">
-                  {correlation > 0.7 ? "Strong positive relationship" : 
-                   correlation < -0.7 ? "Strong inverse relationship" : 
-                   "Moderate or weak relationship"}
-                </p>
-              </div>
-            )}
-
-            {/* Analysis Control Panel (Only in Comparison Mode) */}
-            {isComparisonEligible && (
-              <div className="bg-brand-primary/10 p-4 rounded-xl border border-brand-primary/20 transition-all duration-500 animate-in fade-in slide-in-from-top-2">
-                 <h3 className="font-semibold text-brand-primary text-sm flex items-center gap-2 mb-2">
-                   <ArrowRightLeft className="w-4 h-4" />
-                   Spread Analysis
-                 </h3>
-                 <p className="text-xs text-text-main mb-3 leading-relaxed">
-                   Comparing <strong>{INDICATOR_CONFIG[selectedKeysArray[0]].label}</strong> vs <strong>{INDICATOR_CONFIG[selectedKeysArray[1]].label}</strong>
-                 </p>
-                 
-                 <button
-                    onClick={() => setShowSpread(!showSpread)}
-                    className={`w-full text-xs flex items-center justify-center gap-2 px-3 py-2 rounded-md font-medium transition-all ${
-                      showSpread
-                        ? "bg-brand-primary text-white shadow-sm"
-                        : "bg-bg-secondary text-brand-primary border border-brand-secondary/30 hover:bg-bg-primary"
-                    }`}
-                  >
-                    {showSpread ? "Hide Difference" : "Show Difference Line"}
-                  </button>
-              </div>
-            )}
           </div>
+        )}
 
-          {/* Main Chart Area */}
-          <div className="lg:col-span-3 space-y-6">
-            <div className="bg-bg-secondary p-6 rounded-xl shadow-sm border border-brand-secondary/30 h-[500px] flex flex-col relative transition-colors duration-300">
-              <div className="mb-2 flex justify-between items-center z-10">
-                <h3 className="text-lg font-semibold text-text-main">
-                  {chartMode === "indexed" ? "Relative Performance (Base = 100)" : "Historical Data"}
-                </h3>
-                {isComparisonEligible && showSpread && (
-                   <span className="text-xs font-medium text-brand-primary bg-brand-primary/10 px-2 py-1 rounded flex items-center gap-1">
-                     <Minus className="w-3 h-3" strokeDasharray="4 4" /> Difference (Spread)
-                   </span>
-                )}
-              </div>
-              
-              <div className="flex-1 w-full min-h-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={processedData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <CartesianGrid 
-                        strokeDasharray="3 3" 
-                        vertical={false} 
-                        stroke={theme === 'dark' ? '#374151' : '#f0f0f0'} 
-                    />
-                    <XAxis 
-                      dataKey="observation_date" 
-                      tick={{fill: theme === 'dark' ? '#9CA3AF' : '#6B7280', fontSize: 12}}
-                      tickLine={false}
-                      axisLine={{stroke: theme === 'dark' ? '#374151' : '#e5e7eb'}}
-                      minTickGap={60}
-                    />
-                    
-                    {chartMode === "indexed" ? (
-                      <YAxis 
-                        tick={{fill: theme === 'dark' ? '#9CA3AF' : '#6B7280', fontSize: 12}} 
-                        tickLine={false} 
-                        axisLine={false}
-                        domain={['auto', 'auto']}
-                      />
-                    ) : (
-                      <>
-                        <YAxis 
-                          yAxisId="left"
-                          tick={{fill: theme === 'dark' ? '#9CA3AF' : '#6B7280', fontSize: 12}} 
-                          tickLine={false} 
-                          axisLine={false}
-                          orientation="left"
-                        />
-                         <YAxis 
-                          yAxisId="right"
-                          orientation="right"
-                          tick={{fill: theme === 'dark' ? '#9CA3AF' : '#6B7280', fontSize: 12}} 
-                          tickLine={false} 
-                          axisLine={false}
-                        />
-                      </>
-                    )}
-
-                    {/* Recession Bands */}
-                    {REFERENCE_ZONES.map((zone, idx) => (
-                      <ReferenceArea 
-                        key={idx}
-                        x1={zone.start} 
-                        x2={zone.end} 
-                        yAxisId={chartMode === "indexed" ? undefined : "left"}
-                        fill={zone.color} 
-                        fillOpacity={zone.opacity}
-                        ifOverflow="extendDomain"
-                        label={{ value: zone.label, position: zone.labelPos || 'insideTop', fontSize: 10, fill: theme === 'dark' ? '#D1D5DB' : '#4B5563' }}
-                      />
-                    ))}
-
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend wrapperStyle={{paddingTop: '20px'}} />
-                    
-                    {Array.from(selectedKeys).map((key, index) => {
-                      const config = INDICATOR_CONFIG[key];
-                      const axisId = (chartMode === "absolute" && index > 0) ? "right" : "left";
-                      
-                      return (
-                        <Line
-                          key={key}
-                          yAxisId={chartMode === "indexed" ? undefined : axisId}
-                          type="monotone"
-                          dataKey={config.dataKey}
-                          name={config.label}
-                          stroke={config.color}
-                          strokeWidth={2.5}
-                          dot={false}
-                          activeDot={{ r: 6, strokeWidth: 0 }}
-                          connectNulls={true}
-                          animationDuration={800}
-                        />
-                      );
-                    })}
-
-                    {isComparisonEligible && showSpread && (
-                      <Line
-                        type="monotone"
-                        dataKey="spread"
-                        name="Spread (Diff)"
-                        stroke="#6366f1"
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                        dot={false}
-                        activeDot={false}
-                        animationDuration={500}
-                        opacity={0.6}
-                      />
-                    )}
-
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
+        {/* Advanced Views */}
+        {viewMode === 'philips' && (
+          <div className="space-y-6">
+            {renderPhilipsCurve()}
+            <div className="bg-white p-6 rounded-xl border border-gray-100 text-sm text-gray-600">
+              <h4 className="font-bold text-gray-900 mb-2">How to read this chart:</h4>
+              <p>The Philips Curve illustrates the inverse trade-off between unemployment and inflation. In a "normal" economy, you would expect points to form a downward sloping curve (like a slide). When dots move to the top-right (High Inflation + High Unemployment), that indicates Stagflation (e.g., 1970s). The recent post-COVID era is often visible as a chaotic loop in the top-left or top-center.</p>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Array.from(selectedKeys).map(key => {
-                const config = INDICATOR_CONFIG[key];
-                return (
-                  <div key={key} className="bg-bg-secondary p-5 rounded-xl shadow-sm border border-brand-secondary/30 flex items-start gap-3 transition-colors duration-300">
-                    <div className="mt-1 w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: config.color }} />
-                    <div>
-                      <h4 className="font-semibold text-text-main">{config.label}</h4>
-                      <p className="text-sm text-text-muted mt-1 mb-2 leading-relaxed">
-                        {config.definition}
-                      </p>
-                      <a 
-                        href={config.source} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-xs text-brand-primary hover:underline inline-flex items-center gap-1"
-                      >
-                        View Source <ExternalLink className="h-3 w-3" />
-                      </a>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
           </div>
-        </div>
+        )}
+
+        {viewMode === 'beveridge' && (
+          <div className="space-y-6">
+            {renderBeveridgeCurve()}
+            <div className="bg-white p-6 rounded-xl border border-gray-100 text-sm text-gray-600">
+              <h4 className="font-bold text-gray-900 mb-2">How to read this chart:</h4>
+              <p>The Beveridge Curve shows the relationship between unemployment and job openings. A healthy economy moves up and down a diagonal line. A <strong>shift outward</strong> (up and to the right) indicates a structural mismatch—companies want to hire, but the available workers don't fit the roles or aren't taking the jobs. This shift is a key feature of the post-2020 economy.</p>
+            </div>
+          </div>
+        )}
+
+        {viewMode === 'housing' && (
+          <div className="space-y-6">
+            {renderHousingAffordability()}
+            <div className="bg-white p-6 rounded-xl border border-gray-100 text-sm text-gray-600">
+              <h4 className="font-bold text-gray-900 mb-2">Understanding Affordability:</h4>
+              <p>The <strong>Red Line</strong> (Payment Burden) combines price and interest rates. It is a better proxy for "affordability" than price alone. Notice how the red line spikes significantly higher than the brown line (Price) in recent years—this gap represents the impact of interest rate hikes on monthly payments, making homes historically unaffordable even if prices settle.</p>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
