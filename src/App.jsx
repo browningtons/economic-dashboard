@@ -745,7 +745,7 @@ export default function App() {
               {darkMode ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-600" />}
             </button>
             <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
-               {['dashboard', 'sahm', 'philips', 'buffett'].map(mode => (
+               {['dashboard', 'buffett', 'philips', 'sahm'].map(mode => (
                  <button key={mode} onClick={() => setViewMode(mode)} className={`px-3 py-1.5 rounded-md text-sm font-medium capitalize transition-all ${viewMode === mode ? 'bg-white dark:bg-gray-600 shadow text-blue-600 dark:text-blue-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}>
                    {mode}
                  </button>
@@ -802,49 +802,6 @@ export default function App() {
           </div>
         )}
 
-        {viewMode === 'sahm' && (
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 h-[500px] flex flex-col">
-            <div className="mb-4">
-              <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-red-600" /> Sahm Rule Indicator
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Signals recession when 3-month moving average of unemployment rises 0.50% above the previous 12-month low.</p>
-            </div>
-            <div className="flex-1 w-full min-h-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={sahmData} margin={{ top: 10, right: 30, left: 10, bottom: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? COLORS.gridDark : COLORS.gridLight} />
-                  <XAxis dataKey="date" tickFormatter={(str) => str.substring(0, 4)} stroke="#9ca3af" />
-                  <YAxis stroke="#9ca3af" />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <ReferenceArea y1={0.5} label="Threshold (0.50)" stroke="red" strokeDasharray="3 3" />
-                  <Area type="monotone" dataKey="sahmValue" stroke="#ef4444" fill="#ef4444" fillOpacity={0.3} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
-
-        {viewMode === 'philips' && (
-           <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 h-[500px] flex flex-col">
-             <div className="mb-4">
-               <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">The Philips Curve (Unemployment vs. Inflation)</h3>
-               <p className="text-sm text-gray-500 dark:text-gray-400">The curve illustrates the historical inverse relationship between the rate of unemployment and the rate of inflation (measured as year-over-year CPI change). A movement to the left and down suggests a strong economy with low inflation, while movements up and to the right suggest stagflation.</p>
-             </div>
-             <div className="flex-1 w-full min-h-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <ScatterChart margin={{ top: 20, right: 20, bottom: 10, left: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? COLORS.gridDark : COLORS.gridLight} />
-                  <XAxis type="number" dataKey="x" name="Unemployment" unit="%" stroke="#9ca3af" />
-                  <YAxis type="number" dataKey="y" name="Inflation" unit="%" stroke="#9ca3af" />
-                  <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={tooltipStyle} />
-                  <Scatter name="Philips" data={philipsData} fill={COLORS.purple} />
-                </ScatterChart>
-              </ResponsiveContainer>
-             </div>
-           </div>
-        )}
-
         {viewMode === 'buffett' && (
           <div className="space-y-4">
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
@@ -870,6 +827,49 @@ export default function App() {
                    <p className="text-sm mt-2">The 'Buffett Indicator' requires the **GDP** and **Stock Market** columns to be present in the data.</p>
                </div>
            )}
+          </div>
+        )}
+
+        {viewMode === 'philips' && (
+           <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 h-[500px] flex flex-col">
+             <div className="mb-4">
+               <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">The Philips Curve (Unemployment vs. Inflation)</h3>
+               <p className="text-sm text-gray-500 dark:text-gray-400">The curve illustrates the historical inverse relationship between the rate of unemployment and the rate of inflation (measured as year-over-year CPI change). A movement to the left and down suggests a strong economy with low inflation, while movements up and to the right suggest stagflation.</p>
+             </div>
+             <div className="flex-1 w-full min-h-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <ScatterChart margin={{ top: 20, right: 20, bottom: 10, left: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? COLORS.gridDark : COLORS.gridLight} />
+                  <XAxis type="number" dataKey="x" name="Unemployment" unit="%" stroke="#9ca3af" />
+                  <YAxis type="number" dataKey="y" name="Inflation" unit="%" stroke="#9ca3af" />
+                  <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={tooltipStyle} />
+                  <Scatter name="Philips" data={philipsData} fill={COLORS.purple} />
+                </ScatterChart>
+              </ResponsiveContainer>
+             </div>
+           </div>
+        )}
+
+        {viewMode === 'sahm' && (
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 h-[500px] flex flex-col">
+            <div className="mb-4">
+              <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-red-600" /> Sahm Rule Indicator
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Signals recession when 3-month moving average of unemployment rises 0.50% above the previous 12-month low.</p>
+            </div>
+            <div className="flex-1 w-full min-h-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={sahmData} margin={{ top: 10, right: 30, left: 10, bottom: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? COLORS.gridDark : COLORS.gridLight} />
+                  <XAxis dataKey="date" tickFormatter={(str) => str.substring(0, 4)} stroke="#9ca3af" />
+                  <YAxis stroke="#9ca3af" />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <ReferenceArea y1={0.5} label="Threshold (0.50)" stroke="red" strokeDasharray="3 3" />
+                  <Area type="monotone" dataKey="sahmValue" stroke="#ef4444" fill="#ef4444" fillOpacity={0.3} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         )}
       </div>
