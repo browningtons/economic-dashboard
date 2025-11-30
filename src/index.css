@@ -5,40 +5,60 @@
 @layer base {
   :root {
     /* --- LIGHT MODE (Zen Focus) --- */
-    --color-bg-primary: #FAF9F6;      /* Off-white */
-    --color-bg-secondary: #FFFFFF;    /* White cards */
-    --color-text-main: #2C2C2C;       /* Dark Grey */
-    --color-text-muted: #6B7280;      /* Light Grey */
-    
-    --color-brand-primary: #4A7C59;   /* Sage Green */
-    --color-brand-secondary: #F3E9D2; /* Soft Sand */
-    --color-brand-accent: #C8553D;    /* Muted Coral */
+    --color-bg-primary: #FAF9F6;      
+    --color-bg-secondary: #FFFFFF;    
+    --color-text-main: #2C2C2C;       
+    --color-text-muted: #6B7280;      
+
+    --color-brand-primary: #4A7C59;   
+    --color-brand-secondary: #F3E9D2; 
+    --color-brand-accent: #C8553D;    
 
     /* --- DATA ZONES --- */
-    --color-zone-weak: #EF4444;       /* Red */
-    --color-zone-average: #F59E0B;    /* Amber */
-    --color-zone-fit: #10B981;        /* Emerald */
+    --color-zone-weak: #EF4444;
+    --color-zone-average: #F59E0B;
+    --color-zone-fit: #10B981;
   }
 
-  /* --- DARK MODE OVERRIDES --- */
   .dark {
-    --color-bg-primary: #111827;      /* Very Dark Grey */
-    --color-bg-secondary: #1F2937;    /* Dark Card */
-    --color-text-main: #F9FAFB;       /* White */
-    --color-text-muted: #9CA3AF;      /* Grey */
+    --color-bg-primary: #111827;
+    --color-bg-secondary: #1F2937;
+    --color-text-main: #F9FAFB;
+    --color-text-muted: #9CA3AF;
 
-    --color-brand-primary: #6EE7B7;   /* Lighter Sage */
-    --color-brand-secondary: #374151; /* Dark Grey Sand */
-    --color-brand-accent: #F87171;    /* Lighter Coral */
-    
-    /* Slightly lighter zones for contrast on dark bg */
+    --color-brand-primary: #6EE7B7;
+    --color-brand-secondary: #374151;
+    --color-brand-accent: #F87171;
+
     --color-zone-weak: #F87171;
     --color-zone-average: #FBBF24;
     --color-zone-fit: #34D399;
   }
+}
 
-  body {
-    /* Apply variables to body and add smooth transition */
-    @apply bg-bg-primary text-text-main transition-colors duration-300;
-  }
+/* --------------------------------------------- */
+/* ✅ CREATE REAL TAILWIND UTILITY CLASSES       */
+/* --------------------------------------------- */
+
+@layer utilities {
+  .bg-primary    { background-color: var(--color-bg-primary); }
+  .bg-secondary  { background-color: var(--color-bg-secondary); }
+
+  .text-main     { color: var(--color-text-main); }
+  .text-muted    { color: var(--color-text-muted); }
+
+  .brand-primary   { background-color: var(--color-brand-primary); }
+  .brand-secondary { background-color: var(--color-brand-secondary); }
+  .brand-accent    { background-color: var(--color-brand-accent); }
+
+  .zone-weak    { background-color: var(--color-zone-weak); }
+  .zone-average { background-color: var(--color-zone-average); }
+  .zone-fit     { background-color: var(--color-zone-fit); }
+}
+
+/* --------------------------------------------- */
+/* Apply your theme to body                      */
+/* --------------------------------------------- */
+body {
+  @apply bg-primary text-main transition-colors duration-300;
 }
