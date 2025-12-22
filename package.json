@@ -1,5 +1,5 @@
 {
-  "homepage": "https://browningtons.github.io/economic-dashboard",
+  "homepage": "https://browningtons.github.io/economic-dashboard/",
   "name": "economic-dashboard",
   "private": true,
   "version": "0.0.0",
@@ -7,23 +7,21 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "predeploy": "npm run build"
   },
   "dependencies": {
     "lucide-react": "^0.555.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "recharts": "^3.5.0"
   },
   "devDependencies": {
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
-    "@vitejs/plugin-react-swc": "^3.5.0",
-    "gh-pages": "^6.3.0",
+    "autoprefixer": "^10.4.22",
+    "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.6.3",
-    "vite": "^7.2.4"
+    "vite": "^5.4.0"
   }
 }
