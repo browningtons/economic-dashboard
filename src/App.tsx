@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { 
   LineChart, 
   Line, 
+  ComposedChart,
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -80,6 +81,7 @@ interface CustomTooltipProps {
   payload?: TooltipEntry[];
   label?: number | string;
   isRelative: boolean;
+  mode?: 'Dashboard' | 'Buffett';
 }
 
 // --- Data ---
@@ -484,8 +486,63 @@ const Card: React.FC<{ children: React.ReactNode; className?: string; style?: Re
   </div>
 );
 
-const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, isRelative }) => {
+const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, isRelative, mode = 'Dashboard' }) => {
   if (active && payload && payload.length && label !== undefined) {
+    if (mode === 'Buffett') {
+      const point = payload[0]?.payload;
+      if (!point) return null;
+
+      const buffettValue = Number(point.buffettValue);
+      let status = 'Fair Value';
+      let statusColor = '#6DA36D';
+
+      if (buffettValue > 150) {
+        status = 'Significantly Overvalued';
+        statusColor = '#D65D5D';
+      } else if (buffettValue > 127) {
+        status = 'Overvalued';
+        statusColor = '#E6A35C';
+      } else if (buffettValue < 83) {
+        status = 'Undervalued';
+        statusColor = '#5D8AA8';
+      }
+
+      return (
+        <div className="bg-secondary border border-theme p-3 rounded shadow-xl z-50">
+          <p className="text-main text-xs mb-2 font-mono border-b border-subtle pb-1">
+            {new Date(label).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+          </p>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-6 text-sm">
+              <span className="text-muted font-medium">Buffett Indicator</span>
+              <span className="text-main font-bold font-mono">{buffettValue.toFixed(1)}%</span>
+            </div>
+
+            <div className="flex items-center justify-between gap-4 text-xs">
+              <span className="text-muted">Valuation:</span>
+              <span
+                className="font-bold px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wide text-white"
+                style={{ backgroundColor: statusColor }}
+              >
+                {status}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs text-muted pt-2 border-t border-subtle mt-1">
+              <div>
+                <span className="block text-[9px] uppercase tracking-wider text-muted">Total Market Cap</span>
+                <span className="font-mono text-main">${(Number(point['Stock Market (b)']) / 1000).toFixed(1)}T</span>
+              </div>
+              <div className="text-right">
+                <span className="block text-[9px] uppercase tracking-wider text-muted">US GDP</span>
+                <span className="font-mono text-main">${(Number(point.GDP) / 1000).toFixed(1)}T</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     
     // Standard Dashboard Tooltip
     return (
@@ -496,24 +553,33 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, i
         <div className="space-y-1">
           {payload.filter((p) => p.name !== 'Baseline').map((entry, index) => {
              const originalValue = entry.payload?.[`original_${entry.dataKey}`];
+             const rawData = entry.payload;
+             const showCount = entry.name === 'Unemployment Rate' && rawData?.['Unemployeed Count'] !== undefined;
              return (
-              <div key={index} className="flex items-center justify-between gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full border border-subtle" style={{ backgroundColor: entry.color }} />
-                  <span className="text-muted font-medium">{entry.name}:</span>
-                </div>
-                <div className="flex flex-col items-end">
-                  <span className="text-main font-mono font-semibold">
-                    {isRelative 
-                      ? `${Number(entry.value).toFixed(1)}%` 
-                      : (Number(entry.value) >= 1000 ? Number(entry.value).toLocaleString() : entry.value)}
-                  </span>
-                  {isRelative && originalValue && (
-                    <span className="text-[10px] text-muted">
-                      ({Number(originalValue).toLocaleString()})
+              <div key={index} className="flex flex-col gap-0.5 mb-2 last:mb-0">
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full border border-subtle" style={{ backgroundColor: entry.color }} />
+                    <span className="text-muted font-medium">{entry.name}:</span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-main font-mono font-semibold">
+                      {isRelative 
+                        ? `${Number(entry.value).toFixed(1)}%` 
+                        : (Number(entry.value) >= 1000 ? Number(entry.value).toLocaleString() : entry.value)}
                     </span>
-                  )}
+                    {isRelative && originalValue && (
+                      <span className="text-[10px] text-muted">
+                        ({Number(originalValue).toLocaleString()})
+                      </span>
+                    )}
+                  </div>
                 </div>
+                {showCount && (
+                  <div className="flex justify-end text-[10px] text-muted -mt-1 mb-1 font-mono">
+                    Count: {(Number(rawData?.['Unemployeed Count']) / 1000).toFixed(1)}M
+                  </div>
+                )}
               </div>
             );
           })}
@@ -909,6 +975,11 @@ export default function App() {
     });
   }, [filteredData, viewMode, activeMetrics]);
 
+  const buffettData = useMemo(
+    () => filteredData.filter((point) => point.buffettValue !== undefined),
+    [filteredData]
+  );
+
   const toggleMetric = (id: string) => {
     if (selectedMetrics.includes(id)) {
       if (selectedMetrics.length > 1) setSelectedMetrics(prev => prev.filter(m => m !== id));
@@ -1240,6 +1311,68 @@ export default function App() {
                    </span>
                  </div>
                ))}
+            </div>
+          </Card>
+
+          <Card className="min-h-[400px] flex flex-col">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-main">The Buffett Indicator</h2>
+                <p className="text-sm text-muted mt-1">Ratio of total US stock market value to GDP.</p>
+              </div>
+              <div className="flex items-center gap-2 bg-muted-surface border border-theme px-3 py-1 rounded">
+                <span className="text-main text-sm font-mono">
+                  Current: {buffettData.length > 0 ? `${Number(buffettData[buffettData.length - 1].buffettValue).toFixed(1)}%` : 'N/A'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex-1 w-full min-h-[320px] -ml-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={buffettData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" vertical={false} />
+                  <XAxis
+                    dataKey="timestamp"
+                    type="number"
+                    domain={['dataMin', 'dataMax']}
+                    stroke="var(--color-chart-axis)"
+                    fontSize={11}
+                    tickFormatter={(val) => {
+                      const d = new Date(val);
+                      return `${d.getMonth() + 1}/${d.getFullYear().toString().slice(2)}`;
+                    }}
+                    tickMargin={15}
+                    minTickGap={40}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    stroke="var(--color-chart-axis)"
+                    fontSize={11}
+                    orientation="left"
+                    tickFormatter={(val) => `${val}%`}
+                    axisLine={false}
+                    tickLine={false}
+                    domain={['auto', 'auto']}
+                  />
+                  <Tooltip content={<CustomTooltip isRelative={false} mode="Buffett" />} />
+
+                  <ReferenceArea y1={150} y2={200} fill="#D65D5D" fillOpacity={0.1} />
+                  <ReferenceArea y1={127} y2={150} fill="#E6A35C" fillOpacity={0.1} />
+                  <ReferenceArea y1={105} y2={127} fill="#6DA36D" fillOpacity={0.1} />
+                  <ReferenceArea y1={83} y2={105} fill="#5D8AA8" fillOpacity={0.1} />
+
+                  <Line
+                    type="monotone"
+                    dataKey="buffettValue"
+                    name="Buffett Indicator"
+                    stroke="#0F172A"
+                    strokeWidth={2.2}
+                    dot={false}
+                    activeDot={{ r: 4, strokeWidth: 0, fill: '#F04A00' }}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
             </div>
           </Card>
 
