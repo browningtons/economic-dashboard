@@ -1325,17 +1325,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Range Slider */}
-            {data.length > 0 && (
-              <DateRangeSlider 
-                min={0}
-                max={data.length - 1}
-                value={dateRange}
-                onChange={setDateRange}
-                data={data}
-              />
-            )}
-
             <div className={`flex-1 w-full ${shareMode ? 'min-h-[560px]' : 'min-h-[450px]'} -ml-2`}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
@@ -1363,12 +1352,12 @@ export default function App() {
                     stroke="var(--color-chart-axis)" 
                     fontSize={11} 
                     orientation="left"
-                    label={{ value: leftAxisTitle, angle: -90, position: 'insideLeft', offset: 0, style: { fill: 'var(--color-chart-axis)', fontSize: 11 } }}
+                    label={{ value: leftAxisTitle, angle: -90, position: 'insideLeft', offset: 2, style: { fill: 'var(--color-chart-axis)', fontSize: 13, fontWeight: 700 } }}
                     tickFormatter={(val) => viewMode === 'relative' ? `${val}%` : Number(val).toLocaleString()}
                     axisLine={false}
                     tickLine={false}
                     domain={['auto', 'auto']}
-                    width={50}
+                    width={64}
                   />
                   
                   {/* Secondary Right Axis (Always active in Raw mode when 2+ metrics selected) */}
@@ -1378,12 +1367,12 @@ export default function App() {
                       orientation="right" 
                       stroke="var(--color-chart-axis)" 
                       fontSize={11}
-                      label={{ value: rightAxisTitle, angle: 90, position: 'insideRight', offset: 0, style: { fill: 'var(--color-chart-axis)', fontSize: 11 } }}
+                      label={{ value: rightAxisTitle, angle: 90, position: 'insideRight', offset: 2, style: { fill: 'var(--color-chart-axis)', fontSize: 13, fontWeight: 700 } }}
                       tickFormatter={(val) => Number(val).toLocaleString()}
                       axisLine={false}
                       tickLine={false}
                       domain={['auto', 'auto']}
-                      width={40}
+                      width={64}
                     />
                   )}
 
@@ -1440,6 +1429,16 @@ export default function App() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
+            {/* Range Slider */}
+            {data.length > 0 && (
+              <DateRangeSlider 
+                min={0}
+                max={data.length - 1}
+                value={dateRange}
+                onChange={setDateRange}
+                data={data}
+              />
+            )}
 
             {/* NEW BOTTOM LEGEND SECTION */}
             <div className="mt-4 flex flex-wrap items-center justify-center gap-3 border-t border-subtle pt-4">
