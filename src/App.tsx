@@ -84,8 +84,6 @@ interface CustomTooltipProps {
   mode?: 'Dashboard' | 'Buffett';
 }
 
-type DataLoadSource = 'Google Sheet' | 'Local CSV' | 'Embedded CSV';
-
 interface DataSourceInfo {
   provider: string;
   seriesId: string;
@@ -271,7 +269,7 @@ const METRICS: MetricConfig[] = [
     desc: 'Average duration of unemployment.',
     isMacro: false, // Small count (Weeks)
     isPercentage: false,
-    format: (v) => `${v} wks`,
+    format: (v) => `${v.toLocaleString()} wks`,
     category: 'Labor Market'
   },
   { 
@@ -352,7 +350,7 @@ const METRICS: MetricConfig[] = [
     desc: 'US National Home Price Index.',
     isMacro: true, // Large Index Number
     isPercentage: false,
-    format: (v) => `${v}`,
+    format: (v) => `${v.toLocaleString(undefined, { maximumFractionDigits: 1 })}`,
     category: 'Housing'
   },
   { 
@@ -364,7 +362,7 @@ const METRICS: MetricConfig[] = [
     isMacro: false, // Small count (single digits)
     isPercentage: false,
     isProxy: true,
-    format: (v) => `${v} mo`,
+    format: (v) => `${v.toLocaleString(undefined, { maximumFractionDigits: 1 })} mo`,
     category: 'Housing'
   },
   { 
@@ -376,7 +374,7 @@ const METRICS: MetricConfig[] = [
     isMacro: true, // Large count (Thousands)
     isPercentage: false,
     isProxy: true,
-    format: (v) => `${v}K`,
+    format: (v) => `${Math.round(v).toLocaleString()}K`,
     category: 'Housing'
   },
 
@@ -400,7 +398,7 @@ const METRICS: MetricConfig[] = [
     desc: 'Consumer Price Index.',
     isMacro: true, // Large Index Number
     isPercentage: false,
-    format: (v) => `${v}`,
+    format: (v) => `${v.toLocaleString(undefined, { maximumFractionDigits: 1 })}`,
     category: 'Macro & Markets'
   },
   { 
@@ -767,7 +765,6 @@ export default function App() {
   const [data, setData] = useState<DataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
-  const [dataSource, setDataSource] = useState<DataLoadSource>('Embedded CSV');
   const [activeTab, setActiveTab] = useState<'Dashboard' | 'Buffett'>('Dashboard');
   const [shareMode, setShareMode] = useState(false);
   const [viewMode, setViewMode] = useState<'raw' | 'relative'>('raw');
@@ -782,12 +779,12 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
 
-    const getCsvData = async (): Promise<{ csvData: string; source: DataLoadSource }> => {
+    const getCsvData = async (): Promise<string> => {
       if (GOOGLE_SHEET_URL) {
         const csvUrl = toGoogleCsvUrl(GOOGLE_SHEET_URL);
         try {
           const response = await fetch(csvUrl, { cache: 'no-store' });
-          if (response.ok) return { csvData: await response.text(), source: 'Google Sheet' };
+          if (response.ok) return await response.text();
           console.warn(`Failed to fetch Google Sheet URL (status ${response.status}). Falling back.`);
         } catch (error) {
           console.warn('Failed to fetch Google Sheet URL. Falling back.', error);
@@ -796,12 +793,12 @@ export default function App() {
 
       try {
         const response = await fetch(LOCAL_DATA_URL, { cache: 'no-store' });
-        if (response.ok) return { csvData: await response.text(), source: 'Local CSV' };
+        if (response.ok) return await response.text();
       } catch (error) {
         console.warn('Failed to fetch local CSV fallback. Falling back to embedded CSV.', error);
       }
 
-      return { csvData: RAW_CSV_DATA, source: 'Embedded CSV' };
+      return RAW_CSV_DATA;
     };
 
     const loadData = async () => {
@@ -809,9 +806,8 @@ export default function App() {
       setIsLoading(true);
 
       try {
-        const { csvData, source } = await getCsvData();
+        const csvData = await getCsvData();
         if (cancelled) return;
-        setDataSource(source);
 
         const lines = csvData.split('\n');
         if (lines.length < 2) {
@@ -1083,26 +1079,11 @@ export default function App() {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Historical Dashboard & Recession Signals
             </p>
+            <p className="text-xs text-muted mt-1">Last updated: {lastUpdatedText}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2 bg-muted-surface border border-theme px-3 py-1 rounded-md">
-            <span className="text-xs text-muted uppercase tracking-wide">Data Source</span>
-            <span className="text-sm font-semibold text-main">{dataSource}</span>
-          </div>
-          <div className="flex items-center gap-2 bg-muted-surface border border-theme px-3 py-1 rounded-md">
-            <span className="text-xs text-muted uppercase tracking-wide">Last Updated</span>
-            <span className="text-sm font-semibold text-main">{lastUpdatedText}</span>
-          </div>
-          <button
-            onClick={() => setShareMode((prev) => !prev)}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md border transition ${
-              shareMode ? 'bg-secondary text-main border-theme' : 'bg-muted-surface text-muted border-theme hover:text-main'
-            }`}
-          >
-            {shareMode ? 'Exit Share Mode' : 'Share Mode'}
-          </button>
           <div className="flex bg-muted-surface p-1 rounded-lg border border-theme">
             {(['Dashboard', 'Buffett'] as const).map((tab) => (
               <button
@@ -1146,6 +1127,14 @@ export default function App() {
                   Relative Index
                 </button>
               </div>
+              <button
+                onClick={() => setShareMode((prev) => !prev)}
+                className={`w-full mt-3 text-left text-sm font-medium border border-theme rounded-lg px-3 py-2 transition ${
+                  shareMode ? 'bg-secondary text-main' : 'bg-muted-surface text-muted hover:text-main'
+                }`}
+              >
+                {shareMode ? 'Exit Share Mode' : 'Share Mode'}
+              </button>
             </div>
 
             <div>
@@ -1157,10 +1146,16 @@ export default function App() {
               </div>
 
               <button
-                onClick={() => setShowMetricSelector((prev) => !prev)}
+                onClick={() => {
+                  if (showMetricSelector) {
+                    setShareMode((prev) => !prev);
+                    return;
+                  }
+                  setShowMetricSelector(true);
+                }}
                 className="w-full text-left text-sm font-medium bg-muted-surface border border-theme rounded-lg px-3 py-2 hover:brightness-95 transition"
               >
-                {showMetricSelector ? 'Hide Metric Selector' : 'Show Metric Selector'}
+                {showMetricSelector ? (shareMode ? 'Exit Share Mode' : 'Share Mode') : 'Show Metric Selector'}
               </button>
 
               {showMetricSelector && (
@@ -1309,7 +1304,7 @@ export default function App() {
                     stroke="var(--color-chart-axis)" 
                     fontSize={11} 
                     orientation="left"
-                    tickFormatter={(val) => viewMode === 'relative' ? `${val}%` : val >= 1000 ? `${val/1000}k` : val}
+                    tickFormatter={(val) => viewMode === 'relative' ? `${val}%` : Number(val).toLocaleString()}
                     axisLine={false}
                     tickLine={false}
                     domain={['auto', 'auto']}
@@ -1323,7 +1318,7 @@ export default function App() {
                       orientation="right" 
                       stroke="var(--color-chart-axis)" 
                       fontSize={11}
-                      tickFormatter={(val) => `${val}`}
+                      tickFormatter={(val) => Number(val).toLocaleString()}
                       axisLine={false}
                       tickLine={false}
                       domain={['auto', 'auto']}
@@ -1450,10 +1445,10 @@ export default function App() {
                   />
                   <Tooltip content={<CustomTooltip isRelative={false} mode="Buffett" />} />
 
-                  <ReferenceArea y1={150} y2={200} fill="#D65D5D" fillOpacity={0.1} />
-                  <ReferenceArea y1={127} y2={150} fill="#E6A35C" fillOpacity={0.1} />
-                  <ReferenceArea y1={105} y2={127} fill="#6DA36D" fillOpacity={0.1} />
-                  <ReferenceArea y1={83} y2={105} fill="#5D8AA8" fillOpacity={0.1} />
+                  <ReferenceArea y1={150} y2={200} fill="#D65D5D" fillOpacity={0.4} />
+                  <ReferenceArea y1={127} y2={150} fill="#E6A35C" fillOpacity={0.4} />
+                  <ReferenceArea y1={105} y2={127} fill="#6DA36D" fillOpacity={0.4} />
+                  <ReferenceArea y1={83} y2={105} fill="#5D8AA8" fillOpacity={0.4} />
 
                   <Line
                     type="monotone"
