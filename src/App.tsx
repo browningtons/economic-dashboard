@@ -23,6 +23,7 @@ import {
   TrendingDown, 
   Building, 
   HelpCircle,
+  Info,
   Users,
   AlertCircle,
   Hammer,
@@ -81,6 +82,15 @@ interface CustomTooltipProps {
   label?: number | string;
   isRelative: boolean;
   mode?: 'Dashboard' | 'Buffett';
+}
+
+type DataLoadSource = 'Google Sheet' | 'Local CSV' | 'Embedded CSV';
+
+interface DataSourceInfo {
+  provider: string;
+  seriesId: string;
+  url: string;
+  note?: string;
 }
 
 // --- Data ---
@@ -206,6 +216,28 @@ const REQUIRED_COLUMNS = [
   'Stock Market (b)',
   'National Debt (b)',
 ];
+
+const METRIC_SOURCES: Record<string, DataSourceInfo> = {
+  'Unemployment Rate': { provider: 'FRED', seriesId: 'UNRATE', url: 'https://fred.stlouisfed.org/series/UNRATE' },
+  'Avg Weeks Unemployeed': { provider: 'FRED', seriesId: 'UEMPMEAN', url: 'https://fred.stlouisfed.org/series/UEMPMEAN' },
+  'Median Weeks Unemployeed': { provider: 'FRED', seriesId: 'UEMPMED', url: 'https://fred.stlouisfed.org/series/UEMPMED' },
+  'Job Openings': { provider: 'FRED', seriesId: 'JTSJOL', url: 'https://fred.stlouisfed.org/series/JTSJOL' },
+  'Unemployed 27 weeks': { provider: 'FRED', seriesId: 'UEMP27OV', url: 'https://fred.stlouisfed.org/series/UEMP27OV' },
+  'Unemployeed Count': { provider: 'FRED', seriesId: 'UNEMPLOY', url: 'https://fred.stlouisfed.org/series/UNEMPLOY' },
+  'Fed Rate': { provider: 'FRED', seriesId: 'FEDFUNDS', url: 'https://fred.stlouisfed.org/series/FEDFUNDS' },
+  '15 year mortgage': { provider: 'FRED', seriesId: 'MORTGAGE15US', url: 'https://fred.stlouisfed.org/series/MORTGAGE15US' },
+  '30 year mortgage': { provider: 'FRED', seriesId: 'MORTGAGE30US', url: 'https://fred.stlouisfed.org/series/MORTGAGE30US' },
+  'S&P 500': { provider: 'FRED', seriesId: 'SP500', url: 'https://fred.stlouisfed.org/series/SP500' },
+  'Labor Participation Rate': { provider: 'FRED', seriesId: 'CIVPART', url: 'https://fred.stlouisfed.org/series/CIVPART' },
+  'Labor Participation Core': { provider: 'FRED', seriesId: 'LNS11300060', url: 'https://fred.stlouisfed.org/series/LNS11300060' },
+  'Housing Price Index': { provider: 'FRED', seriesId: 'CSUSHPINSA', url: 'https://fred.stlouisfed.org/series/CSUSHPINSA' },
+  'CPI': { provider: 'FRED', seriesId: 'CPIAUCSL', url: 'https://fred.stlouisfed.org/series/CPIAUCSL' },
+  'GDP': { provider: 'FRED', seriesId: 'GDP', url: 'https://fred.stlouisfed.org/series/GDP' },
+  'Stock Market (b)': { provider: 'FRED', seriesId: 'NCBCEL', url: 'https://fred.stlouisfed.org/series/NCBCEL', note: 'Market value proxy' },
+  'National Debt (b)': { provider: 'FRED', seriesId: 'GFDEBTN', url: 'https://fred.stlouisfed.org/series/GFDEBTN' },
+  'Months Supply': { provider: 'App Model', seriesId: 'PROXY', url: '#', note: 'Deterministic proxy series' },
+  'New Home Starts': { provider: 'App Model', seriesId: 'PROXY', url: '#', note: 'Deterministic proxy series' },
+};
 
 const METRICS: MetricConfig[] = [
   // --- LABOR MARKET ---
@@ -735,7 +767,9 @@ export default function App() {
   const [data, setData] = useState<DataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
+  const [dataSource, setDataSource] = useState<DataLoadSource>('Embedded CSV');
   const [activeTab, setActiveTab] = useState<'Dashboard' | 'Buffett'>('Dashboard');
+  const [shareMode, setShareMode] = useState(false);
   const [viewMode, setViewMode] = useState<'raw' | 'relative'>('raw');
   // Set default selected metrics to S&P 500 and Job Openings
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>(['S&P 500', 'Job Openings']);
@@ -748,12 +782,12 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
 
-    const getCsvData = async (): Promise<string> => {
+    const getCsvData = async (): Promise<{ csvData: string; source: DataLoadSource }> => {
       if (GOOGLE_SHEET_URL) {
         const csvUrl = toGoogleCsvUrl(GOOGLE_SHEET_URL);
         try {
           const response = await fetch(csvUrl, { cache: 'no-store' });
-          if (response.ok) return await response.text();
+          if (response.ok) return { csvData: await response.text(), source: 'Google Sheet' };
           console.warn(`Failed to fetch Google Sheet URL (status ${response.status}). Falling back.`);
         } catch (error) {
           console.warn('Failed to fetch Google Sheet URL. Falling back.', error);
@@ -762,12 +796,12 @@ export default function App() {
 
       try {
         const response = await fetch(LOCAL_DATA_URL, { cache: 'no-store' });
-        if (response.ok) return await response.text();
+        if (response.ok) return { csvData: await response.text(), source: 'Local CSV' };
       } catch (error) {
         console.warn('Failed to fetch local CSV fallback. Falling back to embedded CSV.', error);
       }
 
-      return RAW_CSV_DATA;
+      return { csvData: RAW_CSV_DATA, source: 'Embedded CSV' };
     };
 
     const loadData = async () => {
@@ -775,8 +809,9 @@ export default function App() {
       setIsLoading(true);
 
       try {
-        const csvData = await getCsvData();
+        const { csvData, source } = await getCsvData();
         if (cancelled) return;
+        setDataSource(source);
 
         const lines = csvData.split('\n');
         if (lines.length < 2) {
@@ -1003,6 +1038,12 @@ export default function App() {
     return groups;
   }, []);
 
+  const lastUpdatedText = useMemo(() => {
+    if (data.length === 0) return 'N/A';
+    const lastPoint = data[data.length - 1];
+    return new Date(lastPoint.timestamp).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  }, [data]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-primary flex items-center justify-center text-muted">
@@ -1025,7 +1066,7 @@ export default function App() {
   // --- RENDERING ONLY THE DASHBOARD VIEW ---
   return (
     <div className="min-h-screen bg-primary text-main font-sans p-4 md:p-8 lg:p-10">
-      <div className="mx-auto max-w-[1600px]">
+      <div className={`mx-auto ${shareMode ? 'max-w-[1700px]' : 'max-w-[1600px]'}`}>
       
       {/* Header */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 bg-secondary p-6 rounded-2xl shadow-sm border border-theme">
@@ -1045,7 +1086,23 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 bg-muted-surface border border-theme px-3 py-1 rounded-md">
+            <span className="text-xs text-muted uppercase tracking-wide">Data Source</span>
+            <span className="text-sm font-semibold text-main">{dataSource}</span>
+          </div>
+          <div className="flex items-center gap-2 bg-muted-surface border border-theme px-3 py-1 rounded-md">
+            <span className="text-xs text-muted uppercase tracking-wide">Last Updated</span>
+            <span className="text-sm font-semibold text-main">{lastUpdatedText}</span>
+          </div>
+          <button
+            onClick={() => setShareMode((prev) => !prev)}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md border transition ${
+              shareMode ? 'bg-secondary text-main border-theme' : 'bg-muted-surface text-muted border-theme hover:text-main'
+            }`}
+          >
+            {shareMode ? 'Exit Share Mode' : 'Share Mode'}
+          </button>
           <div className="flex bg-muted-surface p-1 rounded-lg border border-theme">
             {(['Dashboard', 'Buffett'] as const).map((tab) => (
               <button
@@ -1066,9 +1123,10 @@ export default function App() {
       </header>
       
       {/* STANDARD DASHBOARD VIEW (Always visible now) */}
-      <div className="grid grid-cols-1 lg:grid-cols-[32fr_68fr] gap-6">
+      <div className={`${shareMode ? 'grid grid-cols-1 gap-6' : 'grid grid-cols-1 lg:grid-cols-[32fr_68fr] gap-6'}`}>
         
         {/* Sidebar Settings */}
+        {!shareMode && (
         <div className="space-y-6">
           
           <Card className="h-full">
@@ -1167,13 +1225,14 @@ export default function App() {
             </div>
           </Card>
         </div>
+        )}
 
         {/* Main Content Area */}
         <div className="flex flex-col gap-6">
           
           {/* Chart Section */}
           {activeTab === 'Dashboard' && (
-          <Card className="flex-1 min-h-[500px] flex flex-col relative overflow-hidden">
+          <Card className={`flex-1 flex flex-col relative overflow-hidden ${shareMode ? 'min-h-[760px]' : 'min-h-[500px]'}`}>
              {/* --- CORRELATION INDICATOR --- */}
              {activeMetrics.length === 2 && rSquared && (
               <div className="group absolute top-4 right-4 z-20 flex items-center gap-2 cursor-help bg-secondary backdrop-blur-sm p-2 rounded-lg shadow-sm border border-theme">
@@ -1199,7 +1258,7 @@ export default function App() {
             )}
             {/* ----------------------------- */}
 
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-4 z-10">
+            <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-center ${shareMode ? 'mb-5 gap-3' : 'mb-8 gap-4'} z-10`}>
               <div>
                 <h2 className="text-lg font-bold text-main flex items-center gap-2">
                   {viewMode === 'relative' ? 'Relative Performance Index' : 'Economic Trends'}
@@ -1223,7 +1282,7 @@ export default function App() {
               />
             )}
 
-            <div className="flex-1 w-full min-h-[450px] -ml-2">
+            <div className={`flex-1 w-full ${shareMode ? 'min-h-[560px]' : 'min-h-[450px]'} -ml-2`}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" vertical={false} />
@@ -1331,14 +1390,14 @@ export default function App() {
                {activeMetrics.map(m => (
                  <div key={m.id} className="flex items-center gap-2 px-3 py-1.5 bg-muted-surface rounded-full border border-theme">
                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: m.color }} />
-                   <span className="text-base font-medium text-main">
+                   <span className={`${shareMode ? 'text-lg' : 'text-base'} font-medium text-main`}>
                      {m.label}{m.isProxy ? ' (Proxy)' : ''}
                    </span>
                  </div>
                ))}
             </div>
             <div className="mt-5 p-4 bg-muted-surface border border-theme rounded-lg">
-              <p className="text-sm md:text-base text-main leading-relaxed">
+              <p className={`${shareMode ? 'text-lg' : 'text-sm md:text-base'} text-main leading-relaxed`}>
                 This index does not predict recessions.
                 <br />
                 It highlights periods where market optimism and labor demand stop moving together, often a sign of structural transition.
@@ -1412,9 +1471,10 @@ export default function App() {
           )}
 
           {/* Metric Details Grid */}
-          {activeTab === 'Dashboard' && (
+          {activeTab === 'Dashboard' && !shareMode && (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {activeMetrics.map(m => {
+              const source = METRIC_SOURCES[m.id];
               // Get last valid value
               const validPoints = data.filter(d => d[m.id] !== undefined);
               const lastPoint = validPoints[validPoints.length - 1];
@@ -1452,6 +1512,30 @@ export default function App() {
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-2">
                       <h4 className="font-bold text-main">{m.label}</h4>
+                      {source && (
+                        <div className="relative group/source">
+                          {source.url === '#' ? (
+                            <span className="inline-flex items-center justify-center w-4 h-4 text-muted">
+                              <Info className="w-3.5 h-3.5" />
+                            </span>
+                          ) : (
+                            <a
+                              href={source.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center justify-center w-4 h-4 text-muted hover:text-main"
+                              title={`Open source: ${source.seriesId}`}
+                            >
+                              <Info className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                          <div className="absolute left-0 top-full mt-1 w-56 bg-main text-inverse text-[11px] rounded-md px-2 py-2 opacity-0 group-hover/source:opacity-100 transition pointer-events-none z-20">
+                            <div className="font-semibold">{source.provider}</div>
+                            <div>Series: {source.seriesId}</div>
+                            {source.note && <div className="text-inverse-muted mt-0.5">{source.note}</div>}
+                          </div>
+                        </div>
+                      )}
                       {m.isProxy && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full badge-proxy">
                           Proxy
