@@ -184,7 +184,10 @@ const REFERENCE_ZONES: ReferenceZone[] = [
   { label: "COVID-19", start: "2020-02-01", end: "2020-04-01", color: "#9ca3af", opacity: 0.3, labelPos: 'insideTop' },
   { label: "ChatGPT Launch", start: "2022-11-01", end: "2023-01-01", color: "#9ca3af", opacity: 0.3, labelPos: 'insideBottom' },
 ];
-const REMOTE_DATA_URL = import.meta.env.VITE_ECON_DATA_URL?.trim();
+const GOOGLE_SHEET_URL = (
+  import.meta.env.VITE_GOOGLE_SHEET_URL?.trim() ||
+  import.meta.env.VITE_ECON_DATA_URL?.trim()
+);
 const LOCAL_DATA_URL = `${import.meta.env.BASE_URL}data/economic_indicators.csv`;
 const REQUIRED_COLUMNS = [
   'Observed Date',
@@ -464,6 +467,19 @@ const parseLine = (line: string): string[] => {
   return result;
 };
 
+const toGoogleCsvUrl = (url: string): string => {
+  if (url.includes('/gviz/tq?tqx=out:csv') || url.includes('/export?format=csv')) {
+    return url;
+  }
+
+  const idMatch = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (!idMatch) return url;
+
+  const gidMatch = url.match(/[?&]gid=(\d+)/);
+  const gid = gidMatch ? gidMatch[1] : null;
+  return `https://docs.google.com/spreadsheets/d/${idMatch[1]}/export?format=csv${gid ? `&gid=${gid}` : ''}`;
+};
+
 // --- Components ---
 
 const Card: React.FC<{ children: React.ReactNode; className?: string; style?: React.CSSProperties }> = ({ children, className = "", style }) => (
@@ -732,21 +748,22 @@ export default function App() {
     let cancelled = false;
 
     const getCsvData = async (): Promise<string> => {
+      if (GOOGLE_SHEET_URL) {
+        const csvUrl = toGoogleCsvUrl(GOOGLE_SHEET_URL);
+        try {
+          const response = await fetch(csvUrl, { cache: 'no-store' });
+          if (response.ok) return await response.text();
+          console.warn(`Failed to fetch Google Sheet URL (status ${response.status}). Falling back.`);
+        } catch (error) {
+          console.warn('Failed to fetch Google Sheet URL. Falling back.', error);
+        }
+      }
+
       try {
         const response = await fetch(LOCAL_DATA_URL, { cache: 'no-store' });
         if (response.ok) return await response.text();
       } catch (error) {
         console.warn('Failed to fetch local CSV fallback. Falling back to embedded CSV.', error);
-      }
-
-      if (REMOTE_DATA_URL) {
-        try {
-          const response = await fetch(REMOTE_DATA_URL, { cache: 'no-store' });
-          if (response.ok) return await response.text();
-          console.warn(`Failed to fetch VITE_ECON_DATA_URL (status ${response.status}). Falling back.`);
-        } catch (error) {
-          console.warn('Failed to fetch VITE_ECON_DATA_URL. Falling back.', error);
-        }
       }
 
       return RAW_CSV_DATA;

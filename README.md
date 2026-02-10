@@ -8,10 +8,12 @@ This app can load economic data directly from a Google Sheet CSV export.
 2. Create a `.env.local` file in the project root:
 
 ```bash
-VITE_ECON_DATA_URL="https://docs.google.com/spreadsheets/d/<SHEET_ID>/gviz/tq?tqx=out:csv&sheet=<TAB_NAME>"
+VITE_GOOGLE_SHEET_URL="https://docs.google.com/spreadsheets/d/<SHEET_ID>/edit?gid=<TAB_GID>#gid=<TAB_GID>"
 ```
 
-If `VITE_ECON_DATA_URL` is unavailable or fails, the app falls back to:
+You can also provide a direct CSV export URL if you prefer.
+
+If `VITE_GOOGLE_SHEET_URL` is unavailable or fails, the app falls back to:
 - `public/data/economic_indicators.csv`
 - Embedded CSV in `src/App.tsx` (last fallback)
 
