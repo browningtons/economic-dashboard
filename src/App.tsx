@@ -1017,13 +1017,13 @@ export default function App() {
     let label = '';
     let labelDy = -12;
     if (isMin && isMax) {
-      label = `Min/Max ${formatExtremaValue(metric, value)}`;
+      label = formatExtremaValue(metric, value);
       labelDy = -12;
     } else if (isMax) {
-      label = `Max ${formatExtremaValue(metric, extrema.maxValue)}`;
+      label = formatExtremaValue(metric, extrema.maxValue);
       labelDy = -12;
     } else {
-      label = `Min ${formatExtremaValue(metric, extrema.minValue)}`;
+      label = formatExtremaValue(metric, extrema.minValue);
       labelDy = 16;
     }
 
@@ -1411,13 +1411,6 @@ export default function App() {
                    </span>
                  </div>
                ))}
-            </div>
-            <div className="mt-5 p-4 bg-muted-surface border border-theme rounded-lg">
-              <p className={`${shareMode ? 'text-lg' : 'text-sm md:text-base'} text-main leading-relaxed`}>
-                This index does not predict recessions.
-                <br />
-                It highlights periods where market optimism and labor demand stop moving together, often a sign of structural transition.
-              </p>
             </div>
           </Card>
           )}
