@@ -26,7 +26,6 @@ import {
   Info,
   Users,
   AlertCircle,
-  Hammer,
   Globe,
   Coins
 } from 'lucide-react';
@@ -51,7 +50,6 @@ interface MetricConfig {
   isMacro: boolean; // TRUE for large numbers (S&P, GDP, Debt), FALSE for small (Rates, Counts)
   format: (val: number) => string;
   isPercentage: boolean;
-  isProxy?: boolean;
   category: 'Labor Market' | 'Monetary Policy' | 'Housing' | 'Macro & Markets';
 }
 
@@ -89,6 +87,13 @@ interface DataSourceInfo {
   seriesId: string;
   url: string;
   note?: string;
+}
+
+interface MetricExtrema {
+  minValue: number;
+  maxValue: number;
+  minTimestamp: number;
+  maxTimestamp: number;
 }
 
 // --- Data ---
@@ -231,10 +236,8 @@ const METRIC_SOURCES: Record<string, DataSourceInfo> = {
   'Housing Price Index': { provider: 'FRED', seriesId: 'CSUSHPINSA', url: 'https://fred.stlouisfed.org/series/CSUSHPINSA' },
   'CPI': { provider: 'FRED', seriesId: 'CPIAUCSL', url: 'https://fred.stlouisfed.org/series/CPIAUCSL' },
   'GDP': { provider: 'FRED', seriesId: 'GDP', url: 'https://fred.stlouisfed.org/series/GDP' },
-  'Stock Market (b)': { provider: 'FRED', seriesId: 'NCBCEL', url: 'https://fred.stlouisfed.org/series/NCBCEL', note: 'Market value proxy' },
+  'Stock Market (b)': { provider: 'FRED', seriesId: 'NCBCEL', url: 'https://fred.stlouisfed.org/series/NCBCEL' },
   'National Debt (b)': { provider: 'FRED', seriesId: 'GFDEBTN', url: 'https://fred.stlouisfed.org/series/GFDEBTN' },
-  'Months Supply': { provider: 'App Model', seriesId: 'PROXY', url: '#', note: 'Deterministic proxy series' },
-  'New Home Starts': { provider: 'App Model', seriesId: 'PROXY', url: '#', note: 'Deterministic proxy series' },
 };
 
 const METRICS: MetricConfig[] = [
@@ -353,31 +356,6 @@ const METRICS: MetricConfig[] = [
     format: (v) => `${v.toLocaleString(undefined, { maximumFractionDigits: 1 })}`,
     category: 'Housing'
   },
-  { 
-    id: 'Months Supply',
-    label: 'Months Supply', 
-    icon: Home, 
-    color: '#0d9488', 
-    desc: 'Deterministic proxy based on year + seasonal pattern.',
-    isMacro: false, // Small count (single digits)
-    isPercentage: false,
-    isProxy: true,
-    format: (v) => `${v.toLocaleString(undefined, { maximumFractionDigits: 1 })} mo`,
-    category: 'Housing'
-  },
-  { 
-    id: 'New Home Starts',
-    label: 'New Home Starts', 
-    icon: Hammer, 
-    color: '#7c3aed', 
-    desc: 'Deterministic proxy with seasonal variation.',
-    isMacro: true, // Large count (Thousands)
-    isPercentage: false,
-    isProxy: true,
-    format: (v) => `${Math.round(v).toLocaleString()}K`,
-    category: 'Housing'
-  },
-
   // --- MACRO & MARKETS ---
   { 
     id: 'S&P 500', 
@@ -467,13 +445,6 @@ const calculateRSquared = (data: DataPoint[], key1: string, key2: string): strin
 
   const r = numerator / denominator;
   return (r * r).toFixed(2);
-};
-
-// Deterministic pseudo-noise from a numeric seed. Keeps mocked series stable across reloads.
-const deterministicNoise = (seed: number, amplitude = 1): number => {
-  const x = Math.sin(seed * 12.9898) * 43758.5453;
-  const normalized = x - Math.floor(x); // [0, 1)
-  return (normalized * 2 - 1) * amplitude; // [-amplitude, amplitude]
 };
 
 // --- Parsing Helper ---
@@ -870,25 +841,6 @@ export default function App() {
             continue;
           }
 
-          // --- DETERMINISTIC PROXY SERIES for Missing Metrics ---
-          const month = new Date(Number(entry.timestamp)).getMonth();
-          const seed = Number(entry.timestamp);
-
-          // Months Supply: Low in 2020-2021, rising afterward with deterministic seasonality
-          if (entry.year !== undefined) {
-            const seasonal = Math.sin((month / 12) * Math.PI * 2) * 0.25;
-            const wobble = deterministicNoise(seed + 17, 0.15);
-
-            if (entry.year === 2020) entry['Months Supply'] = 3.5 + seasonal + wobble;
-            else if (entry.year === 2021) entry['Months Supply'] = 2.0 + seasonal + wobble;
-            else if (entry.year >= 2022) entry['Months Supply'] = 3.0 + (entry.year - 2022) * 0.5 + seasonal + wobble;
-          }
-          
-          // New Home Starts: deterministic seasonal proxy (~1.2M - 1.8M)
-          const housingSeasonal = Math.sin((month / 12) * Math.PI * 2) * 140;
-          const housingWobble = deterministicNoise(seed + 101, 120);
-          entry['New Home Starts'] = Math.max(900, 1400 + housingSeasonal + housingWobble);
-
           if (entry['Stock Market (b)'] !== undefined && entry['GDP'] !== undefined) {
             entry.buffettValue = (Number(entry['Stock Market (b)']) / Number(entry['GDP'])) * 100;
           }
@@ -1008,6 +960,89 @@ export default function App() {
     () => filteredData.filter((point) => point.buffettValue !== undefined),
     [filteredData]
   );
+
+  const metricExtrema = useMemo(() => {
+    const extrema: Record<string, MetricExtrema> = {};
+
+    activeMetrics.forEach((metric) => {
+      let minValue = Infinity;
+      let maxValue = -Infinity;
+      let minTimestamp: number | null = null;
+      let maxTimestamp: number | null = null;
+
+      chartData.forEach((point) => {
+        const value = Number(point[metric.id]);
+        const timestamp = Number(point.timestamp);
+        if (!Number.isFinite(value) || !Number.isFinite(timestamp)) return;
+
+        if (value < minValue) {
+          minValue = value;
+          minTimestamp = timestamp;
+        }
+        if (value > maxValue) {
+          maxValue = value;
+          maxTimestamp = timestamp;
+        }
+      });
+
+      if (minTimestamp !== null && maxTimestamp !== null) {
+        extrema[metric.id] = { minValue, maxValue, minTimestamp, maxTimestamp };
+      }
+    });
+
+    return extrema;
+  }, [activeMetrics, chartData]);
+
+  const formatExtremaValue = useCallback((metric: MetricConfig, value: number): string => {
+    if (viewMode === 'relative') return `${value.toFixed(1)}%`;
+    return metric.format(value);
+  }, [viewMode]);
+
+  const renderExtremaDot = useCallback((metric: MetricConfig, dotProps: any) => {
+    const extrema = metricExtrema[metric.id];
+    if (!extrema) return null;
+
+    const timestamp = Number(dotProps?.payload?.timestamp);
+    const value = Number(dotProps?.value);
+    if (!Number.isFinite(timestamp) || !Number.isFinite(value)) return null;
+
+    const isMin = timestamp === extrema.minTimestamp && value === extrema.minValue;
+    const isMax = timestamp === extrema.maxTimestamp && value === extrema.maxValue;
+    if (!isMin && !isMax) return null;
+
+    const cx = Number(dotProps.cx);
+    const cy = Number(dotProps.cy);
+    if (!Number.isFinite(cx) || !Number.isFinite(cy)) return null;
+
+    let label = '';
+    let labelDy = -12;
+    if (isMin && isMax) {
+      label = `Min/Max ${formatExtremaValue(metric, value)}`;
+      labelDy = -12;
+    } else if (isMax) {
+      label = `Max ${formatExtremaValue(metric, extrema.maxValue)}`;
+      labelDy = -12;
+    } else {
+      label = `Min ${formatExtremaValue(metric, extrema.minValue)}`;
+      labelDy = 16;
+    }
+
+    return (
+      <g>
+        <circle cx={cx} cy={cy} r={3.5} fill={metric.color} stroke="var(--color-chart-bg)" strokeWidth={1.5} />
+        <text
+          x={cx}
+          y={cy + labelDy}
+          textAnchor="middle"
+          className="fill-main"
+          fontSize={10}
+          fontWeight={600}
+        >
+          {label}
+        </text>
+      </g>
+    );
+  }, [formatExtremaValue, metricExtrema]);
 
   const toggleMetric = (id: string) => {
     if (selectedMetrics.includes(id)) {
@@ -1185,11 +1220,6 @@ export default function App() {
                                 <div className={`text-sm font-medium truncate transition-colors ${isSelected ? 'text-main' : 'text-muted group-hover:text-main'}`}>
                                   {m.label}
                                 </div>
-                                {m.isProxy && (
-                                  <span className="inline-flex mt-1 text-[10px] px-1.5 py-0.5 rounded-full badge-proxy">
-                                    Proxy
-                                  </span>
-                                )}
                               </div>
                               
                               <div className={`
@@ -1346,7 +1376,7 @@ export default function App() {
                         name={m.label}
                         stroke={m.color} 
                         strokeWidth={2} 
-                        dot={false}
+                        dot={(dotProps) => renderExtremaDot(m, dotProps)}
                         activeDot={{ r: 4, strokeWidth: 0, fill: m.color }}
                         animationDuration={1000}
                         connectNulls
@@ -1377,7 +1407,7 @@ export default function App() {
                  <div key={m.id} className="flex items-center gap-2 px-3 py-1.5 bg-muted-surface rounded-full border border-theme">
                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: m.color }} />
                    <span className={`${shareMode ? 'text-lg' : 'text-base'} font-medium text-main`}>
-                     {m.label}{m.isProxy ? ' (Proxy)' : ''}
+                     {m.label}
                    </span>
                  </div>
                ))}
@@ -1500,32 +1530,21 @@ export default function App() {
                       <h4 className="font-bold text-main">{m.label}</h4>
                       {source && (
                         <div className="relative group/source">
-                          {source.url === '#' ? (
-                            <span className="inline-flex items-center justify-center w-4 h-4 text-muted">
-                              <Info className="w-3.5 h-3.5" />
-                            </span>
-                          ) : (
-                            <a
-                              href={source.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center justify-center w-4 h-4 text-muted hover:text-main"
-                              title={`Open source: ${source.seriesId}`}
-                            >
-                              <Info className="w-3.5 h-3.5" />
-                            </a>
-                          )}
+                          <a
+                            href={source.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center justify-center w-4 h-4 text-muted hover:text-main"
+                            title={`Open source: ${source.seriesId}`}
+                          >
+                            <Info className="w-3.5 h-3.5" />
+                          </a>
                           <div className="absolute left-0 top-full mt-1 w-56 bg-main text-inverse text-[11px] rounded-md px-2 py-2 opacity-0 group-hover/source:opacity-100 transition pointer-events-none z-20">
                             <div className="font-semibold">{source.provider}</div>
                             <div>Series: {source.seriesId}</div>
                             {source.note && <div className="text-inverse-muted mt-0.5">{source.note}</div>}
                           </div>
                         </div>
-                      )}
-                      {m.isProxy && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full badge-proxy">
-                          Proxy
-                        </span>
                       )}
                     </div>
                     <m.icon className="w-4 h-4 text-muted group-hover:text-main transition-colors" />
