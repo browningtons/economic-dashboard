@@ -770,7 +770,6 @@ export default function App() {
   const [viewMode, setViewMode] = useState<'raw' | 'relative'>('raw');
   // Set default selected metrics to S&P 500 and Job Openings
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>(['S&P 500', 'Job Openings']);
-  const [showMetricSelector, setShowMetricSelector] = useState(false);
   const [hoveredMetric, setHoveredMetric] = useState<string | null>(null);
   
   // Date Range State (Indices) - Initialized to a safe empty array state
@@ -1084,6 +1083,14 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
+          {shareMode && (
+            <button
+              onClick={() => setShareMode(false)}
+              className="px-3 py-1.5 text-sm font-medium rounded-md border bg-muted-surface text-main border-theme"
+            >
+              Back to Metric Selector
+            </button>
+          )}
           <div className="flex bg-muted-surface p-1 rounded-lg border border-theme">
             {(['Dashboard', 'Buffett'] as const).map((tab) => (
               <button
@@ -1144,21 +1151,6 @@ export default function App() {
                   {selectedMetrics.length} Selected
                 </span>
               </div>
-
-              <button
-                onClick={() => {
-                  if (showMetricSelector) {
-                    setShareMode((prev) => !prev);
-                    return;
-                  }
-                  setShowMetricSelector(true);
-                }}
-                className="w-full text-left text-sm font-medium bg-muted-surface border border-theme rounded-lg px-3 py-2 hover:brightness-95 transition"
-              >
-                {showMetricSelector ? (shareMode ? 'Exit Share Mode' : 'Share Mode') : 'Show Metric Selector'}
-              </button>
-
-              {showMetricSelector && (
               <div className="mt-4 space-y-6 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
                 {Object.entries(metricsByCategory).map(([category, catMetrics]) => (
                   <div key={category}>
@@ -1216,7 +1208,6 @@ export default function App() {
                   </div>
                 ))}
               </div>
-              )}
             </div>
           </Card>
         </div>
