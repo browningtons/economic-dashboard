@@ -25,7 +25,6 @@ import {
   HelpCircle,
   Users,
   AlertCircle,
-  Landmark,
   Hammer,
   Globe,
   Coins
@@ -309,19 +308,6 @@ const METRICS: MetricConfig[] = [
     format: (v) => `${v}%`,
     category: 'Monetary Policy'
   },
-  { 
-    id: '10 year treasury',
-    label: '10Y Treasury', 
-    icon: Landmark, 
-    color: '#EAB308', 
-    desc: 'Deterministic proxy derived from 30Y mortgage data.',
-    isMacro: false, // Percentage
-    isPercentage: true,
-    isProxy: true,
-    format: (v) => `${v}%`,
-    category: 'Monetary Policy'
-  },
-
   // --- HOUSING ---
   { 
     id: 'Housing Price Index', 
@@ -733,6 +719,7 @@ export default function App() {
   const [data, setData] = useState<DataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'Dashboard' | 'Buffett'>('Dashboard');
   const [viewMode, setViewMode] = useState<'raw' | 'relative'>('raw');
   // Set default selected metrics to S&P 500 and Job Openings
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>(['S&P 500', 'Job Openings']);
@@ -745,6 +732,13 @@ export default function App() {
     let cancelled = false;
 
     const getCsvData = async (): Promise<string> => {
+      try {
+        const response = await fetch(LOCAL_DATA_URL, { cache: 'no-store' });
+        if (response.ok) return await response.text();
+      } catch (error) {
+        console.warn('Failed to fetch local CSV fallback. Falling back to embedded CSV.', error);
+      }
+
       if (REMOTE_DATA_URL) {
         try {
           const response = await fetch(REMOTE_DATA_URL, { cache: 'no-store' });
@@ -753,13 +747,6 @@ export default function App() {
         } catch (error) {
           console.warn('Failed to fetch VITE_ECON_DATA_URL. Falling back.', error);
         }
-      }
-
-      try {
-        const response = await fetch(LOCAL_DATA_URL, { cache: 'no-store' });
-        if (response.ok) return await response.text();
-      } catch (error) {
-        console.warn('Failed to fetch local CSV fallback. Falling back to embedded CSV.', error);
       }
 
       return RAW_CSV_DATA;
@@ -839,12 +826,6 @@ export default function App() {
           const month = new Date(Number(entry.timestamp)).getMonth();
           const seed = Number(entry.timestamp);
 
-          // 10-Year Treasury: Correlated with 30y mortgage but lower (stable spread with small variation)
-          if (entry['30 year mortgage'] !== undefined) {
-            const spread = 1.5 + deterministicNoise(seed, 0.12);
-            entry['10 year treasury'] = Math.max(0.5, Number(entry['30 year mortgage']) - spread);
-          }
-          
           // Months Supply: Low in 2020-2021, rising afterward with deterministic seasonality
           if (entry.year !== undefined) {
             const seasonal = Math.sin((month / 12) * Math.PI * 2) * 0.25;
@@ -1045,7 +1026,22 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex bg-muted-surface p-1 rounded-lg border border-theme">
+            {(['Dashboard', 'Buffett'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
+                  activeTab === tab
+                    ? 'bg-secondary text-main shadow-sm border border-theme'
+                    : 'text-muted hover:text-main'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
           <ThemeToggle />
         </div>
       </header>
@@ -1148,6 +1144,7 @@ export default function App() {
         <div className="flex flex-col gap-6">
           
           {/* Chart Section */}
+          {activeTab === 'Dashboard' && (
           <Card className="flex-1 min-h-[500px] flex flex-col relative overflow-hidden">
              {/* --- CORRELATION INDICATOR --- */}
              {activeMetrics.length === 2 && rSquared && (
@@ -1313,8 +1310,10 @@ export default function App() {
                ))}
             </div>
           </Card>
+          )}
 
-          <Card className="min-h-[400px] flex flex-col">
+          {activeTab === 'Buffett' && (
+          <Card className="min-h-[500px] flex flex-col">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3">
               <div>
                 <h2 className="text-lg font-bold text-main">The Buffett Indicator</h2>
@@ -1353,7 +1352,7 @@ export default function App() {
                     tickFormatter={(val) => `${val}%`}
                     axisLine={false}
                     tickLine={false}
-                    domain={['auto', 'auto']}
+                    domain={[75, 'auto']}
                   />
                   <Tooltip content={<CustomTooltip isRelative={false} mode="Buffett" />} />
 
@@ -1375,8 +1374,10 @@ export default function App() {
               </ResponsiveContainer>
             </div>
           </Card>
+          )}
 
           {/* Metric Details Grid */}
+          {activeTab === 'Dashboard' && (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {activeMetrics.map(m => {
               // Get last valid value
@@ -1447,6 +1448,7 @@ export default function App() {
               );
             })}
           </div>
+          )}
         </div>
       </div>
     </div>
