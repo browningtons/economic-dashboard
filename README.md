@@ -1,3 +1,20 @@
+# Economic Dashboard
+
+## Data Source Setup (Google Sheets)
+
+This app can load economic data directly from a Google Sheet CSV export.
+
+1. Publish your sheet/tab so it can be read as CSV.
+2. Create a `.env.local` file in the project root:
+
+```bash
+VITE_ECON_DATA_URL="https://docs.google.com/spreadsheets/d/<SHEET_ID>/gviz/tq?tqx=out:csv&sheet=<TAB_NAME>"
+```
+
+If `VITE_ECON_DATA_URL` is unavailable or fails, the app falls back to:
+- `public/data/economic_indicators.csv`
+- Embedded CSV in `src/App.tsx` (last fallback)
+
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

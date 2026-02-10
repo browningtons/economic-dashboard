@@ -1,9 +1,16 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 
-const ThemeContext = createContext();
+type ThemeMode = 'light' | 'dark';
 
-export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState('light');
+interface ThemeContextValue {
+  theme: ThemeMode;
+  toggleTheme: () => void;
+}
+
+const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
+
+export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [theme, setTheme] = useState<ThemeMode>('light');
 
   useEffect(() => {
     // 1. Check if user has visited before and saved a preference
@@ -41,4 +48,10 @@ export const ThemeProvider = ({ children }) => {
   );
 };
 
-export const useTheme = () => useContext(ThemeContext);
+export const useTheme = (): ThemeContextValue => {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
+};

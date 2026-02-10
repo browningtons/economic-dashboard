@@ -4,35 +4,35 @@
 
 @layer base {
   :root {
-    /* --- LIGHT MODE (Zen Focus) --- */
-    --color-bg-primary: #FAF9F6;      
-    --color-bg-secondary: #FFFFFF;    
-    --color-text-main: #2C2C2C;       
-    --color-text-muted: #6B7280;      
+    /* --- LIGHT MODE (Personal Brand) --- */
+    --color-bg-primary: #F4F8FB;
+    --color-bg-secondary: #FFFFFF;
+    --color-text-main: #0F172A;
+    --color-text-muted: #0F3D57;
 
-    --color-brand-primary: #4A7C59;   
-    --color-brand-secondary: #F3E9D2; 
-    --color-brand-accent: #C8553D;    
+    --color-brand-primary: #F04A00;
+    --color-brand-secondary: #0F3D57;
+    --color-brand-accent: #2CB6C0;
 
     /* --- DATA ZONES --- */
-    --color-zone-weak: #EF4444;
-    --color-zone-average: #F59E0B;
-    --color-zone-fit: #10B981;
+    --color-zone-weak: #F04A00;
+    --color-zone-average: #2CB6C0;
+    --color-zone-fit: #0F3D57;
   }
 
   .dark {
-    --color-bg-primary: #111827;
-    --color-bg-secondary: #1F2937;
-    --color-text-main: #F9FAFB;
-    --color-text-muted: #9CA3AF;
+    --color-bg-primary: #0F172A;
+    --color-bg-secondary: #0F3D57;
+    --color-text-main: #E6F1F5;
+    --color-text-muted: #9BC9D8;
 
-    --color-brand-primary: #6EE7B7;
-    --color-brand-secondary: #374151;
-    --color-brand-accent: #F87171;
+    --color-brand-primary: #F04A00;
+    --color-brand-secondary: #2CB6C0;
+    --color-brand-accent: #0F3D57;
 
-    --color-zone-weak: #F87171;
-    --color-zone-average: #FBBF24;
-    --color-zone-fit: #34D399;
+    --color-zone-weak: #F04A00;
+    --color-zone-average: #2CB6C0;
+    --color-zone-fit: #9BC9D8;
   }
 }
 

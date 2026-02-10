@@ -23,7 +23,6 @@ import {
   TrendingDown, 
   Building, 
   HelpCircle,
-  Sun,
   Users,
   AlertCircle,
   Landmark,
@@ -31,6 +30,7 @@ import {
   Globe,
   Coins
 } from 'lucide-react';
+import ThemeToggle from './ThemeToggle';
 
 // --- Types & Interfaces ---
 
@@ -155,6 +155,8 @@ const REFERENCE_ZONES = [
   { label: "COVID-19", start: "2020-02-01", end: "2020-04-01", color: "#9ca3af", opacity: 0.3, labelPos: 'insideTop' },
   { label: "ChatGPT Launch", start: "2022-11-01", end: "2023-01-01", color: "#9ca3af", opacity: 0.3, labelPos: 'insideBottom' },
 ];
+const REMOTE_DATA_URL = import.meta.env.VITE_ECON_DATA_URL?.trim();
+const LOCAL_DATA_URL = '/data/economic_indicators.csv';
 
 const METRICS: MetricConfig[] = [
   // --- LABOR MARKET ---
@@ -398,6 +400,13 @@ const calculateRSquared = (data: DataPoint[], key1: string, key2: string): strin
   return (r * r).toFixed(2);
 };
 
+// Deterministic pseudo-noise from a numeric seed. Keeps mocked series stable across reloads.
+const deterministicNoise = (seed: number, amplitude = 1): number => {
+  const x = Math.sin(seed * 12.9898) * 43758.5453;
+  const normalized = x - Math.floor(x); // [0, 1)
+  return (normalized * 2 - 1) * amplitude; // [-amplitude, amplitude]
+};
+
 // --- Parsing Helper ---
 const parseLine = (line: string) => {
   const result = [];
@@ -612,76 +621,118 @@ export default function App() {
   const [dateRange, setDateRange] = useState<[number, number]>([0, 0]);
 
   useEffect(() => {
-    const lines = RAW_CSV_DATA.split('\n');
-    if (lines.length < 2) return; // Need headers and at least one data row
-    
-    const headers = parseLine(lines[0]);
-    
-    const parsedData: DataPoint[] = [];
+    let cancelled = false;
 
-    for (let i = 1; i < lines.length; i++) {
-      if (!lines[i].trim()) continue;
-      
-      const values = parseLine(lines[i]);
-      // Skip row if column count doesn't match header count
-      if (values.length !== headers.length) {
-         console.warn(`Skipping row ${i+1}: Column count mismatch (${values.length} vs ${headers.length})`);
-         continue;
+    const getCsvData = async (): Promise<string> => {
+      if (REMOTE_DATA_URL) {
+        try {
+          const response = await fetch(REMOTE_DATA_URL, { cache: 'no-store' });
+          if (response.ok) return await response.text();
+          console.warn(`Failed to fetch VITE_ECON_DATA_URL (status ${response.status}). Falling back.`);
+        } catch (error) {
+          console.warn('Failed to fetch VITE_ECON_DATA_URL. Falling back.', error);
+        }
       }
 
-      const entry: any = {};
+      try {
+        const response = await fetch(LOCAL_DATA_URL, { cache: 'no-store' });
+        if (response.ok) return await response.text();
+      } catch (error) {
+        console.warn('Failed to fetch local CSV fallback. Falling back to embedded CSV.', error);
+      }
+
+      return RAW_CSV_DATA;
+    };
+
+    const loadData = async () => {
+      const csvData = await getCsvData();
+      if (cancelled) return;
+
+      const lines = csvData.split('\n');
+      if (lines.length < 2) return; // Need headers and at least one data row
       
-      headers.forEach((header, index) => {
-        let value = values[index]?.replace(/^,|,$/g, '') || ''; 
+      const headers = parseLine(lines[0]);
+      
+      const parsedData: DataPoint[] = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
         
-        if (value) {
-           value = value.replace(/"/g, '').replace(/,/g, ''); 
+        const values = parseLine(lines[i]);
+        // Skip row if column count doesn't match header count
+        if (values.length !== headers.length) {
+          console.warn(`Skipping row ${i+1}: Column count mismatch (${values.length} vs ${headers.length})`);
+          continue;
+        }
+
+        const entry: any = {};
+        
+        headers.forEach((header, index) => {
+          let value = values[index]?.replace(/^,|,$/g, '') || ''; 
+          
+          if (value) {
+            value = value.replace(/"/g, '').replace(/,/g, ''); 
+          }
+          
+          if (header === 'Observed Date' && value) {
+            entry['date'] = value;
+            entry['timestamp'] = new Date(value).getTime(); // Add numeric timestamp
+            entry['year'] = new Date(value).getFullYear();
+          } else if (!isNaN(Number(value)) && value !== '') {
+            entry[header] = Number(value);
+          } else {
+            entry[header] = undefined; // Use undefined for missing values to ensure Recharts skips them
+          }
+        });
+
+        // --- DETERMINISTIC PROXY SERIES for Missing Metrics ---
+        const month = entry['timestamp'] !== undefined ? new Date(Number(entry['timestamp'])).getMonth() : 0;
+        const seed = entry['timestamp'] !== undefined ? Number(entry['timestamp']) : i;
+
+        // 10-Year Treasury: Correlated with 30y mortgage but lower (stable spread with small variation)
+        if (entry['30 year mortgage'] !== undefined) {
+          const spread = 1.5 + deterministicNoise(seed, 0.12);
+          entry['10 year treasury'] = Math.max(0.5, Number(entry['30 year mortgage']) - spread);
         }
         
-        if (header === 'Observed Date' && value) {
-          entry['date'] = value;
-          entry['timestamp'] = new Date(value).getTime(); // Add numeric timestamp
-          entry['year'] = new Date(value).getFullYear();
-        } else if (!isNaN(Number(value)) && value !== '') {
-          entry[header] = Number(value);
-        } else {
-          entry[header] = undefined; // Use undefined for missing values to ensure Recharts skips them
+        // Months Supply: Low in 2020-2021, rising afterward with deterministic seasonality
+        if (entry['year'] !== undefined) {
+          const seasonal = Math.sin((month / 12) * Math.PI * 2) * 0.25;
+          const wobble = deterministicNoise(seed + 17, 0.15);
+
+          if (entry['year'] === 2020) entry['Months Supply'] = 3.5 + seasonal + wobble;
+          else if (entry['year'] === 2021) entry['Months Supply'] = 2.0 + seasonal + wobble;
+          else if (entry['year'] >= 2022) entry['Months Supply'] = 3.0 + (entry['year'] - 2022) * 0.5 + seasonal + wobble;
         }
-      });
+        
+        // New Home Starts: deterministic seasonal proxy (~1.2M - 1.8M)
+        const housingSeasonal = Math.sin((month / 12) * Math.PI * 2) * 140;
+        const housingWobble = deterministicNoise(seed + 101, 120);
+        entry['New Home Starts'] = Math.max(900, 1400 + housingSeasonal + housingWobble);
 
-      // --- MOCK DATA GENERATION for Missing Metrics ---
-      // 10-Year Treasury: Correlated with 30y mortgage but lower
-      if (entry['30 year mortgage'] !== undefined) {
-        entry['10 year treasury'] = Math.max(0.5, Number(entry['30 year mortgage']) - 1.5 + (Math.random() * 0.2)); 
+        if (entry['Stock Market (b)'] !== undefined && entry['GDP'] !== undefined) {
+          entry.buffettValue = (entry['Stock Market (b)'] / entry['GDP']) * 100;
+        }
+
+        if (entry.date) parsedData.push(entry);
       }
       
-      // Months Supply: Low in 2020-2021, rising in 2022
-      if (entry['year'] !== undefined) {
-        if (entry['year'] === 2020) entry['Months Supply'] = 3.5 + Math.random();
-        else if (entry['year'] === 2021) entry['Months Supply'] = 2.0 + Math.random();
-        else if (entry['year'] >= 2022) entry['Months Supply'] = 3.0 + (entry['year'] - 2022) * 0.5 + Math.random();
-      }
+      // Sort data chronologically just in case
+      parsedData.sort((a, b) => a.timestamp - b.timestamp);
+      if (cancelled) return;
       
-      // New Home Starts: Seasonally adjusted annual rate (mocked ~1.2M - 1.8M)
-      entry['New Home Starts'] = 1200 + Math.random() * 600;
-
-      if (entry['Stock Market (b)'] !== undefined && entry['GDP'] !== undefined) {
-        entry.buffettValue = (entry['Stock Market (b)'] / entry['GDP']) * 100;
+      setData(parsedData);
+      
+      // IMPORTANT: Only set date range if data is available
+      if (parsedData.length > 0) {
+        setDateRange([0, parsedData.length - 1]);
       }
+    };
 
-      if (entry.date) parsedData.push(entry);
-    }
-    
-    // Sort data chronologically just in case
-    parsedData.sort((a, b) => a.timestamp - b.timestamp);
-    
-    setData(parsedData);
-    
-    // IMPORTANT: Only set date range if data is available
-    if (parsedData.length > 0) {
-      setDateRange([0, parsedData.length - 1]);
-    }
-
+    loadData();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const activeMetrics = useMemo(() => 
@@ -790,7 +841,7 @@ export default function App() {
   if (data.length === 0) {
     return (
       <div className="min-h-screen bg-[#fafafa] flex items-center justify-center text-slate-500">
-        Loading data... Please ensure RAW_CSV_DATA is properly formatted.
+        Loading data... Please verify your CSV source is reachable and formatted correctly.
       </div>
     );
   }
@@ -817,11 +868,8 @@ export default function App() {
           </div>
         </div>
 
-        {/* Removed the tabs, keeping only the theme toggle placeholder */}
         <div className="flex items-center gap-4">
-          <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors">
-            <Sun className="w-5 h-5" />
-          </button>
+          <ThemeToggle />
         </div>
       </header>
       
@@ -1095,7 +1143,7 @@ export default function App() {
               const prevValue = prevPoint ? Number(prevPoint[m.id]) : 0;
               
               // Calculate Change
-              let changeValue = 0;
+              let changeValue: number | null = 0;
               let isPercentagePoint = false;
 
               if (m.isPercentage) {
@@ -1104,10 +1152,18 @@ export default function App() {
                 isPercentagePoint = true;
               } else {
                 // Percent Change (e.g. 100 -> 110 is +10%)
-                changeValue = ((lastValue - prevValue) / prevValue) * 100;
+                if (prevValue > 0) {
+                  changeValue = ((lastValue - prevValue) / prevValue) * 100;
+                } else {
+                  changeValue = null;
+                }
               }
-              
-              const isPositive = changeValue >= 0;
+
+              if (changeValue !== null && !Number.isFinite(changeValue)) {
+                changeValue = null;
+              }
+
+              const isPositive = changeValue !== null && changeValue >= 0;
 
               return (
                 <Card key={m.id} className="group hover:bg-slate-50 transition-all duration-300">
@@ -1122,9 +1178,13 @@ export default function App() {
                        <span className="text-2xl font-mono text-slate-900 font-semibold">
                          {m.format(lastValue)}
                        </span>
-                       <span className={`text-xs font-medium flex items-center ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
-                         {isPositive ? '+' : ''}{changeValue.toFixed(1)}{isPercentagePoint ? 'pp' : '%'}
-                       </span>
+                       {changeValue === null ? (
+                         <span className="text-xs font-medium text-slate-400">N/A</span>
+                       ) : (
+                         <span className={`text-xs font-medium flex items-center ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
+                           {isPositive ? '+' : ''}{changeValue.toFixed(1)}{isPercentagePoint ? 'pp' : '%'}
+                         </span>
+                       )}
                      </div>
                      <div className="text-[10px] text-slate-400 mt-1">
                        Last observed: {lastPoint?.date}
