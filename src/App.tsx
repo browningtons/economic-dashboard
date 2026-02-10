@@ -739,6 +739,7 @@ export default function App() {
   const [viewMode, setViewMode] = useState<'raw' | 'relative'>('raw');
   // Set default selected metrics to S&P 500 and Job Openings
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>(['S&P 500', 'Job Openings']);
+  const [showMetricSelector, setShowMetricSelector] = useState(false);
   const [hoveredMetric, setHoveredMetric] = useState<string | null>(null);
   
   // Date Range State (Indices) - Initialized to a safe empty array state
@@ -1023,7 +1024,8 @@ export default function App() {
 
   // --- RENDERING ONLY THE DASHBOARD VIEW ---
   return (
-    <div className="min-h-screen bg-primary text-main font-sans p-4 md:p-6 lg:p-8">
+    <div className="min-h-screen bg-primary text-main font-sans p-4 md:p-8 lg:p-10">
+      <div className="mx-auto max-w-[1600px]">
       
       {/* Header */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 bg-secondary p-6 rounded-2xl shadow-sm border border-theme">
@@ -1035,8 +1037,8 @@ export default function App() {
             </svg>
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-main tracking-tight">Economic Indicators</h1>
-            <p className="text-xs text-muted mt-1 font-medium tracking-wide flex items-center gap-2">
+            <h1 className="text-3xl md:text-4xl font-bold text-main tracking-tight">Economic Indicators</h1>
+            <p className="text-sm text-muted mt-1 font-medium tracking-wide flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Historical Dashboard & Recession Signals
             </p>
@@ -1064,14 +1066,14 @@ export default function App() {
       </header>
       
       {/* STANDARD DASHBOARD VIEW (Always visible now) */}
-      <div className="grid grid-cols-1 lg:grid-cols-[35fr_65fr] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[32fr_68fr] gap-6">
         
         {/* Sidebar Settings */}
         <div className="space-y-6">
           
           <Card className="h-full">
             <div className="mb-8">
-              <h3 className="text-xs font-bold text-muted uppercase tracking-wider mb-4 px-1">Chart Mode</h3>
+              <h3 className="text-sm font-bold text-muted uppercase tracking-wider mb-4 px-1">Chart Mode</h3>
               <div className="flex text-xs font-medium border border-theme rounded p-1">
                 <button 
                   onClick={() => setViewMode('raw')}
@@ -1090,13 +1092,21 @@ export default function App() {
 
             <div>
               <div className="flex justify-between items-center mb-4 px-1">
-                <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Metrics</h3>
-                <span className="text-[10px] text-muted">
+                <h3 className="text-sm font-bold text-muted uppercase tracking-wider">Metrics</h3>
+                <span className="text-xs text-muted">
                   {selectedMetrics.length} Selected
                 </span>
               </div>
-              
-              <div className="space-y-6 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
+
+              <button
+                onClick={() => setShowMetricSelector((prev) => !prev)}
+                className="w-full text-left text-sm font-medium bg-muted-surface border border-theme rounded-lg px-3 py-2 hover:brightness-95 transition"
+              >
+                {showMetricSelector ? 'Hide Metric Selector' : 'Show Metric Selector'}
+              </button>
+
+              {showMetricSelector && (
+              <div className="mt-4 space-y-6 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
                 {Object.entries(metricsByCategory).map(([category, catMetrics]) => (
                   <div key={category}>
                     <h4 className="text-[10px] font-bold text-muted uppercase tracking-wider mb-2 pl-1 border-b border-subtle pb-1">{category}</h4>
@@ -1153,6 +1163,7 @@ export default function App() {
                   </div>
                 ))}
               </div>
+              )}
             </div>
           </Card>
         </div>
@@ -1193,7 +1204,7 @@ export default function App() {
                 <h2 className="text-lg font-bold text-main flex items-center gap-2">
                   {viewMode === 'relative' ? 'Relative Performance Index' : 'Economic Trends'}
                 </h2>
-                <p className="text-sm text-muted mt-1">
+                <p className="text-base text-muted mt-1">
                    {viewMode === 'relative' 
                      ? 'Comparing percentage growth relative to start date (Base = 100)' 
                      : 'Historical absolute values over time'}
@@ -1320,11 +1331,18 @@ export default function App() {
                {activeMetrics.map(m => (
                  <div key={m.id} className="flex items-center gap-2 px-3 py-1.5 bg-muted-surface rounded-full border border-theme">
                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: m.color }} />
-                   <span className="text-sm font-medium text-main">
+                   <span className="text-base font-medium text-main">
                      {m.label}{m.isProxy ? ' (Proxy)' : ''}
                    </span>
                  </div>
                ))}
+            </div>
+            <div className="mt-5 p-4 bg-muted-surface border border-theme rounded-lg">
+              <p className="text-sm md:text-base text-main leading-relaxed">
+                This index does not predict recessions.
+                <br />
+                It highlights periods where market optimism and labor demand stop moving together, often a sign of structural transition.
+              </p>
             </div>
           </Card>
           )}
@@ -1467,6 +1485,7 @@ export default function App() {
           </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
