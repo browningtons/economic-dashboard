@@ -13,6 +13,14 @@
     --color-brand-primary: #F04A00;
     --color-brand-secondary: #0F3D57;
     --color-brand-accent: #2CB6C0;
+    --color-border: #C8D6DE;
+    --color-border-subtle: #E3ECF1;
+    --color-surface-muted: #EAF1F5;
+    --color-text-inverse: #EAF1F5;
+    --color-text-inverse-muted: #C9DDE6;
+    --color-chart-grid: #d6e2e9;
+    --color-chart-axis: #486577;
+    --color-chart-baseline: #9cb4c1;
 
     /* --- DATA ZONES --- */
     --color-zone-weak: #F04A00;
@@ -29,6 +37,14 @@
     --color-brand-primary: #F04A00;
     --color-brand-secondary: #2CB6C0;
     --color-brand-accent: #0F3D57;
+    --color-border: #29506A;
+    --color-border-subtle: #365f7a;
+    --color-surface-muted: #173147;
+    --color-text-inverse: #F5FAFD;
+    --color-text-inverse-muted: #C9DDE6;
+    --color-chart-grid: #2a4760;
+    --color-chart-axis: #8eb1c6;
+    --color-chart-baseline: #4f7086;
 
     --color-zone-weak: #F04A00;
     --color-zone-average: #2CB6C0;
@@ -43,13 +59,26 @@
 @layer utilities {
   .bg-primary    { background-color: var(--color-bg-primary); }
   .bg-secondary  { background-color: var(--color-bg-secondary); }
+  .bg-main       { background-color: var(--color-text-main); }
+  .bg-muted-surface { background-color: var(--color-surface-muted); }
 
   .text-main     { color: var(--color-text-main); }
   .text-muted    { color: var(--color-text-muted); }
+  .text-inverse  { color: var(--color-text-inverse); }
+  .text-inverse-muted { color: var(--color-text-inverse-muted); }
+
+  .border-theme  { border-color: var(--color-border); }
+  .border-subtle { border-color: var(--color-border-subtle); }
 
   .brand-primary   { background-color: var(--color-brand-primary); }
   .brand-secondary { background-color: var(--color-brand-secondary); }
   .brand-accent    { background-color: var(--color-brand-accent); }
+
+  .badge-proxy {
+    background-color: color-mix(in oklab, var(--color-brand-primary) 18%, transparent);
+    border: 1px solid color-mix(in oklab, var(--color-brand-primary) 35%, transparent);
+    color: var(--color-text-main);
+  }
 
   .zone-weak    { background-color: var(--color-zone-weak); }
   .zone-average { background-color: var(--color-zone-average); }

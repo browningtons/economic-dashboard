@@ -7,7 +7,6 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer, 
-  TooltipProps, 
   Legend, 
   ReferenceArea,
 } from 'recharts';
@@ -38,7 +37,7 @@ interface DataPoint {
   date: string;
   year: number;
   timestamp: number;
-  [key: string]: string | number;
+  [key: string]: string | number | undefined;
 }
 
 interface MetricConfig {
@@ -51,7 +50,36 @@ interface MetricConfig {
   isMacro: boolean; // TRUE for large numbers (S&P, GDP, Debt), FALSE for small (Rates, Counts)
   format: (val: number) => string;
   isPercentage: boolean;
+  isProxy?: boolean;
   category: 'Labor Market' | 'Monetary Policy' | 'Housing' | 'Macro & Markets';
+}
+
+type ReferenceLabelPosition = 'insideTopLeft' | 'insideTop' | 'insideBottom';
+
+interface ReferenceZone {
+  label: string;
+  start: string;
+  end: string;
+  color: string;
+  opacity: number;
+  labelPos: ReferenceLabelPosition;
+}
+
+type CsvEntry = Partial<DataPoint> & Record<string, string | number | undefined>;
+
+interface TooltipEntry {
+  name?: string;
+  value?: number | string;
+  color?: string;
+  dataKey?: string | number;
+  payload?: Record<string, string | number | undefined>;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: TooltipEntry[];
+  label?: number | string;
+  isRelative: boolean;
 }
 
 // --- Data ---
@@ -149,7 +177,7 @@ const PALETTE = {
 };
 
 // --- REFERENCE ZONES ---
-const REFERENCE_ZONES = [
+const REFERENCE_ZONES: ReferenceZone[] = [
   { label: "Dot Com", start: "2001-03-01", end: "2001-11-01", color: "#9ca3af", opacity: 0.3, labelPos: 'insideTopLeft' },
   { label: "Great Recession", start: "2007-12-01", end: "2009-06-01", color: "#9ca3af", opacity: 0.3, labelPos: 'insideTopLeft' },
   { label: "COVID-19", start: "2020-02-01", end: "2020-04-01", color: "#9ca3af", opacity: 0.3, labelPos: 'insideTop' },
@@ -157,6 +185,23 @@ const REFERENCE_ZONES = [
 ];
 const REMOTE_DATA_URL = import.meta.env.VITE_ECON_DATA_URL?.trim();
 const LOCAL_DATA_URL = '/data/economic_indicators.csv';
+const REQUIRED_COLUMNS = [
+  'Observed Date',
+  'Unemployment Rate',
+  'Avg Weeks Unemployeed',
+  'Unemployeed Count',
+  'Job Openings',
+  'Fed Rate',
+  '15 year mortgage',
+  '30 year mortgage',
+  'S&P 500',
+  'Labor Participation Rate',
+  'Housing Price Index',
+  'CPI',
+  'GDP',
+  'Stock Market (b)',
+  'National Debt (b)',
+];
 
 const METRICS: MetricConfig[] = [
   // --- LABOR MARKET ---
@@ -263,13 +308,14 @@ const METRICS: MetricConfig[] = [
     category: 'Monetary Policy'
   },
   { 
-    id: '10 year treasury', // Mocked ID
+    id: '10 year treasury',
     label: '10Y Treasury', 
     icon: Landmark, 
     color: '#EAB308', 
-    desc: 'Yield on 10-year US Treasury Note.',
+    desc: 'Deterministic proxy derived from 30Y mortgage data.',
     isMacro: false, // Percentage
     isPercentage: true,
+    isProxy: true,
     format: (v) => `${v}%`,
     category: 'Monetary Policy'
   },
@@ -287,24 +333,26 @@ const METRICS: MetricConfig[] = [
     category: 'Housing'
   },
   { 
-    id: 'Months Supply', // Mocked ID
+    id: 'Months Supply',
     label: 'Months Supply', 
     icon: Home, 
     color: '#0d9488', 
-    desc: 'Ratio of new houses for sale to sold.',
+    desc: 'Deterministic proxy based on year + seasonal pattern.',
     isMacro: false, // Small count (single digits)
     isPercentage: false,
+    isProxy: true,
     format: (v) => `${v} mo`,
     category: 'Housing'
   },
   { 
-    id: 'New Home Starts', // Mocked ID
+    id: 'New Home Starts',
     label: 'New Home Starts', 
     icon: Hammer, 
     color: '#7c3aed', 
-    desc: 'New privately owned housing units started.',
+    desc: 'Deterministic proxy with seasonal variation.',
     isMacro: true, // Large count (Thousands)
     isPercentage: false,
+    isProxy: true,
     format: (v) => `${v}K`,
     category: 'Housing'
   },
@@ -408,8 +456,8 @@ const deterministicNoise = (seed: number, amplitude = 1): number => {
 };
 
 // --- Parsing Helper ---
-const parseLine = (line: string) => {
-  const result = [];
+const parseLine = (line: string): string[] => {
+  const result: string[] = [];
   let current = '';
   let inQuotes = false;
   
@@ -431,37 +479,37 @@ const parseLine = (line: string) => {
 // --- Components ---
 
 const Card: React.FC<{ children: React.ReactNode; className?: string; style?: React.CSSProperties }> = ({ children, className = "", style }) => (
-  <div className={`bg-white border border-slate-200 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow duration-300 ${className}`} style={style}>
+  <div className={`bg-secondary border border-theme rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow duration-300 ${className}`} style={style}>
     {children}
   </div>
 );
 
-const CustomTooltip: React.FC<TooltipProps<number, string> & { isRelative: boolean }> = ({ active, payload, label, isRelative }) => {
-  if (active && payload && payload.length) {
+const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, isRelative }) => {
+  if (active && payload && payload.length && label !== undefined) {
     
     // Standard Dashboard Tooltip
     return (
-      <div className="bg-white border border-slate-200 p-3 rounded shadow-xl z-50">
-        <p className="text-slate-900 text-xs mb-2 font-mono border-b border-slate-100 pb-1">
+      <div className="bg-secondary border border-theme p-3 rounded shadow-xl z-50">
+        <p className="text-main text-xs mb-2 font-mono border-b border-subtle pb-1">
           {new Date(label).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
         </p>
         <div className="space-y-1">
-          {payload.filter(p => p.name !== 'Baseline').map((entry, index) => {
-             const originalValue = entry.payload[`original_${entry.dataKey}`];
+          {payload.filter((p) => p.name !== 'Baseline').map((entry, index) => {
+             const originalValue = entry.payload?.[`original_${entry.dataKey}`];
              return (
               <div key={index} className="flex items-center justify-between gap-4 text-sm">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full border border-slate-100" style={{ backgroundColor: entry.color }} />
-                  <span className="text-slate-600 font-medium">{entry.name}:</span>
+                  <div className="w-2 h-2 rounded-full border border-subtle" style={{ backgroundColor: entry.color }} />
+                  <span className="text-muted font-medium">{entry.name}:</span>
                 </div>
                 <div className="flex flex-col items-end">
-                  <span className="text-slate-900 font-mono font-semibold">
+                  <span className="text-main font-mono font-semibold">
                     {isRelative 
                       ? `${Number(entry.value).toFixed(1)}%` 
-                      : (entry.value >= 1000 ? entry.value.toLocaleString() : entry.value)}
+                      : (Number(entry.value) >= 1000 ? Number(entry.value).toLocaleString() : entry.value)}
                   </span>
                   {isRelative && originalValue && (
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-muted">
                       ({Number(originalValue).toLocaleString()})
                     </span>
                   )}
@@ -546,12 +594,12 @@ const DateRangeSlider: React.FC<{
     <div className="pt-6 pb-2 px-2">
       <div 
         ref={sliderRef}
-        className="relative h-2 bg-slate-100 rounded-full cursor-pointer group"
+        className="relative h-2 bg-muted-surface rounded-full cursor-pointer group"
         onClick={handleTrackClick}
       >
         {/* Active Range Track */}
         <div 
-          className="absolute h-full bg-slate-300 rounded-full group-hover:bg-slate-400 transition-colors"
+          className="absolute h-full brand-secondary rounded-full opacity-50 group-hover:opacity-70 transition-colors"
           style={{ 
             left: `${getPercentage(value[0])}%`, 
             right: `${100 - getPercentage(value[1])}%` 
@@ -560,22 +608,22 @@ const DateRangeSlider: React.FC<{
 
         {/* Min Handle */}
         <div 
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-white border-2 border-slate-400 rounded-full shadow cursor-grab active:cursor-grabbing active:scale-110 active:border-blue-500 transition-all z-10"
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-secondary border-2 border-theme rounded-full shadow cursor-grab active:cursor-grabbing active:scale-110 active:border-[color:var(--color-brand-primary)] transition-all z-10"
           style={{ left: `${getPercentage(value[0])}%` }}
           onMouseDown={handleMouseDown('min')}
         >
-          <div className="absolute -top-7 left-1/2 -translate-x-1/2 text-[10px] font-bold text-slate-500 bg-white/90 px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
+          <div className="absolute -top-7 left-1/2 -translate-x-1/2 text-[10px] font-bold text-muted bg-secondary opacity-90 px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
             {new Date(data[value[0]].date).toLocaleDateString(undefined, { month: 'short', year: '2-digit' })}
           </div>
         </div>
 
         {/* Max Handle */}
         <div 
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-white border-2 border-slate-400 rounded-full shadow cursor-grab active:cursor-grabbing active:scale-110 active:border-blue-500 transition-all z-10"
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-secondary border-2 border-theme rounded-full shadow cursor-grab active:cursor-grabbing active:scale-110 active:border-[color:var(--color-brand-primary)] transition-all z-10"
           style={{ left: `${getPercentage(value[1])}%` }}
           onMouseDown={handleMouseDown('max')}
         >
-          <div className="absolute -top-7 left-1/2 -translate-x-1/2 text-[10px] font-bold text-slate-500 bg-white/90 px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
+          <div className="absolute -top-7 left-1/2 -translate-x-1/2 text-[10px] font-bold text-muted bg-secondary opacity-90 px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
             {new Date(data[value[1]].date).toLocaleDateString(undefined, { month: 'short', year: '2-digit' })}
           </div>
         </div>
@@ -585,13 +633,18 @@ const DateRangeSlider: React.FC<{
 };
 
 // Helper for Reference Area Label
-const RenderLabel = (props: any) => {
-  const { viewBox, label, labelPos } = props;
+interface RenderLabelProps {
+  viewBox: { x: number; y: number; width: number; height: number };
+  label: string;
+  labelPos: ReferenceLabelPosition;
+}
+
+const RenderLabel = ({ viewBox, label, labelPos }: RenderLabelProps) => {
   const { x, y, width, height } = viewBox;
   
   let textX = x + 10;
   let textY = y + 20;
-  let textAnchor = "start";
+  let textAnchor: 'start' | 'middle' | 'end' = 'start';
 
   if (labelPos === 'insideTop') {
     textX = x + width / 2;
@@ -612,6 +665,8 @@ const RenderLabel = (props: any) => {
 
 export default function App() {
   const [data, setData] = useState<DataPoint[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'raw' | 'relative'>('raw');
   // Set default selected metrics to S&P 500 and Job Openings
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>(['S&P 500', 'Job Openings']);
@@ -645,87 +700,127 @@ export default function App() {
     };
 
     const loadData = async () => {
-      const csvData = await getCsvData();
-      if (cancelled) return;
+      setDataError(null);
+      setIsLoading(true);
 
-      const lines = csvData.split('\n');
-      if (lines.length < 2) return; // Need headers and at least one data row
-      
-      const headers = parseLine(lines[0]);
-      
-      const parsedData: DataPoint[] = [];
+      try {
+        const csvData = await getCsvData();
+        if (cancelled) return;
 
-      for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-        
-        const values = parseLine(lines[i]);
-        // Skip row if column count doesn't match header count
-        if (values.length !== headers.length) {
-          console.warn(`Skipping row ${i+1}: Column count mismatch (${values.length} vs ${headers.length})`);
-          continue;
+        const lines = csvData.split('\n');
+        if (lines.length < 2) {
+          setDataError('CSV appears empty. Expected header + at least one row.');
+          return;
         }
-
-        const entry: any = {};
         
-        headers.forEach((header, index) => {
-          let value = values[index]?.replace(/^,|,$/g, '') || ''; 
+        const headers = parseLine(lines[0]);
+        const missingColumns = REQUIRED_COLUMNS.filter((column) => !headers.includes(column));
+        if (missingColumns.length > 0) {
+          setDataError(`Missing required columns: ${missingColumns.join(', ')}`);
+          return;
+        }
+        
+        const parsedData: DataPoint[] = [];
+        let badRowCount = 0;
+
+        for (let i = 1; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
           
-          if (value) {
-            value = value.replace(/"/g, '').replace(/,/g, ''); 
+          const values = parseLine(lines[i]);
+          if (values.length !== headers.length) {
+            badRowCount++;
+            continue;
+          }
+
+          const entry: CsvEntry = {};
+          
+          headers.forEach((header, index) => {
+            let value = values[index]?.replace(/^,|,$/g, '') || ''; 
+            
+            if (value) {
+              value = value.replace(/"/g, '').replace(/,/g, ''); 
+            }
+            
+            if (header === 'Observed Date' && value) {
+              const parsedDate = new Date(value);
+              if (!Number.isNaN(parsedDate.getTime())) {
+                entry.date = value;
+                entry.timestamp = parsedDate.getTime();
+                entry.year = parsedDate.getFullYear();
+              }
+            } else if (!isNaN(Number(value)) && value !== '') {
+              entry[header] = Number(value);
+            } else {
+              entry[header] = undefined;
+            }
+          });
+
+          if (!entry.date || entry.timestamp === undefined || entry.year === undefined) {
+            badRowCount++;
+            continue;
+          }
+
+          const missingRequiredValue = REQUIRED_COLUMNS.some((column) => {
+            if (column === 'Observed Date') return false;
+            return entry[column] === undefined;
+          });
+          if (missingRequiredValue) {
+            badRowCount++;
+            continue;
+          }
+
+          // --- DETERMINISTIC PROXY SERIES for Missing Metrics ---
+          const month = new Date(Number(entry.timestamp)).getMonth();
+          const seed = Number(entry.timestamp);
+
+          // 10-Year Treasury: Correlated with 30y mortgage but lower (stable spread with small variation)
+          if (entry['30 year mortgage'] !== undefined) {
+            const spread = 1.5 + deterministicNoise(seed, 0.12);
+            entry['10 year treasury'] = Math.max(0.5, Number(entry['30 year mortgage']) - spread);
           }
           
-          if (header === 'Observed Date' && value) {
-            entry['date'] = value;
-            entry['timestamp'] = new Date(value).getTime(); // Add numeric timestamp
-            entry['year'] = new Date(value).getFullYear();
-          } else if (!isNaN(Number(value)) && value !== '') {
-            entry[header] = Number(value);
-          } else {
-            entry[header] = undefined; // Use undefined for missing values to ensure Recharts skips them
+          // Months Supply: Low in 2020-2021, rising afterward with deterministic seasonality
+          if (entry.year !== undefined) {
+            const seasonal = Math.sin((month / 12) * Math.PI * 2) * 0.25;
+            const wobble = deterministicNoise(seed + 17, 0.15);
+
+            if (entry.year === 2020) entry['Months Supply'] = 3.5 + seasonal + wobble;
+            else if (entry.year === 2021) entry['Months Supply'] = 2.0 + seasonal + wobble;
+            else if (entry.year >= 2022) entry['Months Supply'] = 3.0 + (entry.year - 2022) * 0.5 + seasonal + wobble;
           }
-        });
+          
+          // New Home Starts: deterministic seasonal proxy (~1.2M - 1.8M)
+          const housingSeasonal = Math.sin((month / 12) * Math.PI * 2) * 140;
+          const housingWobble = deterministicNoise(seed + 101, 120);
+          entry['New Home Starts'] = Math.max(900, 1400 + housingSeasonal + housingWobble);
 
-        // --- DETERMINISTIC PROXY SERIES for Missing Metrics ---
-        const month = entry['timestamp'] !== undefined ? new Date(Number(entry['timestamp'])).getMonth() : 0;
-        const seed = entry['timestamp'] !== undefined ? Number(entry['timestamp']) : i;
+          if (entry['Stock Market (b)'] !== undefined && entry['GDP'] !== undefined) {
+            entry.buffettValue = (Number(entry['Stock Market (b)']) / Number(entry['GDP'])) * 100;
+          }
 
-        // 10-Year Treasury: Correlated with 30y mortgage but lower (stable spread with small variation)
-        if (entry['30 year mortgage'] !== undefined) {
-          const spread = 1.5 + deterministicNoise(seed, 0.12);
-          entry['10 year treasury'] = Math.max(0.5, Number(entry['30 year mortgage']) - spread);
+          parsedData.push(entry as DataPoint);
         }
         
-        // Months Supply: Low in 2020-2021, rising afterward with deterministic seasonality
-        if (entry['year'] !== undefined) {
-          const seasonal = Math.sin((month / 12) * Math.PI * 2) * 0.25;
-          const wobble = deterministicNoise(seed + 17, 0.15);
+        if (badRowCount > 0) {
+          setDataError(`CSV validation failed: ${badRowCount} row(s) are malformed or missing required values.`);
+          return;
+        }
 
-          if (entry['year'] === 2020) entry['Months Supply'] = 3.5 + seasonal + wobble;
-          else if (entry['year'] === 2021) entry['Months Supply'] = 2.0 + seasonal + wobble;
-          else if (entry['year'] >= 2022) entry['Months Supply'] = 3.0 + (entry['year'] - 2022) * 0.5 + seasonal + wobble;
+        // Sort data chronologically just in case
+        parsedData.sort((a, b) => a.timestamp - b.timestamp);
+        if (cancelled) return;
+        
+        if (parsedData.length === 0) {
+          setDataError('CSV validation failed: no valid rows were found.');
+          return;
         }
         
-        // New Home Starts: deterministic seasonal proxy (~1.2M - 1.8M)
-        const housingSeasonal = Math.sin((month / 12) * Math.PI * 2) * 140;
-        const housingWobble = deterministicNoise(seed + 101, 120);
-        entry['New Home Starts'] = Math.max(900, 1400 + housingSeasonal + housingWobble);
-
-        if (entry['Stock Market (b)'] !== undefined && entry['GDP'] !== undefined) {
-          entry.buffettValue = (entry['Stock Market (b)'] / entry['GDP']) * 100;
-        }
-
-        if (entry.date) parsedData.push(entry);
-      }
-      
-      // Sort data chronologically just in case
-      parsedData.sort((a, b) => a.timestamp - b.timestamp);
-      if (cancelled) return;
-      
-      setData(parsedData);
-      
-      // IMPORTANT: Only set date range if data is available
-      if (parsedData.length > 0) {
+        setData(parsedData);
         setDateRange([0, parsedData.length - 1]);
+      } catch (error) {
+        setDataError(`Data load failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      } finally {
+        if (!cancelled) setIsLoading(false);
       }
     };
 
@@ -798,7 +893,7 @@ export default function App() {
     });
 
     return filteredData.map(point => {
-      const newPoint: any = { ...point };
+      const newPoint: DataPoint = { ...point };
       activeMetrics.forEach(m => {
         const val = Number(point[m.id]);
         const base = baseValues[m.id];
@@ -838,20 +933,31 @@ export default function App() {
     return groups;
   }, []);
 
-  if (data.length === 0) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center text-slate-500">
+      <div className="min-h-screen bg-primary flex items-center justify-center text-muted">
         Loading data... Please verify your CSV source is reachable and formatted correctly.
+      </div>
+    );
+  }
+
+  if (dataError) {
+    return (
+      <div className="min-h-screen bg-primary flex items-center justify-center p-6">
+        <div className="max-w-2xl w-full bg-secondary border border-theme rounded-xl p-6">
+          <h2 className="text-lg font-bold text-main mb-2">Data Validation Error</h2>
+          <p className="text-sm text-muted">{dataError}</p>
+        </div>
       </div>
     );
   }
 
   // --- RENDERING ONLY THE DASHBOARD VIEW ---
   return (
-    <div className="min-h-screen bg-[#fafafa] text-slate-900 font-sans p-4 md:p-6 lg:p-8">
+    <div className="min-h-screen bg-primary text-main font-sans p-4 md:p-6 lg:p-8">
       
       {/* Header */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 bg-secondary p-6 rounded-2xl shadow-sm border border-theme">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
             {/* Custom Blue Pulse Icon */}
@@ -860,10 +966,10 @@ export default function App() {
             </svg>
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Economic Indicators</h1>
-            <p className="text-xs text-slate-500 mt-1 font-medium tracking-wide flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-main tracking-tight">Economic Indicators</h1>
+            <p className="text-xs text-muted mt-1 font-medium tracking-wide flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Live Dashboard & Recession Signals
+              Historical Dashboard & Recession Signals
             </p>
           </div>
         </div>
@@ -881,17 +987,17 @@ export default function App() {
           
           <Card className="h-full">
             <div className="mb-8">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-1">Chart Mode</h3>
-              <div className="flex text-xs font-medium border border-slate-200 rounded p-1">
+              <h3 className="text-xs font-bold text-muted uppercase tracking-wider mb-4 px-1">Chart Mode</h3>
+              <div className="flex text-xs font-medium border border-theme rounded p-1">
                 <button 
                   onClick={() => setViewMode('raw')}
-                  className={`flex-1 py-1.5 rounded transition-all ${viewMode === 'raw' ? 'bg-slate-100 text-black font-semibold' : 'text-slate-400 hover:text-slate-600'}`}
+                  className={`flex-1 py-1.5 rounded transition-all ${viewMode === 'raw' ? 'bg-muted-surface text-main font-semibold' : 'text-muted hover:text-main'}`}
                 >
                   Raw Values
                 </button>
                 <button 
                   onClick={() => setViewMode('relative')}
-                  className={`flex-1 py-1.5 rounded transition-all ${viewMode === 'relative' ? 'bg-slate-100 text-black font-semibold' : 'text-slate-400 hover:text-slate-600'}`}
+                  className={`flex-1 py-1.5 rounded transition-all ${viewMode === 'relative' ? 'bg-muted-surface text-main font-semibold' : 'text-muted hover:text-main'}`}
                 >
                   Relative Index
                 </button>
@@ -900,8 +1006,8 @@ export default function App() {
 
             <div>
               <div className="flex justify-between items-center mb-4 px-1">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Metrics</h3>
-                <span className="text-[10px] text-slate-400">
+                <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Metrics</h3>
+                <span className="text-[10px] text-muted">
                   {selectedMetrics.length} Selected
                 </span>
               </div>
@@ -909,7 +1015,7 @@ export default function App() {
               <div className="space-y-6 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
                 {Object.entries(metricsByCategory).map(([category, catMetrics]) => (
                   <div key={category}>
-                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1 border-b border-slate-100 pb-1">{category}</h4>
+                    <h4 className="text-[10px] font-bold text-muted uppercase tracking-wider mb-2 pl-1 border-b border-subtle pb-1">{category}</h4>
                     <div className="space-y-1.5">
                       {catMetrics.map((m) => {
                         const isSelected = selectedMetrics.includes(m.id);
@@ -924,8 +1030,8 @@ export default function App() {
                             className={`
                               group relative p-2.5 rounded-md border cursor-pointer transition-all duration-200
                               ${isSelected 
-                                ? 'bg-slate-50 border-slate-200' 
-                                : 'bg-transparent border-transparent hover:bg-slate-50'}
+                                ? 'bg-muted-surface border-theme' 
+                                : 'bg-transparent border-transparent hover:bg-muted-surface'}
                             `}
                           >
                             <div className="flex items-center gap-3">
@@ -934,21 +1040,26 @@ export default function App() {
                                   w-6 h-6 flex items-center justify-center transition-all duration-300
                                 `}
                               >
-                                <m.icon className={`w-4 h-4 ${isSelected ? 'text-black' : 'text-slate-400'}`} />
+                                <m.icon className={`w-4 h-4 ${isSelected ? 'text-main' : 'text-muted'}`} />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className={`text-sm font-medium truncate transition-colors ${isSelected ? 'text-black' : 'text-slate-500 group-hover:text-slate-700'}`}>
+                                <div className={`text-sm font-medium truncate transition-colors ${isSelected ? 'text-main' : 'text-muted group-hover:text-main'}`}>
                                   {m.label}
                                 </div>
+                                {m.isProxy && (
+                                  <span className="inline-flex mt-1 text-[10px] px-1.5 py-0.5 rounded-full badge-proxy">
+                                    Proxy
+                                  </span>
+                                )}
                               </div>
                               
                               <div className={`
                                 w-3 h-3 rounded-full border flex items-center justify-center transition-all duration-200
                                 ${isSelected 
-                                  ? 'bg-black border-black' 
-                                  : 'border-slate-300'}
+                                  ? 'bg-main border-main' 
+                                  : 'border-theme'}
                               `}>
-                                 {isSelected && <div className="w-1 h-1 bg-white rounded-full" />}
+                                 {isSelected && <div className="w-1 h-1 bg-secondary rounded-full" />}
                               </div>
                             </div>
                           </div>
@@ -969,22 +1080,22 @@ export default function App() {
           <Card className="flex-1 min-h-[500px] flex flex-col relative overflow-hidden">
              {/* --- CORRELATION INDICATOR --- */}
              {activeMetrics.length === 2 && rSquared && (
-              <div className="group absolute top-4 right-4 z-20 flex items-center gap-2 cursor-help bg-white/90 backdrop-blur-sm p-2 rounded-lg shadow-sm border border-slate-200">
-                <span className="text-sm font-bold text-slate-700">
+              <div className="group absolute top-4 right-4 z-20 flex items-center gap-2 cursor-help bg-secondary backdrop-blur-sm p-2 rounded-lg shadow-sm border border-theme">
+                <span className="text-sm font-bold text-main">
                   R<sup>2</sup> = {rSquared}
                 </span>
-                <HelpCircle className="w-4 h-4 text-slate-400 hover:text-blue-500 transition-colors" />
-                <div className="absolute right-0 top-full mt-2 w-64 p-4 bg-slate-900 text-white text-xs rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none transform translate-y-1 group-hover:translate-y-0">
+                <HelpCircle className="w-4 h-4 text-muted hover:text-[color:var(--color-brand-primary)] transition-colors" />
+                <div className="absolute right-0 top-full mt-2 w-64 p-4 bg-main text-inverse text-xs rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none transform translate-y-1 group-hover:translate-y-0">
                   <div className="font-bold text-sm mb-2 text-blue-400">Coefficient of Determination</div>
-                  <p className="mb-3 text-slate-300 leading-relaxed">Measures the strength of the relationship between the two selected indicators.</p>
+                  <p className="mb-3 text-inverse-muted leading-relaxed">Measures the strength of the relationship between the two selected indicators.</p>
                   <div className="space-y-2">
                     <div>
                       <span className="text-blue-300 font-semibold block mb-0.5">Why it's interesting:</span>
-                      <span className="text-slate-400">It reveals if one economic metric effectively predicts or mirrors another.</span>
+                      <span className="text-inverse-muted">It reveals if one economic metric effectively predicts or mirrors another.</span>
                     </div>
                     <div>
                       <span className="text-emerald-300 font-semibold block mb-0.5">Why care?</span>
-                      <span className="text-slate-400">High correlations (near 1.0) suggest a reliable trend; sudden divergences can signal market shifts.</span>
+                      <span className="text-inverse-muted">High correlations (near 1.0) suggest a reliable trend; sudden divergences can signal market shifts.</span>
                     </div>
                   </div>
                 </div>
@@ -994,10 +1105,10 @@ export default function App() {
 
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-4 z-10">
               <div>
-                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <h2 className="text-lg font-bold text-main flex items-center gap-2">
                   {viewMode === 'relative' ? 'Relative Performance Index' : 'Economic Trends'}
                 </h2>
-                <p className="text-sm text-slate-500 mt-1">
+                <p className="text-sm text-muted mt-1">
                    {viewMode === 'relative' 
                      ? 'Comparing percentage growth relative to start date (Base = 100)' 
                      : 'Historical absolute values over time'}
@@ -1019,13 +1130,13 @@ export default function App() {
             <div className="flex-1 w-full min-h-[450px] -ml-2">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" vertical={false} />
                   
                   <XAxis 
                     dataKey="timestamp" 
                     type="number"
                     domain={['dataMin', 'dataMax']}
-                    stroke="#64748b" 
+                    stroke="var(--color-chart-axis)" 
                     fontSize={11} 
                     tickFormatter={(val) => {
                        const d = new Date(val);
@@ -1040,7 +1151,7 @@ export default function App() {
                   {/* Primary Left Axis */}
                   <YAxis 
                     yAxisId="left" 
-                    stroke="#64748b" 
+                    stroke="var(--color-chart-axis)" 
                     fontSize={11} 
                     orientation="left"
                     tickFormatter={(val) => viewMode === 'relative' ? `${val}%` : val >= 1000 ? `${val/1000}k` : val}
@@ -1055,7 +1166,7 @@ export default function App() {
                     <YAxis 
                       yAxisId="right" 
                       orientation="right" 
-                      stroke="#64748b" 
+                      stroke="var(--color-chart-axis)" 
                       fontSize={11}
                       tickFormatter={(val) => `${val}`}
                       axisLine={false}
@@ -1107,7 +1218,7 @@ export default function App() {
                     <Line 
                       yAxisId="left"
                       dataKey={() => 100} 
-                      stroke="#cbd5e1" 
+                      stroke="var(--color-chart-baseline)" 
                       strokeDasharray="4 4" 
                       strokeWidth={1}
                       dot={false} 
@@ -1120,11 +1231,13 @@ export default function App() {
             </div>
 
             {/* NEW BOTTOM LEGEND SECTION */}
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-3 border-t border-slate-100 pt-4">
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-3 border-t border-subtle pt-4">
                {activeMetrics.map(m => (
-                 <div key={m.id} className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-200">
+                 <div key={m.id} className="flex items-center gap-2 px-3 py-1.5 bg-muted-surface rounded-full border border-theme">
                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: m.color }} />
-                   <span className="text-sm font-medium text-slate-700">{m.label}</span>
+                   <span className="text-sm font-medium text-main">
+                     {m.label}{m.isProxy ? ' (Proxy)' : ''}
+                   </span>
                  </div>
                ))}
             </div>
@@ -1166,27 +1279,34 @@ export default function App() {
               const isPositive = changeValue !== null && changeValue >= 0;
 
               return (
-                <Card key={m.id} className="group hover:bg-slate-50 transition-all duration-300">
+                <Card key={m.id} className="group hover:bg-muted-surface transition-all duration-300">
                   <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-bold text-slate-900">{m.label}</h4>
-                    <m.icon className="w-4 h-4 text-slate-400 group-hover:text-black transition-colors" />
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-bold text-main">{m.label}</h4>
+                      {m.isProxy && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full badge-proxy">
+                          Proxy
+                        </span>
+                      )}
+                    </div>
+                    <m.icon className="w-4 h-4 text-muted group-hover:text-main transition-colors" />
                   </div>
-                  <p className="text-xs text-slate-500 leading-relaxed min-h-[1.5em]">{m.desc}</p>
+                  <p className="text-xs text-muted leading-relaxed min-h-[1.5em]">{m.desc}</p>
                   
                   <div className="mt-4">
                      <div className="flex items-baseline gap-2">
-                       <span className="text-2xl font-mono text-slate-900 font-semibold">
+                       <span className="text-2xl font-mono text-main font-semibold">
                          {m.format(lastValue)}
                        </span>
                        {changeValue === null ? (
-                         <span className="text-xs font-medium text-slate-400">N/A</span>
+                         <span className="text-xs font-medium text-muted">N/A</span>
                        ) : (
                          <span className={`text-xs font-medium flex items-center ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
                            {isPositive ? '+' : ''}{changeValue.toFixed(1)}{isPercentagePoint ? 'pp' : '%'}
                          </span>
                        )}
                      </div>
-                     <div className="text-[10px] text-slate-400 mt-1">
+                     <div className="text-[10px] text-muted mt-1">
                        Last observed: {lastPoint?.date}
                      </div>
                   </div>

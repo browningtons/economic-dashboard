@@ -5,9 +5,12 @@
     "jsx": "react-jsx",
     "moduleResolution": "bundler",
     "strict": false,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
     "allowJs": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "types": ["vite/client"],
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true
   },
