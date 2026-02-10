@@ -185,7 +185,7 @@ const REFERENCE_ZONES: ReferenceZone[] = [
   { label: "ChatGPT Launch", start: "2022-11-01", end: "2023-01-01", color: "#9ca3af", opacity: 0.3, labelPos: 'insideBottom' },
 ];
 const REMOTE_DATA_URL = import.meta.env.VITE_ECON_DATA_URL?.trim();
-const LOCAL_DATA_URL = '/data/economic_indicators.csv';
+const LOCAL_DATA_URL = `${import.meta.env.BASE_URL}data/economic_indicators.csv`;
 const REQUIRED_COLUMNS = [
   'Observed Date',
   'Unemployment Rate',
@@ -1352,7 +1352,7 @@ export default function App() {
                     tickFormatter={(val) => `${val}%`}
                     axisLine={false}
                     tickLine={false}
-                    domain={[75, 'auto']}
+                    domain={[80, 'auto']}
                   />
                   <Tooltip content={<CustomTooltip isRelative={false} mode="Buffett" />} />
 
