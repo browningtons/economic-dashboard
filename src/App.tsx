@@ -1058,6 +1058,39 @@ export default function App() {
     return calculateRSquared(filteredData, activeMetrics[0].id, activeMetrics[1].id);
   }, [filteredData, activeMetrics]);
 
+  const chartMetricTitle = useMemo(() => {
+    if (activeMetrics.length <= 1) return '';
+    if (activeMetrics.length === 2) return `${activeMetrics[0].label} vs ${activeMetrics[1].label}`;
+    return `${activeMetrics[0].label}, ${activeMetrics[1].label} +${activeMetrics.length - 2} more`;
+  }, [activeMetrics]);
+
+  const leftAxisMetrics = useMemo(() => {
+    if (viewMode === 'relative') return activeMetrics;
+
+    const leftIds = chartConfig.assignments.filter((a) => a.axis === 'left').map((a) => a.id);
+    return activeMetrics.filter((m) => leftIds.includes(m.id));
+  }, [activeMetrics, chartConfig.assignments, viewMode]);
+
+  const rightAxisMetrics = useMemo(() => {
+    if (viewMode === 'relative') return [];
+
+    const rightIds = chartConfig.assignments.filter((a) => a.axis === 'right').map((a) => a.id);
+    return activeMetrics.filter((m) => rightIds.includes(m.id));
+  }, [activeMetrics, chartConfig.assignments, viewMode]);
+
+  const leftAxisTitle = useMemo(() => {
+    if (viewMode === 'relative') return 'Index (Base=100)';
+    if (leftAxisMetrics.length === 0) return 'Value';
+    if (leftAxisMetrics.length === 1) return leftAxisMetrics[0].label;
+    return `${leftAxisMetrics[0].label} +${leftAxisMetrics.length - 1}`;
+  }, [leftAxisMetrics, viewMode]);
+
+  const rightAxisTitle = useMemo(() => {
+    if (rightAxisMetrics.length === 0) return '';
+    if (rightAxisMetrics.length === 1) return rightAxisMetrics[0].label;
+    return `${rightAxisMetrics[0].label} +${rightAxisMetrics.length - 1}`;
+  }, [rightAxisMetrics]);
+
   // Group metrics by category for sidebar
   const metricsByCategory = useMemo(() => {
     const groups: Record<string, MetricConfig[]> = {};
@@ -1146,10 +1179,10 @@ export default function App() {
       </header>
       
       {/* STANDARD DASHBOARD VIEW (Always visible now) */}
-      <div className={`${shareMode ? 'grid grid-cols-1 gap-6' : 'grid grid-cols-1 lg:grid-cols-[32fr_68fr] gap-6'}`}>
+      <div className={`${activeTab === 'Dashboard' && !shareMode ? 'grid grid-cols-1 lg:grid-cols-[32fr_68fr] gap-6' : 'grid grid-cols-1 gap-6'}`}>
         
         {/* Sidebar Settings */}
-        {!shareMode && (
+        {activeTab === 'Dashboard' && !shareMode && (
         <div className="space-y-6">
           
           <Card className="h-full">
@@ -1279,6 +1312,11 @@ export default function App() {
                 <h2 className="text-lg font-bold text-main flex items-center gap-2">
                   {viewMode === 'relative' ? 'Relative Performance Index' : 'Economic Trends'}
                 </h2>
+                {chartMetricTitle && (
+                  <p className="text-sm text-main mt-1 font-medium" style={{ opacity: 0.85 }}>
+                    {chartMetricTitle}
+                  </p>
+                )}
                 <p className="text-base text-muted mt-1">
                    {viewMode === 'relative' 
                      ? 'Comparing percentage growth relative to start date (Base = 100)' 
@@ -1325,6 +1363,7 @@ export default function App() {
                     stroke="var(--color-chart-axis)" 
                     fontSize={11} 
                     orientation="left"
+                    label={{ value: leftAxisTitle, angle: -90, position: 'insideLeft', offset: 0, style: { fill: 'var(--color-chart-axis)', fontSize: 11 } }}
                     tickFormatter={(val) => viewMode === 'relative' ? `${val}%` : Number(val).toLocaleString()}
                     axisLine={false}
                     tickLine={false}
@@ -1339,6 +1378,7 @@ export default function App() {
                       orientation="right" 
                       stroke="var(--color-chart-axis)" 
                       fontSize={11}
+                      label={{ value: rightAxisTitle, angle: 90, position: 'insideRight', offset: 0, style: { fill: 'var(--color-chart-axis)', fontSize: 11 } }}
                       tickFormatter={(val) => Number(val).toLocaleString()}
                       axisLine={false}
                       tickLine={false}
@@ -1416,7 +1456,7 @@ export default function App() {
           )}
 
           {activeTab === 'Buffett' && (
-          <Card className="min-h-[500px] flex flex-col">
+          <Card className="min-h-[760px] flex flex-col">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3">
               <div>
                 <h2 className="text-lg font-bold text-main">The Buffett Indicator</h2>
@@ -1429,7 +1469,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex-1 w-full min-h-[320px] -ml-2">
+            <div className="flex-1 w-full min-h-[620px] -ml-2">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={buffettData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" vertical={false} />
