@@ -1219,7 +1219,10 @@ export default function App() {
         {activeTab === 'Dashboard' && !shareMode && (
         <div className="space-y-6">
           
-          <Card className="h-full">
+          <Card
+            className="h-full"
+            style={{ backgroundColor: 'color-mix(in oklab, var(--color-surface-muted) 28%, var(--color-bg-secondary))' }}
+          >
             <div className="mb-8">
               <div className="flex text-xs font-medium border border-theme rounded p-1">
                 <button 
