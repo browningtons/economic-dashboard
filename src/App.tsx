@@ -1146,10 +1146,6 @@ export default function App() {
           </div>
           <div>
             <h1 className="text-2xl md:text-3xl font-semibold text-main tracking-tight">Economic Indicators</h1>
-            <p className="text-sm text-muted mt-1 font-medium flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Historical Dashboard & Recession Signals
-            </p>
             <p className="text-sm text-muted mt-1">Last updated: {lastUpdatedText}</p>
           </div>
         </div>
@@ -1191,7 +1187,6 @@ export default function App() {
           
           <Card className="h-full">
             <div className="mb-8">
-              <h3 className="text-sm font-bold text-muted uppercase tracking-wider mb-4 px-1">Chart Mode</h3>
               <div className="flex text-xs font-medium border border-theme rounded p-1">
                 <button 
                   onClick={() => setViewMode('raw')}
@@ -1310,7 +1305,7 @@ export default function App() {
 
             <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-center ${shareMode ? 'mb-5 gap-3' : 'mb-8 gap-4'} z-10`}>
               <div>
-                <h2 className="text-xl font-semibold text-main flex items-center gap-2">
+                <h2 className="text-2xl font-semibold text-main flex items-center gap-2">
                   {viewMode === 'relative' ? 'Relative Performance Index' : 'Economic Trends'}
                 </h2>
                 {chartMetricTitle && (
@@ -1416,7 +1411,7 @@ export default function App() {
                         dataKey={m.id} 
                         name={m.label}
                         stroke={m.color} 
-                        strokeWidth={2} 
+                        strokeWidth={4} 
                         dot={(dotProps) => renderExtremaDot(m, dotProps)}
                         activeDot={{ r: 4, strokeWidth: 0, fill: m.color }}
                         animationDuration={1000}
@@ -1447,7 +1442,7 @@ export default function App() {
                {activeMetrics.map(m => (
                  <div key={m.id} className="flex items-center gap-2 px-3 py-1.5 bg-muted-surface rounded-full border border-theme">
                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: m.color }} />
-                   <span className={`${shareMode ? 'text-lg' : 'text-base'} font-medium text-main`}>
+                   <span className={`${shareMode ? 'text-[22px]' : 'text-[19px]'} font-medium text-main`}>
                      {m.label}
                    </span>
                  </div>
@@ -1510,7 +1505,7 @@ export default function App() {
                     dataKey="buffettValue"
                     name="Buffett Indicator"
                     stroke="#0F172A"
-                    strokeWidth={2.2}
+                    strokeWidth={4.2}
                     dot={false}
                     activeDot={{ r: 4, strokeWidth: 0, fill: '#F04A00' }}
                   />
