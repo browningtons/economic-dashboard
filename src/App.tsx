@@ -30,6 +30,7 @@ import {
   Coins
 } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
+import appLogo from './assets/golden_data_icon_small.png';
 
 // --- Types & Interfaces ---
 
@@ -94,6 +95,15 @@ interface MetricExtrema {
   maxValue: number;
   minTimestamp: number;
   maxTimestamp: number;
+}
+
+interface ExtremaDotProps {
+  cx?: number;
+  cy?: number;
+  value?: number | string;
+  payload?: {
+    timestamp?: number | string;
+  };
 }
 
 // --- Data ---
@@ -169,26 +179,6 @@ const RAW_CSV_DATA = `Observed Date,Unemployment Rate,Avg Weeks Unemployeed,Medi
 9/1/2025,4.40,24.1,9.8,7227,1930,7603,4.22,5.55,6.34,6415,62.3,83.7,328.9,438.2,30486,66847.84,35877.2`;
 
 // --- Configuration ---
-
-// --- ARTISTIC PALETTE (Monet Inspired) ---
-const PALETTE = {
-  weak:   '#D65D5D', // Terra Cotta Red
-  avg:    '#6DA36D', // Fern Green
-  fit:    '#5D8AA8', // Giverny Blue
-  elite:  '#E6A35C', // Sunset Gold
-  
-  // Category Colors
-  body:   '#2563eb', // Blue
-  mind:   '#059669', // Green
-  family: '#7c3aed', // Purple
-  social: '#0d9488', // Teal
-  
-  slate:  '#64748b',
-  
-  // Additions for completeness
-  iris:   '#818CF8', // Soft Indigo
-  rose:   '#F472B6', // Soft Pink
-};
 
 // --- REFERENCE ZONES ---
 const REFERENCE_ZONES: ReferenceZone[] = [
@@ -456,7 +446,13 @@ const parseLine = (line: string): string[] => {
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
     if (char === '"') {
-      inQuotes = !inQuotes;
+      // Handle escaped quotes inside quoted fields ("")
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
     } else if (char === ',' && !inQuotes) {
       result.push(current.trim());
       current = '';
@@ -571,7 +567,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, i
                         ? `${Number(entry.value).toFixed(1)}%` 
                         : (Number(entry.value) >= 1000 ? Number(entry.value).toLocaleString() : entry.value)}
                     </span>
-                    {isRelative && originalValue && (
+                    {isRelative && originalValue !== undefined && originalValue !== null && (
                       <span className="text-[10px] text-muted">
                         ({Number(originalValue).toLocaleString()})
                       </span>
@@ -603,8 +599,18 @@ const DateRangeSlider: React.FC<{
 }> = ({ min, max, value, onChange, data }) => {
   const [isDragging, setIsDragging] = useState<'min' | 'max' | null>(null);
   const sliderRef = useRef<HTMLDivElement>(null);
+  const range = max - min;
 
-  const getPercentage = (val: number) => ((val - min) / (max - min)) * 100;
+  const getPercentage = (val: number) => {
+    if (range <= 0) return 0;
+    return ((val - min) / range) * 100;
+  };
+
+  const getLabel = (index: number) => {
+    const row = data[index];
+    if (!row?.date) return 'N/A';
+    return new Date(row.date).toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
+  };
 
   const handleMouseDown = (type: 'min' | 'max') => (e: React.MouseEvent) => {
     e.preventDefault();
@@ -612,6 +618,7 @@ const DateRangeSlider: React.FC<{
   };
 
   const handleTrackClick = (e: React.MouseEvent) => {
+    if (range <= 0) return;
     if (!sliderRef.current) return;
     const rect = sliderRef.current.getBoundingClientRect();
     const percent = (e.clientX - rect.left) / rect.width;
@@ -633,6 +640,7 @@ const DateRangeSlider: React.FC<{
   }, []);
 
   const handleGlobalMouseMove = useCallback((e: MouseEvent) => {
+    if (range <= 0) return;
     if (!isDragging || !sliderRef.current) return;
     
     const rect = sliderRef.current.getBoundingClientRect();
@@ -646,7 +654,7 @@ const DateRangeSlider: React.FC<{
       const clamped = Math.max(newValue, value[0] + 1);
       if (clamped <= max) onChange([value[0], clamped]);
     }
-  }, [isDragging, min, max, value, onChange]);
+  }, [isDragging, min, max, onChange, range, value]);
 
   useEffect(() => {
     if (isDragging) {
@@ -682,7 +690,7 @@ const DateRangeSlider: React.FC<{
           onMouseDown={handleMouseDown('min')}
         >
           <div className="absolute -top-7 left-1/2 -translate-x-1/2 text-[10px] font-bold text-muted bg-secondary opacity-90 px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
-            {new Date(data[value[0]].date).toLocaleDateString(undefined, { month: 'short', year: '2-digit' })}
+            {getLabel(value[0])}
           </div>
         </div>
 
@@ -693,7 +701,7 @@ const DateRangeSlider: React.FC<{
           onMouseDown={handleMouseDown('max')}
         >
           <div className="absolute -top-7 left-1/2 -translate-x-1/2 text-[10px] font-bold text-muted bg-secondary opacity-90 px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
-            {new Date(data[value[1]].date).toLocaleDateString(undefined, { month: 'short', year: '2-digit' })}
+            {getLabel(value[1])}
           </div>
         </div>
       </div>
@@ -741,7 +749,6 @@ export default function App() {
   const [viewMode, setViewMode] = useState<'raw' | 'relative'>('raw');
   // Set default selected metrics to S&P 500 and Job Openings
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>(['S&P 500', 'Job Openings']);
-  const [hoveredMetric, setHoveredMetric] = useState<string | null>(null);
   
   // Date Range State (Indices) - Initialized to a safe empty array state
   const [dateRange, setDateRange] = useState<[number, number]>([0, 0]);
@@ -998,7 +1005,7 @@ export default function App() {
     return metric.format(value);
   }, [viewMode]);
 
-  const renderExtremaDot = useCallback((metric: MetricConfig, dotProps: any) => {
+  const renderExtremaDot = useCallback((metric: MetricConfig, dotProps: ExtremaDotProps) => {
     const extrema = metricExtrema[metric.id];
     if (!extrema) return null;
 
@@ -1134,19 +1141,16 @@ export default function App() {
       {/* Header */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 bg-secondary p-6 rounded-2xl shadow-sm border border-theme">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
-            {/* Custom Blue Pulse Icon */}
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 12H6L9 3L13 21L17 14L21 14" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+          <div className="w-14 h-14 p-1 bg-muted-surface rounded-xl border border-theme flex items-center justify-center overflow-hidden">
+            <img src={appLogo} alt="Economic Dashboard logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-main tracking-tight">Economic Indicators</h1>
-            <p className="text-sm text-muted mt-1 font-medium tracking-wide flex items-center gap-2">
+            <h1 className="text-2xl md:text-3xl font-semibold text-main tracking-tight">Economic Indicators</h1>
+            <p className="text-sm text-muted mt-1 font-medium flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Historical Dashboard & Recession Signals
             </p>
-            <p className="text-xs text-muted mt-1">Last updated: {lastUpdatedText}</p>
+            <p className="text-sm text-muted mt-1">Last updated: {lastUpdatedText}</p>
           </div>
         </div>
 
@@ -1226,14 +1230,11 @@ export default function App() {
                     <div className="space-y-1.5">
                       {catMetrics.map((m) => {
                         const isSelected = selectedMetrics.includes(m.id);
-                        const isHovered = hoveredMetric === m.id;
                         
                         return (
                           <div 
                             key={m.id}
                             onClick={() => toggleMetric(m.id)}
-                            onMouseEnter={() => setHoveredMetric(m.id)}
-                            onMouseLeave={() => setHoveredMetric(null)}
                             className={`
                               group relative p-2.5 rounded-md border cursor-pointer transition-all duration-200
                               ${isSelected 
@@ -1309,21 +1310,32 @@ export default function App() {
 
             <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-center ${shareMode ? 'mb-5 gap-3' : 'mb-8 gap-4'} z-10`}>
               <div>
-                <h2 className="text-lg font-bold text-main flex items-center gap-2">
+                <h2 className="text-xl font-semibold text-main flex items-center gap-2">
                   {viewMode === 'relative' ? 'Relative Performance Index' : 'Economic Trends'}
                 </h2>
                 {chartMetricTitle && (
-                  <p className="text-sm text-main mt-1 font-medium" style={{ opacity: 0.85 }}>
+                  <p className="text-sm text-muted mt-1 font-medium">
                     {chartMetricTitle}
                   </p>
                 )}
-                <p className="text-base text-muted mt-1">
+                <p className="text-sm text-muted mt-1">
                    {viewMode === 'relative' 
                      ? 'Comparing percentage growth relative to start date (Base = 100)' 
                      : 'Historical absolute values over time'}
                 </p>
               </div>
             </div>
+
+            {/* Range Slider */}
+            {data.length > 1 && (
+              <DateRangeSlider 
+                min={0}
+                max={data.length - 1}
+                value={dateRange}
+                onChange={setDateRange}
+                data={data}
+              />
+            )}
 
             <div className={`flex-1 w-full ${shareMode ? 'min-h-[560px]' : 'min-h-[450px]'} -ml-2`}>
               <ResponsiveContainer width="100%" height="100%">
@@ -1429,16 +1441,6 @@ export default function App() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
-            {/* Range Slider */}
-            {data.length > 0 && (
-              <DateRangeSlider 
-                min={0}
-                max={data.length - 1}
-                value={dateRange}
-                onChange={setDateRange}
-                data={data}
-              />
-            )}
 
             {/* NEW BOTTOM LEGEND SECTION */}
             <div className="mt-4 flex flex-wrap items-center justify-center gap-3 border-t border-subtle pt-4">
@@ -1458,7 +1460,7 @@ export default function App() {
           <Card className="min-h-[760px] flex flex-col">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3">
               <div>
-                <h2 className="text-lg font-bold text-main">The Buffett Indicator</h2>
+                <h2 className="text-xl font-semibold text-main">The Buffett Indicator</h2>
                 <p className="text-sm text-muted mt-1">Ratio of total US stock market value to GDP.</p>
               </div>
               <div className="flex items-center gap-2 bg-muted-surface border border-theme px-3 py-1 rounded">
