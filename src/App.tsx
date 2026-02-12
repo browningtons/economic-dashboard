@@ -490,6 +490,8 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, i
     if (mode === 'Buffett') {
       const point = payload[0]?.payload;
       if (!point) return null;
+      const stockSource = METRIC_SOURCES['Stock Market (b)'];
+      const gdpSource = METRIC_SOURCES.GDP;
 
       const buffettValue = Number(point.buffettValue);
       let status = 'Fair Value';
@@ -531,10 +533,30 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, i
               <div>
                 <span className="block text-[9px] uppercase tracking-wider text-muted">Total Market Cap</span>
                 <span className="font-mono text-main">${(Number(point['Stock Market (b)']) / 1000).toFixed(1)}T</span>
+                {stockSource && (
+                  <a
+                    href={stockSource.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block text-[10px] underline mt-0.5 text-muted hover:text-main"
+                  >
+                    Source
+                  </a>
+                )}
               </div>
               <div className="text-right">
                 <span className="block text-[9px] uppercase tracking-wider text-muted">US GDP</span>
                 <span className="font-mono text-main">${(Number(point.GDP) / 1000).toFixed(1)}T</span>
+                {gdpSource && (
+                  <a
+                    href={gdpSource.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block text-[10px] underline mt-0.5 text-muted hover:text-main"
+                  >
+                    Source
+                  </a>
+                )}
               </div>
             </div>
           </div>
@@ -554,6 +576,8 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, i
              const originalValue = entry.payload?.[`original_${entry.dataKey}`];
              const rawData = entry.payload;
              const showCount = entry.name === 'Unemployment Rate' && rawData?.['Unemployeed Count'] !== undefined;
+             const metricKey = typeof entry.dataKey === 'string' ? entry.dataKey : '';
+             const source = metricKey ? METRIC_SOURCES[metricKey] : undefined;
              return (
               <div key={index} className="flex flex-col gap-0.5 mb-2 last:mb-0">
                 <div className="flex items-center justify-between gap-4 text-sm">
@@ -577,6 +601,18 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, i
                 {showCount && (
                   <div className="flex justify-end text-[10px] text-muted -mt-1 mb-1 font-mono">
                     Count: {(Number(rawData?.['Unemployeed Count']) / 1000).toFixed(1)}M
+                  </div>
+                )}
+                {source && (
+                  <div className="flex justify-end text-[10px]">
+                    <a
+                      href={source.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-muted underline hover:text-main"
+                    >
+                      Source: {source.provider} ({source.seriesId})
+                    </a>
                   </div>
                 )}
               </div>
@@ -1141,9 +1177,7 @@ export default function App() {
       {/* Header */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 bg-secondary p-6 rounded-2xl shadow-sm border border-theme">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 p-1 bg-muted-surface rounded-xl border border-theme flex items-center justify-center overflow-hidden">
-            <img src={appLogo} alt="Economic Dashboard logo" className="w-full h-full object-contain" />
-          </div>
+          <img src={appLogo} alt="Economic Dashboard logo" className="w-14 h-14 object-contain shrink-0" />
           <div>
             <h1 className="text-2xl md:text-3xl font-semibold text-main tracking-tight">Economic Indicators</h1>
             <p className="text-sm text-muted mt-1">Last updated: {lastUpdatedText}</p>
@@ -1551,9 +1585,15 @@ export default function App() {
               }
 
               const isPositive = changeValue !== null && changeValue >= 0;
+              const cardBackground = `color-mix(in oklab, ${m.color} 10%, var(--color-bg-secondary))`;
+              const cardBorder = `color-mix(in oklab, ${m.color} 24%, var(--color-border))`;
 
               return (
-                <Card key={m.id} className="group hover:bg-muted-surface transition-all duration-300">
+                <Card
+                  key={m.id}
+                  className="group transition-all duration-300"
+                  style={{ backgroundColor: cardBackground, borderColor: cardBorder }}
+                >
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-2">
                       <h4 className="font-bold text-main">{m.label}</h4>
@@ -1568,10 +1608,18 @@ export default function App() {
                           >
                             <Info className="w-3.5 h-3.5" />
                           </a>
-                          <div className="absolute left-0 top-full mt-1 w-56 bg-main text-inverse text-[11px] rounded-md px-2 py-2 opacity-0 group-hover/source:opacity-100 transition pointer-events-none z-20">
+                          <div className="absolute left-0 top-full mt-1 w-56 bg-main text-inverse text-[11px] rounded-md px-2 py-2 opacity-0 group-hover/source:opacity-100 transition pointer-events-auto z-20">
                             <div className="font-semibold">{source.provider}</div>
                             <div>Series: {source.seriesId}</div>
                             {source.note && <div className="text-inverse-muted mt-0.5">{source.note}</div>}
+                            <a
+                              href={source.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-block mt-1 underline text-inverse-muted hover:text-inverse"
+                            >
+                              Open source link
+                            </a>
                           </div>
                         </div>
                       )}
