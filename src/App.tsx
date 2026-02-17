@@ -202,6 +202,13 @@ const BUFFETT_ZONES: BuffettZone[] = [
   { label: 'Overvalued', min: 127, max: 150, color: '#E6A35C', legendRange: '127% - 150%' },
   { label: 'Significantly Overvalued', min: 150, max: 200, color: '#D65D5D', legendRange: '> 150%' },
 ];
+const BUFFETT_ZONE_FILL_OPACITY = 0.28;
+const BUFFETT_QUOTE = {
+  text: "It's probably the best single measure of where valuations stand at any given moment.",
+  sourceLabel: "Warren Buffett, Fortune (December 10, 2001)",
+  sourceUrl: 'https://en.wikipedia.org/wiki/Buffett_indicator',
+  reason: 'He favors it because it compares the total stock market value to the size of the economy in one simple ratio.',
+};
 const GOOGLE_SHEET_URL = (
   import.meta.env.VITE_GOOGLE_SHEET_URL?.trim() ||
   import.meta.env.VITE_ECON_DATA_URL?.trim()
@@ -1014,6 +1021,18 @@ export default function App() {
     [filteredData]
   );
 
+  const buffettDomainMax = useMemo(() => {
+    const values = buffettData
+      .map((point) => Number(point.buffettValue))
+      .filter((value) => Number.isFinite(value));
+
+    if (values.length === 0) return 200;
+
+    const max = Math.max(...values);
+    // Keep a small headroom so the top zone/border is visible and never clipped.
+    return Math.max(200, Math.ceil((max + 2) / 10) * 10);
+  }, [buffettData]);
+
   const metricExtrema = useMemo(() => {
     const extrema: Record<string, MetricExtrema> = {};
 
@@ -1521,6 +1540,18 @@ export default function App() {
                   </div>
                 ))}
               </div>
+              <div className="mt-3 rounded-lg border border-theme bg-muted-surface px-3 py-2.5">
+                <p className="text-sm text-main italic">"{BUFFETT_QUOTE.text}"</p>
+                <p className="text-xs text-muted mt-1">{BUFFETT_QUOTE.reason}</p>
+                <a
+                  href={BUFFETT_QUOTE.sourceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-block text-xs text-muted underline mt-1 hover:text-main"
+                >
+                  {BUFFETT_QUOTE.sourceLabel}
+                </a>
+              </div>
             </div>
 
             <div className="flex-1 w-full min-h-[620px] -ml-2">
@@ -1549,13 +1580,16 @@ export default function App() {
                     tickFormatter={(val) => `${val}%`}
                     axisLine={false}
                     tickLine={false}
-                    domain={[45, 'auto']}
+                    domain={[45, buffettDomainMax]}
                   />
                   <Tooltip content={<CustomTooltip isRelative={false} mode="Buffett" />} />
 
-                  {BUFFETT_ZONES.map((zone) => (
-                    <ReferenceArea key={zone.label} y1={zone.min} y2={zone.max} fill={zone.color} fillOpacity={0.4} />
-                  ))}
+                  {BUFFETT_ZONES.map((zone) => {
+                    const y2 = zone.label === 'Significantly Overvalued' ? buffettDomainMax : zone.max;
+                    return (
+                      <ReferenceArea key={zone.label} y1={zone.min} y2={y2} fill={zone.color} fillOpacity={BUFFETT_ZONE_FILL_OPACITY} />
+                    );
+                  })}
 
                   <Line
                     type="monotone"
