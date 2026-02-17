@@ -10,6 +10,7 @@ import {
   ResponsiveContainer, 
   Legend, 
   ReferenceArea,
+  ReferenceDot,
 } from 'recharts';
 import { 
   Activity, 
@@ -95,6 +96,15 @@ interface MetricExtrema {
   maxValue: number;
   minTimestamp: number;
   maxTimestamp: number;
+}
+
+interface BuffettLabelPoint {
+  key: string;
+  timestamp: number;
+  value: number;
+  label: string;
+  color: string;
+  position: 'top' | 'bottom' | 'left';
 }
 
 interface BuffettZone {
@@ -1033,6 +1043,62 @@ export default function App() {
     return Math.max(200, Math.ceil((max + 2) / 10) * 10);
   }, [buffettData]);
 
+  const buffettLabelPoints = useMemo<BuffettLabelPoint[]>(() => {
+    const validPoints = buffettData
+      .map((point) => ({
+        timestamp: Number(point.timestamp),
+        value: Number(point.buffettValue),
+      }))
+      .filter((point) => Number.isFinite(point.timestamp) && Number.isFinite(point.value));
+
+    if (validPoints.length === 0) return [];
+
+    const minPoint = validPoints.reduce((lowest, point) => (point.value < lowest.value ? point : lowest));
+    const maxPoint = validPoints.reduce((highest, point) => (point.value > highest.value ? point : highest));
+    const latestPoint = validPoints[validPoints.length - 1];
+
+    const candidates = [
+      { id: 'min', point: minPoint, title: 'Min', color: '#5D8AA8', position: 'bottom' as const },
+      { id: 'max', point: maxPoint, title: 'Max', color: '#D65D5D', position: 'top' as const },
+      { id: 'latest', point: latestPoint, title: 'Latest', color: '#111827', position: 'left' as const },
+    ];
+
+    const grouped = new Map<string, { point: { timestamp: number; value: number }; labels: string[]; color: string; position: 'top' | 'bottom' | 'left' }>();
+
+    candidates.forEach((candidate) => {
+      const key = `${candidate.point.timestamp}-${candidate.point.value.toFixed(4)}`;
+      const existing = grouped.get(key);
+      const currentLabel = `${candidate.title} ${candidate.point.value.toFixed(1)}%`;
+
+      if (existing) {
+        existing.labels.push(currentLabel);
+        if (candidate.id === 'latest') {
+          existing.color = candidate.color;
+          existing.position = candidate.position;
+        } else if (candidate.id === 'max' && existing.position !== 'left') {
+          existing.color = candidate.color;
+          existing.position = candidate.position;
+        }
+      } else {
+        grouped.set(key, {
+          point: candidate.point,
+          labels: [currentLabel],
+          color: candidate.color,
+          position: candidate.position,
+        });
+      }
+    });
+
+    return Array.from(grouped.entries()).map(([key, entry]) => ({
+      key,
+      timestamp: entry.point.timestamp,
+      value: entry.point.value,
+      label: entry.labels.join(' / '),
+      color: entry.color,
+      position: entry.position,
+    }));
+  }, [buffettData]);
+
   const metricExtrema = useMemo(() => {
     const extrema: Record<string, MetricExtrema> = {};
 
@@ -1540,14 +1606,14 @@ export default function App() {
                   </div>
                 ))}
               </div>
-              <div className="mt-3 rounded-lg border border-theme bg-muted-surface px-3 py-2.5">
-                <p className="text-sm text-main italic">"{BUFFETT_QUOTE.text}"</p>
-                <p className="text-xs text-muted mt-1">{BUFFETT_QUOTE.reason}</p>
+              <div className="mt-3 rounded-xl border border-theme px-4 py-3 shadow-sm" style={{ backgroundColor: 'color-mix(in oklab, var(--color-brand-accent) 10%, var(--color-bg-secondary))' }}>
+                <p className="text-lg md:text-xl text-main italic font-semibold leading-snug">"{BUFFETT_QUOTE.text}"</p>
+                <p className="text-sm text-muted mt-2">{BUFFETT_QUOTE.reason}</p>
                 <a
                   href={BUFFETT_QUOTE.sourceUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-block text-xs text-muted underline mt-1 hover:text-main"
+                  className="inline-block text-sm text-muted underline mt-2 hover:text-main"
                 >
                   {BUFFETT_QUOTE.sourceLabel}
                 </a>
@@ -1590,6 +1656,25 @@ export default function App() {
                       <ReferenceArea key={zone.label} y1={zone.min} y2={y2} fill={zone.color} fillOpacity={BUFFETT_ZONE_FILL_OPACITY} />
                     );
                   })}
+
+                  {buffettLabelPoints.map((point) => (
+                    <ReferenceDot
+                      key={point.key}
+                      x={point.timestamp}
+                      y={point.value}
+                      r={4}
+                      fill={point.color}
+                      stroke="var(--color-bg-secondary)"
+                      strokeWidth={1.5}
+                      label={{
+                        value: point.label,
+                        position: point.position,
+                        fill: 'var(--color-text-main)',
+                        fontSize: 11,
+                        fontWeight: 700,
+                      }}
+                    />
+                  ))}
 
                   <Line
                     type="monotone"
