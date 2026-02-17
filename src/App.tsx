@@ -97,6 +97,14 @@ interface MetricExtrema {
   maxTimestamp: number;
 }
 
+interface BuffettZone {
+  label: 'Undervalued' | 'Fair Value' | 'Overvalued' | 'Significantly Overvalued';
+  min: number;
+  max: number;
+  color: string;
+  legendRange: string;
+}
+
 interface ExtremaDotProps {
   cx?: number;
   cy?: number;
@@ -186,6 +194,13 @@ const REFERENCE_ZONES: ReferenceZone[] = [
   { label: "Great Recession", start: "2007-12-01", end: "2009-06-01", color: "#9ca3af", opacity: 0.3, labelPos: 'insideTopLeft' },
   { label: "COVID-19", start: "2020-02-01", end: "2020-04-01", color: "#9ca3af", opacity: 0.3, labelPos: 'insideTop' },
   { label: "ChatGPT Launch", start: "2022-11-01", end: "2023-01-01", color: "#9ca3af", opacity: 0.3, labelPos: 'insideBottom' },
+];
+
+const BUFFETT_ZONES: BuffettZone[] = [
+  { label: 'Undervalued', min: 45, max: 83, color: '#5D8AA8', legendRange: '< 83%' },
+  { label: 'Fair Value', min: 83, max: 127, color: '#6DA36D', legendRange: '83% - 127%' },
+  { label: 'Overvalued', min: 127, max: 150, color: '#E6A35C', legendRange: '127% - 150%' },
+  { label: 'Significantly Overvalued', min: 150, max: 200, color: '#D65D5D', legendRange: '> 150%' },
 ];
 const GOOGLE_SHEET_URL = (
   import.meta.env.VITE_GOOGLE_SHEET_URL?.trim() ||
@@ -477,6 +492,13 @@ const toGoogleCsvUrl = (url: string): string => {
   return `https://docs.google.com/spreadsheets/d/${idMatch[1]}/export?format=csv${gid ? `&gid=${gid}` : ''}`;
 };
 
+const getBuffettValuation = (value: number): BuffettZone => {
+  if (value > 150) return BUFFETT_ZONES[3];
+  if (value > 127) return BUFFETT_ZONES[2];
+  if (value < 83) return BUFFETT_ZONES[0];
+  return BUFFETT_ZONES[1];
+};
+
 // --- Components ---
 
 const Card: React.FC<{ children: React.ReactNode; className?: string; style?: React.CSSProperties }> = ({ children, className = "", style }) => (
@@ -494,19 +516,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, i
       const gdpSource = METRIC_SOURCES.GDP;
 
       const buffettValue = Number(point.buffettValue);
-      let status = 'Fair Value';
-      let statusColor = '#6DA36D';
-
-      if (buffettValue > 150) {
-        status = 'Significantly Overvalued';
-        statusColor = '#D65D5D';
-      } else if (buffettValue > 127) {
-        status = 'Overvalued';
-        statusColor = '#E6A35C';
-      } else if (buffettValue < 83) {
-        status = 'Undervalued';
-        statusColor = '#5D8AA8';
-      }
+      const valuation = getBuffettValuation(buffettValue);
 
       return (
         <div className="bg-secondary border border-theme p-3 rounded shadow-xl z-50">
@@ -523,9 +533,9 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, i
               <span className="text-muted">Valuation:</span>
               <span
                 className="font-bold px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wide text-white"
-                style={{ backgroundColor: statusColor }}
+                style={{ backgroundColor: valuation.color }}
               >
-                {status}
+                {valuation.label}
               </span>
             </div>
 
@@ -1490,15 +1500,26 @@ export default function App() {
 
           {activeTab === 'Buffett' && (
           <Card className="min-h-[760px] flex flex-col">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3">
-              <div>
-                <h2 className="text-xl font-semibold text-main">The Buffett Indicator</h2>
-                <p className="text-sm text-muted mt-1">Ratio of total US stock market value to GDP.</p>
+            <div className="mb-6">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                <div>
+                  <h2 className="text-xl font-semibold text-main">The Buffett Indicator</h2>
+                  <p className="text-sm text-muted mt-1">Ratio of total US stock market value to GDP.</p>
+                </div>
+                <div className="flex items-center gap-2 bg-muted-surface border border-theme px-3 py-1 rounded">
+                  <span className="text-main text-sm font-mono">
+                    Current: {buffettData.length > 0 ? `${Number(buffettData[buffettData.length - 1].buffettValue).toFixed(1)}%` : 'N/A'}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2 bg-muted-surface border border-theme px-3 py-1 rounded">
-                <span className="text-main text-sm font-mono">
-                  Current: {buffettData.length > 0 ? `${Number(buffettData[buffettData.length - 1].buffettValue).toFixed(1)}%` : 'N/A'}
-                </span>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {BUFFETT_ZONES.map((zone) => (
+                  <div key={zone.label} className="inline-flex items-center gap-2 text-xs px-2.5 py-1 rounded-full border border-theme bg-secondary">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: zone.color }} />
+                    <span className="text-main font-medium">{zone.label}</span>
+                    <span className="text-muted">{zone.legendRange}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -1528,14 +1549,13 @@ export default function App() {
                     tickFormatter={(val) => `${val}%`}
                     axisLine={false}
                     tickLine={false}
-                    domain={[80, 'auto']}
+                    domain={[45, 'auto']}
                   />
                   <Tooltip content={<CustomTooltip isRelative={false} mode="Buffett" />} />
 
-                  <ReferenceArea y1={150} y2={200} fill="#D65D5D" fillOpacity={0.4} />
-                  <ReferenceArea y1={127} y2={150} fill="#E6A35C" fillOpacity={0.4} />
-                  <ReferenceArea y1={105} y2={127} fill="#6DA36D" fillOpacity={0.4} />
-                  <ReferenceArea y1={83} y2={105} fill="#5D8AA8" fillOpacity={0.4} />
+                  {BUFFETT_ZONES.map((zone) => (
+                    <ReferenceArea key={zone.label} y1={zone.min} y2={zone.max} fill={zone.color} fillOpacity={0.4} />
+                  ))}
 
                   <Line
                     type="monotone"
