@@ -653,126 +653,6 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, i
 };
 
 // --- Custom Dual Range Slider Component ---
-const DateRangeSlider: React.FC<{
-  min: number;
-  max: number;
-  value: [number, number];
-  onChange: (val: [number, number]) => void;
-  data: DataPoint[];
-}> = ({ min, max, value, onChange, data }) => {
-  const [isDragging, setIsDragging] = useState<'min' | 'max' | null>(null);
-  const sliderRef = useRef<HTMLDivElement>(null);
-  const range = max - min;
-
-  const getPercentage = (val: number) => {
-    if (range <= 0) return 0;
-    return ((val - min) / range) * 100;
-  };
-
-  const getLabel = (index: number) => {
-    const row = data[index];
-    if (!row?.date) return 'N/A';
-    return new Date(row.date).toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
-  };
-
-  const handleMouseDown = (type: 'min' | 'max') => (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(type);
-  };
-
-  const handleTrackClick = (e: React.MouseEvent) => {
-    if (range <= 0) return;
-    if (!sliderRef.current) return;
-    const rect = sliderRef.current.getBoundingClientRect();
-    const percent = (e.clientX - rect.left) / rect.width;
-    const clickValue = Math.round(min + percent * (max - min));
-    
-    // Determine which handle is closer
-    const distMin = Math.abs(clickValue - value[0]);
-    const distMax = Math.abs(clickValue - value[1]);
-    
-    if (distMin < distMax) {
-      if (clickValue < value[1]) onChange([clickValue, value[1]]);
-    } else {
-      if (clickValue > value[0]) onChange([value[0], clickValue]);
-    }
-  };
-
-  const handleGlobalMouseUp = useCallback(() => {
-    setIsDragging(null);
-  }, []);
-
-  const handleGlobalMouseMove = useCallback((e: MouseEvent) => {
-    if (range <= 0) return;
-    if (!isDragging || !sliderRef.current) return;
-    
-    const rect = sliderRef.current.getBoundingClientRect();
-    const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const newValue = Math.round(min + percent * (max - min));
-
-    if (isDragging === 'min') {
-      const clamped = Math.min(newValue, value[1] - 1);
-      if (clamped >= min) onChange([clamped, value[1]]);
-    } else {
-      const clamped = Math.max(newValue, value[0] + 1);
-      if (clamped <= max) onChange([value[0], clamped]);
-    }
-  }, [isDragging, min, max, onChange, range, value]);
-
-  useEffect(() => {
-    if (isDragging) {
-      window.addEventListener('mousemove', handleGlobalMouseMove);
-      window.addEventListener('mouseup', handleGlobalMouseUp);
-    }
-    return () => {
-      window.removeEventListener('mousemove', handleGlobalMouseMove);
-      window.removeEventListener('mouseup', handleGlobalMouseUp);
-    };
-  }, [isDragging, handleGlobalMouseMove, handleGlobalMouseUp]);
-
-  return (
-    <div className="pt-2 pb-1 px-1">
-      <div 
-        ref={sliderRef}
-        className="relative h-1.5 bg-muted-surface rounded-full cursor-pointer group"
-        onClick={handleTrackClick}
-      >
-        {/* Active Range Track */}
-        <div 
-          className="absolute h-full brand-secondary rounded-full opacity-50 group-hover:opacity-70 transition-colors"
-          style={{ 
-            left: `${getPercentage(value[0])}%`, 
-            right: `${100 - getPercentage(value[1])}%` 
-          }}
-        />
-
-        {/* Min Handle */}
-        <div 
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 bg-secondary border border-theme rounded-full shadow-sm cursor-grab active:cursor-grabbing active:scale-110 active:border-[color:var(--color-brand-primary)] transition-all z-10"
-          style={{ left: `${getPercentage(value[0])}%` }}
-          onMouseDown={handleMouseDown('min')}
-        >
-          <div className="absolute -top-7 left-1/2 -translate-x-1/2 text-[10px] font-bold text-muted bg-secondary opacity-90 px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
-            {getLabel(value[0])}
-          </div>
-        </div>
-
-        {/* Max Handle */}
-        <div 
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 bg-secondary border border-theme rounded-full shadow-sm cursor-grab active:cursor-grabbing active:scale-110 active:border-[color:var(--color-brand-primary)] transition-all z-10"
-          style={{ left: `${getPercentage(value[1])}%` }}
-          onMouseDown={handleMouseDown('max')}
-        >
-          <div className="absolute -top-7 left-1/2 -translate-x-1/2 text-[10px] font-bold text-muted bg-secondary opacity-90 px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
-            {getLabel(value[1])}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Helper for Reference Area Label
 interface RenderLabelProps {
   viewBox: { x: number; y: number; width: number; height: number };
   label: string;
@@ -819,6 +699,7 @@ export default function App() {
   
   // Date Range State (Indices) - Initialized to a safe empty array state
   const [dateRange, setDateRange] = useState<[number, number]>([0, 0]);
+  const [datePreset, setDatePreset] = useState<'1Y' | '5Y' | '10Y' | 'MAX'>('5Y');
 
   useEffect(() => {
     let cancelled = false;
@@ -1278,6 +1159,36 @@ export default function App() {
     return Math.floor((Date.now() - latest.timestamp) / 86400000);
   }, [data]);
 
+  const applyDatePreset = useCallback((preset: '1Y' | '5Y' | '10Y' | 'MAX') => {
+    if (!data.length) return;
+    const endIndex = data.length - 1;
+    if (preset === 'MAX') {
+      setDateRange([0, endIndex]);
+      setDatePreset('MAX');
+      return;
+    }
+
+    const years = preset === '1Y' ? 1 : preset === '5Y' ? 5 : 10;
+    const endTs = data[endIndex].timestamp;
+    const cutoff = new Date(endTs);
+    cutoff.setFullYear(cutoff.getFullYear() - years);
+    const startIndex = Math.max(0, data.findIndex((d) => d.timestamp >= cutoff.getTime()));
+    setDateRange([startIndex === -1 ? 0 : startIndex, endIndex]);
+    setDatePreset(preset);
+  }, [data]);
+
+  useEffect(() => {
+    if (!data.length) return;
+    applyDatePreset(datePreset);
+  }, [data, applyDatePreset, datePreset]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.matchMedia('(max-width: 768px)').matches) {
+      setViewMode('relative');
+    }
+  }, []);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-primary flex items-center justify-center text-muted">
@@ -1469,7 +1380,7 @@ export default function App() {
             )}
             {/* ----------------------------- */}
 
-            <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-center ${shareMode ? 'mb-5 gap-3' : 'mb-8 gap-4'} z-10`}>
+            <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-start ${shareMode ? 'mb-5 gap-3' : 'mb-8 gap-4'} z-10`}>
               <div>
                 <h2 className="text-2xl font-semibold text-main flex items-center gap-2">
                   {viewMode === 'relative' ? 'Relative Performance Index' : 'Economic Trends'}
@@ -1488,6 +1399,18 @@ export default function App() {
                   <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-muted">{selectedMetrics.length} metrics</span>
                   <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-muted">Range: {rangeLabel}</span>
                 </div>
+              </div>
+
+              <div className="flex items-center gap-1 rounded-lg border border-theme bg-muted-surface p-1">
+                {(['1Y', '5Y', '10Y', 'MAX'] as const).map((preset) => (
+                  <button
+                    key={preset}
+                    onClick={() => applyDatePreset(preset)}
+                    className={`rounded-md px-2.5 py-1.5 text-xs font-medium ${datePreset === preset ? 'bg-secondary text-main shadow-sm border border-theme' : 'text-muted hover:text-main'}`}
+                  >
+                    {preset}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -1595,18 +1518,6 @@ export default function App() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
-
-            {data.length > 1 && (
-              <div className="mt-2 opacity-80">
-                <DateRangeSlider 
-                  min={0}
-                  max={data.length - 1}
-                  value={dateRange}
-                  onChange={setDateRange}
-                  data={data}
-                />
-              </div>
-            )}
 
             {/* NEW BOTTOM LEGEND SECTION */}
             <div className="mt-4 flex flex-wrap items-center justify-center gap-3 border-t border-subtle pt-4">
