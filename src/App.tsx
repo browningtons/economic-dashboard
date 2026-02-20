@@ -807,6 +807,9 @@ export default function App() {
   const [data, setData] = useState<DataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
+  const [dataWarning, setDataWarning] = useState<string | null>(null);
+  const [dataSource, setDataSource] = useState<'google' | 'local' | 'embedded'>('embedded');
+  const [reloadKey, setReloadKey] = useState(0);
   const [activeTab, setActiveTab] = useState<'Dashboard' | 'Buffett'>('Dashboard');
   const [shareMode, setShareMode] = useState(false);
   const [viewMode, setViewMode] = useState<'raw' | 'relative'>('raw');
@@ -819,12 +822,12 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
 
-    const getCsvData = async (): Promise<string> => {
+    const getCsvData = async (): Promise<{ text: string; source: 'google' | 'local' | 'embedded' }> => {
       if (GOOGLE_SHEET_URL) {
         const csvUrl = toGoogleCsvUrl(GOOGLE_SHEET_URL);
         try {
           const response = await fetch(csvUrl, { cache: 'no-store' });
-          if (response.ok) return await response.text();
+          if (response.ok) return { text: await response.text(), source: 'google' };
           console.warn(`Failed to fetch Google Sheet URL (status ${response.status}). Falling back.`);
         } catch (error) {
           console.warn('Failed to fetch Google Sheet URL. Falling back.', error);
@@ -833,21 +836,23 @@ export default function App() {
 
       try {
         const response = await fetch(LOCAL_DATA_URL, { cache: 'no-store' });
-        if (response.ok) return await response.text();
+        if (response.ok) return { text: await response.text(), source: 'local' };
       } catch (error) {
         console.warn('Failed to fetch local CSV fallback. Falling back to embedded CSV.', error);
       }
 
-      return RAW_CSV_DATA;
+      return { text: RAW_CSV_DATA, source: 'embedded' };
     };
 
     const loadData = async () => {
       setDataError(null);
+      setDataWarning(null);
       setIsLoading(true);
 
       try {
-        const csvData = await getCsvData();
+        const { text: csvData, source } = await getCsvData();
         if (cancelled) return;
+        setDataSource(source);
 
         const lines = csvData.split('\n');
         if (lines.length < 2) {
@@ -919,8 +924,7 @@ export default function App() {
         }
         
         if (badRowCount > 0) {
-          setDataError(`CSV validation failed: ${badRowCount} row(s) are malformed or missing required values.`);
-          return;
+          setDataWarning(`Loaded with ${badRowCount} skipped row(s) due to malformed or missing required values.`);
         }
 
         // Sort data chronologically just in case
@@ -945,7 +949,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
   const activeMetrics = useMemo(() => 
     METRICS.filter(m => selectedMetrics.includes(m.id)), 
@@ -1245,6 +1249,8 @@ export default function App() {
     return new Date(lastPoint.timestamp).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
   }, [data]);
 
+  const sourceLabel = dataSource === 'google' ? 'Google Sheet' : dataSource === 'local' ? 'Local CSV' : 'Embedded fallback';
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-primary flex items-center justify-center text-muted">
@@ -1259,6 +1265,7 @@ export default function App() {
         <div className="max-w-2xl w-full bg-secondary border border-theme rounded-xl p-6">
           <h2 className="text-lg font-bold text-main mb-2">Data Validation Error</h2>
           <p className="text-sm text-muted">{dataError}</p>
+          <button onClick={() => setReloadKey((k) => k + 1)} className="mt-4 rounded-md border border-theme bg-muted-surface px-3 py-1.5 text-sm">Retry load</button>
         </div>
       </div>
     );
@@ -1275,7 +1282,7 @@ export default function App() {
           <img src={appLogo} alt="Economic Dashboard logo" className="w-14 h-14 object-contain shrink-0" />
           <div>
             <h1 className="text-2xl md:text-3xl font-semibold text-main tracking-tight">Economic Indicators</h1>
-            <p className="text-sm text-muted mt-1">Last updated: {lastUpdatedText}</p>
+            <p className="text-sm text-muted mt-1">Last updated: {lastUpdatedText} · Source: {sourceLabel}</p>
           </div>
         </div>
 
@@ -1303,9 +1310,18 @@ export default function App() {
               </button>
             ))}
           </div>
+          <button onClick={() => setReloadKey((k) => k + 1)} className="px-3 py-1.5 text-sm font-medium rounded-md border bg-muted-surface text-main border-theme">
+            Refresh data
+          </button>
           <ThemeToggle />
         </div>
       </header>
+
+      {dataWarning && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+          {dataWarning}
+        </div>
+      )}
       
       {/* STANDARD DASHBOARD VIEW (Always visible now) */}
       <div className={`${activeTab === 'Dashboard' && !shareMode ? 'grid grid-cols-1 lg:grid-cols-[32fr_68fr] gap-6' : 'grid grid-cols-1 gap-6'}`}>
