@@ -731,10 +731,10 @@ const DateRangeSlider: React.FC<{
   }, [isDragging, handleGlobalMouseMove, handleGlobalMouseUp]);
 
   return (
-    <div className="pt-6 pb-2 px-2">
+    <div className="pt-2 pb-1 px-1">
       <div 
         ref={sliderRef}
-        className="relative h-2 bg-muted-surface rounded-full cursor-pointer group"
+        className="relative h-1.5 bg-muted-surface rounded-full cursor-pointer group"
         onClick={handleTrackClick}
       >
         {/* Active Range Track */}
@@ -748,7 +748,7 @@ const DateRangeSlider: React.FC<{
 
         {/* Min Handle */}
         <div 
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-secondary border-2 border-theme rounded-full shadow cursor-grab active:cursor-grabbing active:scale-110 active:border-[color:var(--color-brand-primary)] transition-all z-10"
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 bg-secondary border border-theme rounded-full shadow-sm cursor-grab active:cursor-grabbing active:scale-110 active:border-[color:var(--color-brand-primary)] transition-all z-10"
           style={{ left: `${getPercentage(value[0])}%` }}
           onMouseDown={handleMouseDown('min')}
         >
@@ -759,7 +759,7 @@ const DateRangeSlider: React.FC<{
 
         {/* Max Handle */}
         <div 
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-secondary border-2 border-theme rounded-full shadow cursor-grab active:cursor-grabbing active:scale-110 active:border-[color:var(--color-brand-primary)] transition-all z-10"
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 bg-secondary border border-theme rounded-full shadow-sm cursor-grab active:cursor-grabbing active:scale-110 active:border-[color:var(--color-brand-primary)] transition-all z-10"
           style={{ left: `${getPercentage(value[1])}%` }}
           onMouseDown={handleMouseDown('max')}
         >
@@ -797,7 +797,7 @@ const RenderLabel = ({ viewBox, label, labelPos }: RenderLabelProps) => {
   }
 
   return (
-    <text x={textX} y={textY} fill="#6b7280" fontSize={10} fontWeight="bold" textAnchor={textAnchor} className="uppercase tracking-wide">
+    <text x={textX} y={textY} fill="#94a3b8" fontSize={9} fontWeight="600" textAnchor={textAnchor}>
       {label}
     </text>
   );
@@ -1234,6 +1234,9 @@ export default function App() {
     return `${rightAxisMetrics[0].label} +${rightAxisMetrics.length - 1}`;
   }, [rightAxisMetrics]);
 
+  const leftAxisColor = leftAxisMetrics[0]?.color ?? 'var(--color-chart-axis)';
+  const rightAxisColor = rightAxisMetrics[0]?.color ?? 'var(--color-chart-axis)';
+
   // Group metrics by category for sidebar
   const metricsByCategory = useMemo(() => {
     const groups: Record<string, MetricConfig[]> = {};
@@ -1488,17 +1491,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Range Slider */}
-            {data.length > 1 && (
-              <DateRangeSlider 
-                min={0}
-                max={data.length - 1}
-                value={dateRange}
-                onChange={setDateRange}
-                data={data}
-              />
-            )}
-
             <div className={`flex-1 w-full ${shareMode ? 'min-h-[560px]' : 'min-h-[450px]'} -ml-2`}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
@@ -1523,10 +1515,10 @@ export default function App() {
                   {/* Primary Left Axis */}
                   <YAxis 
                     yAxisId="left" 
-                    stroke="var(--color-chart-axis)" 
+                    stroke={leftAxisColor} 
                     fontSize={11} 
                     orientation="left"
-                    label={{ value: leftAxisTitle, angle: -90, position: 'insideLeft', offset: 2, style: { fill: 'var(--color-chart-axis)', fontSize: 13, fontWeight: 700 } }}
+                    label={{ value: leftAxisTitle, angle: -90, position: 'insideLeft', offset: 2, style: { fill: leftAxisColor, fontSize: 13, fontWeight: 700 } }}
                     tickFormatter={(val) => viewMode === 'relative' ? `${val}%` : Number(val).toLocaleString()}
                     axisLine={false}
                     tickLine={false}
@@ -1539,9 +1531,9 @@ export default function App() {
                     <YAxis 
                       yAxisId="right" 
                       orientation="right" 
-                      stroke="var(--color-chart-axis)" 
+                      stroke={rightAxisColor} 
                       fontSize={11}
-                      label={{ value: rightAxisTitle, angle: 90, position: 'insideRight', offset: 2, style: { fill: 'var(--color-chart-axis)', fontSize: 13, fontWeight: 700 } }}
+                      label={{ value: rightAxisTitle, angle: 90, position: 'insideRight', offset: 2, style: { fill: rightAxisColor, fontSize: 13, fontWeight: 700 } }}
                       tickFormatter={(val) => Number(val).toLocaleString()}
                       axisLine={false}
                       tickLine={false}
@@ -1561,8 +1553,8 @@ export default function App() {
                       x2={new Date(zone.end).getTime()}
                       yAxisId="left"
                       fill={zone.color}
-                      fillOpacity={zone.opacity}
-                      label={(props) => <RenderLabel {...props} label={zone.label} labelPos={zone.labelPos} />}
+                      fillOpacity={0.12}
+                      label={(props) => <RenderLabel {...props} label={`ⓘ ${zone.label}`} labelPos={zone.labelPos} />}
                     />
                   ))}
 
@@ -1603,6 +1595,18 @@ export default function App() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
+
+            {data.length > 1 && (
+              <div className="mt-2 opacity-80">
+                <DateRangeSlider 
+                  min={0}
+                  max={data.length - 1}
+                  value={dateRange}
+                  onChange={setDateRange}
+                  data={data}
+                />
+              </div>
+            )}
 
             {/* NEW BOTTOM LEGEND SECTION */}
             <div className="mt-4 flex flex-wrap items-center justify-center gap-3 border-t border-subtle pt-4">
