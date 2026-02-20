@@ -815,6 +815,7 @@ export default function App() {
   const [viewMode, setViewMode] = useState<'raw' | 'relative'>('raw');
   // Set default selected metrics to S&P 500 and Job Openings
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>(['S&P 500', 'Job Openings']);
+  const [metricSearch, setMetricSearch] = useState('');
   
   // Date Range State (Indices) - Initialized to a safe empty array state
   const [dateRange, setDateRange] = useState<[number, number]>([0, 0]);
@@ -1243,6 +1244,17 @@ export default function App() {
     return groups;
   }, []);
 
+  const filteredMetricsByCategory = useMemo(() => {
+    const q = metricSearch.trim().toLowerCase();
+    if (!q) return metricsByCategory;
+    const out: Record<string, MetricConfig[]> = {};
+    for (const [category, list] of Object.entries(metricsByCategory)) {
+      const matches = list.filter((m) => m.label.toLowerCase().includes(q) || m.id.toLowerCase().includes(q));
+      if (matches.length) out[category] = matches;
+    }
+    return out;
+  }, [metricsByCategory, metricSearch]);
+
   const lastUpdatedText = useMemo(() => {
     if (data.length === 0) return 'N/A';
     const lastPoint = data[data.length - 1];
@@ -1250,6 +1262,18 @@ export default function App() {
   }, [data]);
 
   const sourceLabel = dataSource === 'google' ? 'Google Sheet' : dataSource === 'local' ? 'Local CSV' : 'Embedded fallback';
+  const rangeLabel = useMemo(() => {
+    if (!data.length) return 'N/A';
+    const start = data[dateRange[0]];
+    const end = data[dateRange[1]];
+    if (!start || !end) return 'N/A';
+    return `${new Date(start.timestamp).toLocaleDateString()} → ${new Date(end.timestamp).toLocaleDateString()}`;
+  }, [data, dateRange]);
+  const latestDataAgeDays = useMemo(() => {
+    if (!data.length) return null;
+    const latest = data[data.length - 1];
+    return Math.floor((Date.now() - latest.timestamp) / 86400000);
+  }, [data]);
 
   if (isLoading) {
     return (
@@ -1322,6 +1346,11 @@ export default function App() {
           {dataWarning}
         </div>
       )}
+      {latestDataAgeDays !== null && latestDataAgeDays > 45 && (
+        <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+          Data may be stale ({latestDataAgeDays} days since latest point). Consider refreshing your source sheet.
+        </div>
+      )}
       
       {/* STANDARD DASHBOARD VIEW (Always visible now) */}
       <div className={`${activeTab === 'Dashboard' && !shareMode ? 'grid grid-cols-1 lg:grid-cols-[32fr_68fr] gap-6' : 'grid grid-cols-1 gap-6'}`}>
@@ -1360,14 +1389,20 @@ export default function App() {
             </div>
 
             <div>
-              <div className="flex justify-between items-center mb-4 px-1">
+              <div className="flex justify-between items-center mb-3 px-1">
                 <h3 className="text-sm font-bold text-muted uppercase tracking-wider">Metrics</h3>
                 <span className="text-xs text-muted">
                   {selectedMetrics.length} Selected
                 </span>
               </div>
-              <div className="mt-4 space-y-6 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
-                {Object.entries(metricsByCategory).map(([category, catMetrics]) => (
+              <input
+                value={metricSearch}
+                onChange={(e) => setMetricSearch(e.target.value)}
+                placeholder="Search metrics..."
+                className="mb-3 w-full rounded-md border border-theme bg-secondary px-2.5 py-1.5 text-sm text-main"
+              />
+              <div className="mt-2 space-y-6 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
+                {Object.entries(filteredMetricsByCategory).map(([category, catMetrics]) => (
                   <div key={category}>
                     <h4 className="text-[10px] font-bold text-muted uppercase tracking-wider mb-2 pl-1 border-b border-subtle pb-1">{category}</h4>
                     <div className="space-y-1.5">
@@ -1414,6 +1449,9 @@ export default function App() {
                     </div>
                   </div>
                 ))}
+                {Object.keys(filteredMetricsByCategory).length === 0 && (
+                  <p className="text-sm text-muted">No metrics match your search.</p>
+                )}
               </div>
             </div>
           </Card>
@@ -1466,6 +1504,10 @@ export default function App() {
                      ? 'Comparing percentage growth relative to start date (Base = 100)' 
                      : 'Historical absolute values over time'}
                 </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                  <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-muted">{selectedMetrics.length} metrics</span>
+                  <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-muted">Range: {rangeLabel}</span>
+                </div>
               </div>
             </div>
 
