@@ -1353,114 +1353,91 @@ export default function App() {
       )}
       
       {/* STANDARD DASHBOARD VIEW (Always visible now) */}
-      <div className={`${activeTab === 'Dashboard' && !shareMode ? 'grid grid-cols-1 lg:grid-cols-[32fr_68fr] gap-6' : 'grid grid-cols-1 gap-6'}`}>
-        
-        {/* Sidebar Settings */}
-        {activeTab === 'Dashboard' && !shareMode && (
-        <div className="space-y-6">
-          
-          <Card
-            className="h-full"
-            style={{ backgroundColor: 'color-mix(in oklab, var(--color-surface-muted) 28%, var(--color-bg-secondary))' }}
-          >
-            <div className="mb-8">
-              <div className="flex text-xs font-medium border border-theme rounded p-1">
-                <button 
-                  onClick={() => setViewMode('raw')}
-                  className={`flex-1 py-1.5 rounded transition-all ${viewMode === 'raw' ? 'bg-muted-surface text-main font-semibold' : 'text-muted hover:text-main'}`}
-                >
-                  Raw Values
-                </button>
-                <button 
-                  onClick={() => setViewMode('relative')}
-                  className={`flex-1 py-1.5 rounded transition-all ${viewMode === 'relative' ? 'bg-muted-surface text-main font-semibold' : 'text-muted hover:text-main'}`}
-                >
-                  Relative Index
-                </button>
-              </div>
-              <button
-                onClick={() => setShareMode((prev) => !prev)}
-                className={`w-full mt-3 text-left text-sm font-medium border border-theme rounded-lg px-3 py-2 transition ${
-                  shareMode ? 'bg-secondary text-main' : 'bg-muted-surface text-muted hover:text-main'
-                }`}
-              >
-                {shareMode ? 'Exit Share Mode' : 'Share Mode'}
-              </button>
-            </div>
+      <div className="grid grid-cols-1 gap-6">
+        <div className="flex flex-col gap-6">
+          {activeTab === 'Dashboard' && !shareMode && (
+            <>
+              <Card className="p-4">
+                <p className="text-sm font-semibold text-main">Key Takeaway</p>
+                <p className="mt-1 text-sm text-muted">
+                  {activeMetrics.length >= 2
+                    ? `${activeMetrics[0].label} and ${activeMetrics[1].label} are diverging. Review trend slopes for confirmation and monitor next data release.`
+                    : 'Select two indicators to generate a stronger comparative takeaway.'}
+                </p>
+              </Card>
 
-            <div>
-              <div className="flex justify-between items-center mb-3 px-1">
-                <h3 className="text-sm font-bold text-muted uppercase tracking-wider">Metrics</h3>
-                <span className="text-xs text-muted">
-                  {selectedMetrics.length} Selected
-                </span>
-              </div>
-              <input
-                value={metricSearch}
-                onChange={(e) => setMetricSearch(e.target.value)}
-                placeholder="Search metrics..."
-                className="mb-3 w-full rounded-md border border-theme bg-secondary px-2.5 py-1.5 text-sm text-main"
-              />
-              <div className="mt-2 space-y-6 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
-                {Object.entries(filteredMetricsByCategory).map(([category, catMetrics]) => (
-                  <div key={category}>
-                    <h4 className="text-[10px] font-bold text-muted uppercase tracking-wider mb-2 pl-1 border-b border-subtle pb-1">{category}</h4>
-                    <div className="space-y-1.5">
-                      {catMetrics.map((m) => {
-                        const isSelected = selectedMetrics.includes(m.id);
-                        
-                        return (
-                          <div 
-                            key={m.id}
-                            onClick={() => toggleMetric(m.id)}
-                            className={`
-                              group relative p-2.5 rounded-md border cursor-pointer transition-all duration-200
-                              ${isSelected 
-                                ? 'bg-muted-surface border-theme' 
-                                : 'bg-transparent border-transparent hover:bg-muted-surface'}
-                            `}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div 
-                                className={`
-                                  w-6 h-6 flex items-center justify-center transition-all duration-300
-                                `}
-                              >
-                                <m.icon className={`w-4 h-4 ${isSelected ? 'text-main' : 'text-muted'}`} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className={`text-sm font-medium truncate transition-colors ${isSelected ? 'text-main' : 'text-muted group-hover:text-main'}`}>
-                                  {m.label}
-                                </div>
-                              </div>
-                              
-                              <div className={`
-                                w-3 h-3 rounded-full border flex items-center justify-center transition-all duration-200
-                                ${isSelected 
-                                  ? 'bg-main border-main' 
-                                  : 'border-theme'}
-                              `}>
-                                 {isSelected && <div className="w-1 h-1 bg-secondary rounded-full" />}
+              <Card className="p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={selectedMetrics[0] ?? METRICS[0].id}
+                    onChange={(e) => setSelectedMetrics((prev) => [e.target.value, prev[1] ?? prev[0] ?? e.target.value])}
+                    className="rounded-md border border-theme bg-secondary px-3 py-2 text-sm"
+                  >
+                    {METRICS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+                  </select>
+                  <span className="text-sm text-muted">vs</span>
+                  <select
+                    value={selectedMetrics[1] ?? METRICS[1].id}
+                    onChange={(e) => setSelectedMetrics((prev) => [prev[0] ?? METRICS[0].id, e.target.value])}
+                    className="rounded-md border border-theme bg-secondary px-3 py-2 text-sm"
+                  >
+                    {METRICS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+                  </select>
+                  <div className="ml-auto flex items-center gap-2">
+                    <button onClick={() => setViewMode('raw')} className={`rounded-md border px-3 py-2 text-sm ${viewMode === 'raw' ? 'bg-muted-surface border-theme' : 'border-theme'}`}>Raw</button>
+                    <button onClick={() => setViewMode('relative')} className={`rounded-md border px-3 py-2 text-sm ${viewMode === 'relative' ? 'bg-muted-surface border-theme' : 'border-theme'}`}>Relative</button>
+                    <details className="relative">
+                      <summary className="cursor-pointer list-none rounded-md border border-theme px-3 py-2 text-sm">More Filters</summary>
+                      <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-theme bg-secondary p-3 shadow-lg">
+                        <input
+                          value={metricSearch}
+                          onChange={(e) => setMetricSearch(e.target.value)}
+                          placeholder="Search metrics..."
+                          className="mb-3 w-full rounded-md border border-theme bg-secondary px-2.5 py-1.5 text-sm text-main"
+                        />
+                        <div className="max-h-72 space-y-3 overflow-y-auto pr-1">
+                          {Object.entries(filteredMetricsByCategory).map(([category, catMetrics]) => (
+                            <div key={category}>
+                              <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted">{category}</p>
+                              <div className="space-y-1">
+                                {catMetrics.map((m) => (
+                                  <label key={m.id} className="flex items-center gap-2 rounded px-1 py-1 text-sm hover:bg-muted-surface">
+                                    <input type="checkbox" checked={selectedMetrics.includes(m.id)} onChange={() => toggleMetric(m.id)} />
+                                    <span>{m.label}</span>
+                                  </label>
+                                ))}
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          ))}
+                        </div>
+                      </div>
+                    </details>
                   </div>
-                ))}
-                {Object.keys(filteredMetricsByCategory).length === 0 && (
-                  <p className="text-sm text-muted">No metrics match your search.</p>
-                )}
-              </div>
-            </div>
-          </Card>
-        </div>
-        )}
-
-        {/* Main Content Area */}
-        <div className="flex flex-col gap-6">
+                </div>
+              </Card>
+            </>
+          )}
           
+          {activeTab === 'Dashboard' && !shareMode && (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {activeMetrics.slice(0, 4).map((m) => {
+                const validPoints = data.filter(d => d[m.id] !== undefined);
+                const lastPoint = validPoints[validPoints.length - 1];
+                const prevPoint = validPoints[validPoints.length - 2];
+                const lastValue = lastPoint ? Number(lastPoint[m.id]) : 0;
+                const prevValue = prevPoint ? Number(prevPoint[m.id]) : 0;
+                const delta = prevValue ? ((lastValue - prevValue) / prevValue) * 100 : 0;
+                return (
+                  <Card key={`headline-${m.id}`} className="p-4">
+                    <p className="text-xs uppercase tracking-wider text-muted">{m.label}</p>
+                    <p className="mt-1 text-2xl font-semibold text-main">{m.format(lastValue)}</p>
+                    <p className={`mt-1 text-xs ${delta >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{delta >= 0 ? '+' : ''}{delta.toFixed(1)}%</p>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+
           {/* Chart Section */}
           {activeTab === 'Dashboard' && (
           <Card className={`flex-1 flex flex-col relative overflow-hidden ${shareMode ? 'min-h-[760px]' : 'min-h-[500px]'}`}>
@@ -1749,107 +1726,6 @@ export default function App() {
           </Card>
           )}
 
-          {/* Metric Details Grid */}
-          {activeTab === 'Dashboard' && !shareMode && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {activeMetrics.map(m => {
-              const source = METRIC_SOURCES[m.id];
-              // Get last valid value
-              const validPoints = data.filter(d => d[m.id] !== undefined);
-              const lastPoint = validPoints[validPoints.length - 1];
-              const lastValue = lastPoint ? Number(lastPoint[m.id]) : 0;
-              
-              // Get previous value for trend
-              const prevPoint = validPoints[validPoints.length - 2];
-              const prevValue = prevPoint ? Number(prevPoint[m.id]) : 0;
-              
-              // Calculate Change
-              let changeValue: number | null = 0;
-              let isPercentagePoint = false;
-
-              if (m.isPercentage) {
-                // Percentage Point Change (e.g. 5.2% -> 5.4% is +0.2pp)
-                changeValue = lastValue - prevValue;
-                isPercentagePoint = true;
-              } else {
-                // Percent Change (e.g. 100 -> 110 is +10%)
-                if (prevValue > 0) {
-                  changeValue = ((lastValue - prevValue) / prevValue) * 100;
-                } else {
-                  changeValue = null;
-                }
-              }
-
-              if (changeValue !== null && !Number.isFinite(changeValue)) {
-                changeValue = null;
-              }
-
-              const isPositive = changeValue !== null && changeValue >= 0;
-              const cardBackground = `color-mix(in oklab, ${m.color} 10%, var(--color-bg-secondary))`;
-              const cardBorder = `color-mix(in oklab, ${m.color} 24%, var(--color-border))`;
-
-              return (
-                <Card
-                  key={m.id}
-                  className="group transition-all duration-300"
-                  style={{ backgroundColor: cardBackground, borderColor: cardBorder }}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-bold text-main">{m.label}</h4>
-                      {source && (
-                        <div className="relative group/source">
-                          <a
-                            href={source.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center justify-center w-4 h-4 text-muted hover:text-main"
-                            title={`Open source: ${source.seriesId}`}
-                          >
-                            <Info className="w-3.5 h-3.5" />
-                          </a>
-                          <div className="absolute left-0 top-full mt-1 w-56 bg-main text-inverse text-[11px] rounded-md px-2 py-2 opacity-0 group-hover/source:opacity-100 transition pointer-events-auto z-20">
-                            <div className="font-semibold">{source.provider}</div>
-                            <div>Series: {source.seriesId}</div>
-                            {source.note && <div className="text-inverse-muted mt-0.5">{source.note}</div>}
-                            <a
-                              href={source.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-block mt-1 underline text-inverse-muted hover:text-inverse"
-                            >
-                              Open source link
-                            </a>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <m.icon className="w-4 h-4 text-muted group-hover:text-main transition-colors" />
-                  </div>
-                  <p className="text-xs text-muted leading-relaxed min-h-[1.5em]">{m.desc}</p>
-                  
-                  <div className="mt-4">
-                     <div className="flex items-baseline gap-2">
-                       <span className="text-2xl font-mono text-main font-semibold">
-                         {m.format(lastValue)}
-                       </span>
-                       {changeValue === null ? (
-                         <span className="text-xs font-medium text-muted">N/A</span>
-                       ) : (
-                         <span className={`text-xs font-medium flex items-center ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
-                           {isPositive ? '+' : ''}{changeValue.toFixed(1)}{isPercentagePoint ? 'pp' : '%'}
-                         </span>
-                       )}
-                     </div>
-                     <div className="text-[10px] text-muted mt-1">
-                       Last observed: {lastPoint?.date}
-                     </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-          )}
         </div>
       </div>
       </div>
