@@ -12,7 +12,6 @@ import {
   ReferenceArea,
   ReferenceDot,
 } from 'recharts';
-import { toPng } from 'html-to-image';
 import { 
   Activity, 
   TrendingUp, 
@@ -701,8 +700,6 @@ export default function App() {
   // Date Range State (Indices) - Initialized to a safe empty array state
   const [dateRange, setDateRange] = useState<[number, number]>([0, 0]);
   const [datePreset, setDatePreset] = useState<'1Y' | '5Y' | '10Y' | 'MAX'>('5Y');
-  const [exporting, setExporting] = useState(false);
-  const exportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -1278,17 +1275,6 @@ export default function App() {
           <button onClick={() => setReloadKey((k) => k + 1)} className="px-3 py-1.5 text-sm font-medium rounded-md border bg-muted-surface text-main border-theme">
             Refresh data
           </button>
-          {activeTab === 'Dashboard' && (
-            <details className="relative">
-              <summary className="cursor-pointer list-none px-3 py-1.5 text-sm font-medium rounded-md border bg-muted-surface text-main border-theme">
-                {exporting ? 'Exporting…' : 'Export Image'}
-              </summary>
-              <div className="absolute right-0 z-20 mt-2 w-44 rounded-lg border border-theme bg-secondary p-2 shadow-lg">
-                <button disabled={exporting} onClick={() => void exportSocialImage('4:5')} className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-muted-surface disabled:opacity-50">Export 4:5</button>
-                <button disabled={exporting} onClick={() => void exportSocialImage('1.91:1')} className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-muted-surface disabled:opacity-50">Export 1.91:1</button>
-              </div>
-            </details>
-          )}
           <ThemeToggle />
         </div>
       </header>
@@ -1306,7 +1292,7 @@ export default function App() {
       
       {/* STANDARD DASHBOARD VIEW (Always visible now) */}
       <div className="grid grid-cols-1 gap-6">
-        <div ref={exportRef} className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6">
           {activeTab === 'Dashboard' && !shareMode && (
             <>
               <Card className="p-4">
