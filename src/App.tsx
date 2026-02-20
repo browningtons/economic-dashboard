@@ -519,7 +519,7 @@ const getBuffettValuation = (value: number): BuffettZone => {
 // --- Components ---
 
 const Card: React.FC<{ children: React.ReactNode; className?: string; style?: React.CSSProperties }> = ({ children, className = "", style }) => (
-  <div className={`bg-secondary border border-theme rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow duration-300 ${className}`} style={style}>
+  <div className={`bg-secondary border border-theme/70 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300 ${className}`} style={style}>
     {children}
   </div>
 );
@@ -1304,7 +1304,7 @@ export default function App() {
       <div className={`mx-auto ${shareMode ? 'max-w-[1700px]' : 'max-w-[1600px]'}`}>
       
       {/* Header */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 bg-secondary p-6 rounded-2xl shadow-sm border border-theme">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 bg-secondary p-7 rounded-2xl shadow-sm border border-theme/70">
         <div className="flex items-center gap-4">
           <img src={appLogo} alt="Economic Dashboard logo" className="w-14 h-14 object-contain shrink-0" />
           <div>
@@ -1443,7 +1443,7 @@ export default function App() {
 
           {/* Chart Section */}
           {activeTab === 'Dashboard' && (
-          <Card className={`flex-1 flex flex-col relative overflow-hidden ${shareMode ? 'min-h-[760px]' : 'min-h-[500px]'}`}>
+          <Card className={`flex-1 flex flex-col relative overflow-hidden ${shareMode ? 'min-h-[760px]' : 'min-h-[500px]'} p-7`}>
              {/* --- CORRELATION INDICATOR --- */}
              {activeMetrics.length === 2 && rSquared && (
               <div className="group absolute top-4 right-4 z-20 flex items-center gap-2 cursor-help bg-secondary backdrop-blur-sm p-2 rounded-lg shadow-sm border border-theme">
@@ -1491,7 +1491,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className={`flex-1 w-full ${shareMode ? 'min-h-[560px]' : 'min-h-[450px]'} -ml-2`}>
+            <div className={`flex-1 w-full ${shareMode ? 'min-h-[560px]' : 'min-h-[450px]'}`}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" vertical={false} />
@@ -1518,7 +1518,7 @@ export default function App() {
                     stroke={leftAxisColor} 
                     fontSize={11} 
                     orientation="left"
-                    label={{ value: leftAxisTitle, angle: -90, position: 'insideLeft', offset: 2, style: { fill: leftAxisColor, fontSize: 13, fontWeight: 700 } }}
+                    label={{ value: leftAxisTitle, angle: -90, position: 'insideLeft', offset: 2, style: { fill: leftAxisColor, fontSize: 12, fontWeight: 600 } }}
                     tickFormatter={(val) => viewMode === 'relative' ? `${val}%` : Number(val).toLocaleString()}
                     axisLine={false}
                     tickLine={false}
@@ -1533,7 +1533,7 @@ export default function App() {
                       orientation="right" 
                       stroke={rightAxisColor} 
                       fontSize={11}
-                      label={{ value: rightAxisTitle, angle: 90, position: 'insideRight', offset: 2, style: { fill: rightAxisColor, fontSize: 13, fontWeight: 700 } }}
+                      label={{ value: rightAxisTitle, angle: 90, position: 'insideRight', offset: 2, style: { fill: rightAxisColor, fontSize: 12, fontWeight: 600 } }}
                       tickFormatter={(val) => Number(val).toLocaleString()}
                       axisLine={false}
                       tickLine={false}
