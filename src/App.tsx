@@ -1279,103 +1279,9 @@ export default function App() {
         </div>
       </header>
 
-      {dataWarning && (
-        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
-          {dataWarning}
-        </div>
-      )}
-      {latestDataAgeDays !== null && latestDataAgeDays > 45 && (
-        <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
-          Data may be stale ({latestDataAgeDays} days since latest point). Consider refreshing your source sheet.
-        </div>
-      )}
-      
       {/* STANDARD DASHBOARD VIEW (Always visible now) */}
       <div className="grid grid-cols-1 gap-6">
         <div className="flex flex-col gap-6">
-          {activeTab === 'Dashboard' && !shareMode && (
-            <>
-              <Card className="p-4">
-                <p className="text-sm font-semibold text-main">Key Takeaway</p>
-                <p className="mt-1 text-sm text-muted">
-                  {activeMetrics.length >= 2
-                    ? `${activeMetrics[0].label} and ${activeMetrics[1].label} are diverging. Review trend slopes for confirmation and monitor next data release.`
-                    : 'Select two indicators to generate a stronger comparative takeaway.'}
-                </p>
-              </Card>
-
-              <Card className="p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <select
-                    value={selectedMetrics[0] ?? METRICS[0].id}
-                    onChange={(e) => setSelectedMetrics((prev) => [e.target.value, prev[1] ?? prev[0] ?? e.target.value])}
-                    className="rounded-md border border-theme bg-secondary px-3 py-2 text-sm"
-                  >
-                    {METRICS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-                  </select>
-                  <span className="text-sm text-muted">vs</span>
-                  <select
-                    value={selectedMetrics[1] ?? METRICS[1].id}
-                    onChange={(e) => setSelectedMetrics((prev) => [prev[0] ?? METRICS[0].id, e.target.value])}
-                    className="rounded-md border border-theme bg-secondary px-3 py-2 text-sm"
-                  >
-                    {METRICS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-                  </select>
-                  <div className="ml-auto flex items-center gap-2">
-                    <button onClick={() => setViewMode('raw')} className={`rounded-md border px-3 py-2 text-sm ${viewMode === 'raw' ? 'bg-muted-surface border-theme' : 'border-theme'}`}>Raw</button>
-                    <button onClick={() => setViewMode('relative')} className={`rounded-md border px-3 py-2 text-sm ${viewMode === 'relative' ? 'bg-muted-surface border-theme' : 'border-theme'}`}>Relative</button>
-                    <details className="relative">
-                      <summary className="cursor-pointer list-none rounded-md border border-theme px-3 py-2 text-sm">More Filters</summary>
-                      <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-theme bg-secondary p-3 shadow-lg">
-                        <input
-                          value={metricSearch}
-                          onChange={(e) => setMetricSearch(e.target.value)}
-                          placeholder="Search metrics..."
-                          className="mb-3 w-full rounded-md border border-theme bg-secondary px-2.5 py-1.5 text-sm text-main"
-                        />
-                        <div className="max-h-72 space-y-3 overflow-y-auto pr-1">
-                          {Object.entries(filteredMetricsByCategory).map(([category, catMetrics]) => (
-                            <div key={category}>
-                              <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted">{category}</p>
-                              <div className="space-y-1">
-                                {catMetrics.map((m) => (
-                                  <label key={m.id} className="flex items-center gap-2 rounded px-1 py-1 text-sm hover:bg-muted-surface">
-                                    <input type="checkbox" checked={selectedMetrics.includes(m.id)} onChange={() => toggleMetric(m.id)} />
-                                    <span>{m.label}</span>
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </details>
-                  </div>
-                </div>
-              </Card>
-            </>
-          )}
-          
-          {activeTab === 'Dashboard' && !shareMode && (
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-              {activeMetrics.slice(0, 4).map((m) => {
-                const validPoints = data.filter(d => d[m.id] !== undefined);
-                const lastPoint = validPoints[validPoints.length - 1];
-                const prevPoint = validPoints[validPoints.length - 2];
-                const lastValue = lastPoint ? Number(lastPoint[m.id]) : 0;
-                const prevValue = prevPoint ? Number(prevPoint[m.id]) : 0;
-                const delta = prevValue ? ((lastValue - prevValue) / prevValue) * 100 : 0;
-                return (
-                  <Card key={`headline-${m.id}`} className="p-4">
-                    <p className="text-xs uppercase tracking-wider text-muted">{m.label}</p>
-                    <p className="mt-1 text-2xl font-semibold text-main">{m.format(lastValue)}</p>
-                    <p className={`mt-1 text-xs ${delta >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{delta >= 0 ? '+' : ''}{delta.toFixed(1)}%</p>
-                  </Card>
-                )
-              })}
-            </div>
-          )}
-
           {/* Chart Section */}
           {activeTab === 'Dashboard' && (
           <Card className={`flex-1 flex flex-col relative overflow-hidden ${shareMode ? 'min-h-[760px]' : 'min-h-[500px]'} p-7`}>
@@ -1423,6 +1329,18 @@ export default function App() {
                   <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-muted">{selectedMetrics.length} metrics</span>
                   <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-muted">Range: {rangeLabel}</span>
                 </div>
+                {(dataWarning || (latestDataAgeDays !== null && latestDataAgeDays > 45)) && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                    {dataWarning && (
+                      <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-amber-800">{dataWarning}</span>
+                    )}
+                    {latestDataAgeDays !== null && latestDataAgeDays > 45 && (
+                      <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-1 text-rose-700">
+                        Data may be stale ({latestDataAgeDays} days since latest point)
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-1 rounded-lg border border-theme bg-muted-surface p-1">
@@ -1555,6 +1473,87 @@ export default function App() {
                ))}
             </div>
           </Card>
+          )}
+
+          {activeTab === 'Dashboard' && !shareMode && (
+            <>
+              <Card className="p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={selectedMetrics[0] ?? METRICS[0].id}
+                    onChange={(e) => setSelectedMetrics((prev) => [e.target.value, prev[1] ?? prev[0] ?? e.target.value])}
+                    className="rounded-md border border-theme bg-secondary px-3 py-2 text-sm"
+                  >
+                    {METRICS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+                  </select>
+                  <span className="text-sm text-muted">vs</span>
+                  <select
+                    value={selectedMetrics[1] ?? METRICS[1].id}
+                    onChange={(e) => setSelectedMetrics((prev) => [prev[0] ?? METRICS[0].id, e.target.value])}
+                    className="rounded-md border border-theme bg-secondary px-3 py-2 text-sm"
+                  >
+                    {METRICS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+                  </select>
+                  <div className="ml-auto flex items-center gap-2">
+                    <button onClick={() => setViewMode('raw')} className={`rounded-md border px-3 py-2 text-sm ${viewMode === 'raw' ? 'bg-muted-surface border-theme' : 'border-theme'}`}>Raw</button>
+                    <button onClick={() => setViewMode('relative')} className={`rounded-md border px-3 py-2 text-sm ${viewMode === 'relative' ? 'bg-muted-surface border-theme' : 'border-theme'}`}>Relative</button>
+                    <details className="relative">
+                      <summary className="cursor-pointer list-none rounded-md border border-theme px-3 py-2 text-sm">More Filters</summary>
+                      <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-theme bg-secondary p-3 shadow-lg">
+                        <input
+                          value={metricSearch}
+                          onChange={(e) => setMetricSearch(e.target.value)}
+                          placeholder="Search metrics..."
+                          className="mb-3 w-full rounded-md border border-theme bg-secondary px-2.5 py-1.5 text-sm text-main"
+                        />
+                        <div className="max-h-72 space-y-3 overflow-y-auto pr-1">
+                          {Object.entries(filteredMetricsByCategory).map(([category, catMetrics]) => (
+                            <div key={category}>
+                              <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted">{category}</p>
+                              <div className="space-y-1">
+                                {catMetrics.map((m) => (
+                                  <label key={m.id} className="flex items-center gap-2 rounded px-1 py-1 text-sm hover:bg-muted-surface">
+                                    <input type="checkbox" checked={selectedMetrics.includes(m.id)} onChange={() => toggleMetric(m.id)} />
+                                    <span>{m.label}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </details>
+                  </div>
+                </div>
+              </Card>
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {activeMetrics.slice(0, 4).map((m) => {
+                  const validPoints = data.filter(d => d[m.id] !== undefined);
+                  const lastPoint = validPoints[validPoints.length - 1];
+                  const prevPoint = validPoints[validPoints.length - 2];
+                  const lastValue = lastPoint ? Number(lastPoint[m.id]) : 0;
+                  const prevValue = prevPoint ? Number(prevPoint[m.id]) : 0;
+                  const delta = prevValue ? ((lastValue - prevValue) / prevValue) * 100 : 0;
+                  return (
+                    <Card key={`headline-${m.id}`} className="p-4">
+                      <p className="text-xs uppercase tracking-wider text-muted">{m.label}</p>
+                      <p className="mt-1 text-2xl font-semibold text-main">{m.format(lastValue)}</p>
+                      <p className={`mt-1 text-xs ${delta >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{delta >= 0 ? '+' : ''}{delta.toFixed(1)}%</p>
+                    </Card>
+                  )
+                })}
+              </div>
+
+              <Card className="p-4">
+                <p className="text-sm font-semibold text-main">Key Takeaway</p>
+                <p className="mt-1 text-sm text-muted">
+                  {activeMetrics.length >= 2
+                    ? `${activeMetrics[0].label} and ${activeMetrics[1].label} are diverging. Review trend slopes for confirmation and monitor next data release.`
+                    : 'Select two indicators to generate a stronger comparative takeaway.'}
+                </p>
+              </Card>
+            </>
           )}
 
           {activeTab === 'Buffett' && (
