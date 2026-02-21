@@ -699,7 +699,7 @@ export default function App() {
   
   // Date Range State (Indices) - Initialized to a safe empty array state
   const [dateRange, setDateRange] = useState<[number, number]>([0, 0]);
-  const [datePreset, setDatePreset] = useState<'1Y' | '5Y' | '10Y' | 'MAX'>('5Y');
+  const [datePreset, setDatePreset] = useState<'1Y' | '5Y' | '10Y' | 'MAX'>('MAX');
 
   useEffect(() => {
     let cancelled = false;
@@ -1285,34 +1285,9 @@ export default function App() {
           {/* Chart Section */}
           {activeTab === 'Dashboard' && (
           <Card className={`flex-1 flex flex-col relative overflow-hidden ${shareMode ? 'min-h-[760px]' : 'min-h-[500px]'} p-7`}>
-             {/* --- CORRELATION INDICATOR --- */}
-             {activeMetrics.length === 2 && rSquared && (
-              <div className="group absolute top-4 right-4 z-20 flex items-center gap-2 cursor-help bg-secondary backdrop-blur-sm p-2 rounded-lg shadow-sm border border-theme">
-                <span className="text-sm font-bold text-main">
-                  R<sup>2</sup> = {rSquared}
-                </span>
-                <HelpCircle className="w-4 h-4 text-muted hover:text-[color:var(--color-brand-primary)] transition-colors" />
-                <div className="absolute right-0 top-full mt-2 w-64 p-4 bg-main text-inverse text-xs rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none transform translate-y-1 group-hover:translate-y-0">
-                  <div className="font-bold text-sm mb-2 text-blue-400">Coefficient of Determination</div>
-                  <p className="mb-3 text-inverse-muted leading-relaxed">Measures the strength of the relationship between the two selected indicators.</p>
-                  <div className="space-y-2">
-                    <div>
-                      <span className="text-blue-300 font-semibold block mb-0.5">Why it's interesting:</span>
-                      <span className="text-inverse-muted">It reveals if one economic metric effectively predicts or mirrors another.</span>
-                    </div>
-                    <div>
-                      <span className="text-emerald-300 font-semibold block mb-0.5">Why care?</span>
-                      <span className="text-inverse-muted">High correlations (near 1.0) suggest a reliable trend; sudden divergences can signal market shifts.</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            {/* ----------------------------- */}
-
             <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-start ${shareMode ? 'mb-5 gap-3' : 'mb-8 gap-4'} z-10`}>
               <div>
-                <h2 className="text-2xl font-semibold text-main flex items-center gap-2">
+                <h2 className="text-3xl md:text-4xl font-semibold text-main flex items-center gap-2">
                   {viewMode === 'relative' ? 'Relative Performance Index' : 'Economic Trends'}
                 </h2>
                 {chartMetricTitle && (
@@ -1343,16 +1318,41 @@ export default function App() {
                 )}
               </div>
 
-              <div className="flex items-center gap-1 rounded-lg border border-theme bg-muted-surface p-1">
-                {(['1Y', '5Y', '10Y', 'MAX'] as const).map((preset) => (
-                  <button
-                    key={preset}
-                    onClick={() => applyDatePreset(preset)}
-                    className={`rounded-md px-2.5 py-1.5 text-xs font-medium ${datePreset === preset ? 'bg-secondary text-main shadow-sm border border-theme' : 'text-muted hover:text-main'}`}
-                  >
-                    {preset}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2 flex-wrap sm:justify-end">
+                <div className="flex items-center gap-1 rounded-lg border border-theme bg-muted-surface p-1">
+                  {(['1Y', '5Y', '10Y', 'MAX'] as const).map((preset) => (
+                    <button
+                      key={preset}
+                      onClick={() => applyDatePreset(preset)}
+                      className={`rounded-md px-2.5 py-1.5 text-xs font-medium ${datePreset === preset ? 'bg-secondary text-main shadow-sm border border-theme' : 'text-muted hover:text-main'}`}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+
+                {activeMetrics.length === 2 && rSquared && (
+                  <div className="group relative flex items-center gap-2 bg-secondary px-3 py-1.5 rounded-lg shadow-sm border border-theme">
+                    <span className="text-sm font-bold text-main">
+                      R<sup>2</sup> = {rSquared}
+                    </span>
+                    <HelpCircle className="w-4 h-4 text-muted hover:text-[color:var(--color-brand-primary)] transition-colors" />
+                    <div className="absolute right-0 top-full mt-2 w-64 p-4 bg-main text-inverse text-xs rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none transform translate-y-1 group-hover:translate-y-0 z-30">
+                      <div className="font-bold text-sm mb-2 text-blue-400">Coefficient of Determination</div>
+                      <p className="mb-3 text-inverse-muted leading-relaxed">Measures the strength of the relationship between the two selected indicators.</p>
+                      <div className="space-y-2">
+                        <div>
+                          <span className="text-blue-300 font-semibold block mb-0.5">Why it's interesting:</span>
+                          <span className="text-inverse-muted">It reveals if one economic metric effectively predicts or mirrors another.</span>
+                        </div>
+                        <div>
+                          <span className="text-emerald-300 font-semibold block mb-0.5">Why care?</span>
+                          <span className="text-inverse-muted">High correlations (near 1.0) suggest a reliable trend; sudden divergences can signal market shifts.</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
