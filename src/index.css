@@ -91,3 +91,26 @@
 body {
   @apply bg-primary text-main transition-colors duration-300;
 }
+
+/* Subtle dual-range slider thumbs used above the main chart */
+.range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in oklab, var(--color-text-muted) 25%, transparent);
+  background: color-mix(in oklab, var(--color-bg-secondary) 75%, var(--color-surface-muted));
+  pointer-events: auto;
+  cursor: ew-resize;
+}
+
+.range-input::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in oklab, var(--color-text-muted) 25%, transparent);
+  background: color-mix(in oklab, var(--color-bg-secondary) 75%, var(--color-surface-muted));
+  pointer-events: auto;
+  cursor: ew-resize;
+}
