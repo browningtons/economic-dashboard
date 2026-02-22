@@ -1382,7 +1382,7 @@ export default function App() {
         <div className="flex flex-col gap-6">
           {/* Chart Section */}
           {activeTab === 'Dashboard' && (
-          <Card className={`flex-1 flex flex-col relative overflow-hidden ${shareMode ? 'min-h-[760px]' : 'min-h-[500px]'} p-7`}>
+          <Card className={`flex-1 flex flex-col relative ${shareMode ? 'min-h-[760px]' : 'min-h-[500px]'} p-7`}>
             <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-start ${shareMode ? 'mb-5 gap-3' : 'mb-8 gap-4'} z-10`}>
               <div>
                 <h2 className="text-3xl md:text-4xl font-semibold text-main flex items-center gap-2">
@@ -1467,7 +1467,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className={`flex-1 w-full ${shareMode ? 'min-h-[560px]' : 'min-h-[450px]'}`}>
+            <div className={`flex-1 w-full ${shareMode ? 'min-h-[560px]' : 'min-h-[450px]'} pb-2`}>
               {!shareMode && (
                 <div className="mb-3 rounded-lg border border-theme bg-muted-surface/70 p-3">
                   <div className="flex flex-wrap items-center gap-2">
@@ -1531,7 +1531,7 @@ export default function App() {
               )}
 
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+                <LineChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 56 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" vertical={false} />
                   
                   <XAxis 
@@ -1635,7 +1635,7 @@ export default function App() {
             </div>
 
             {/* NEW BOTTOM LEGEND SECTION */}
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3 border-t border-subtle pt-5">
+            <div className="mt-12 flex flex-wrap items-center justify-center gap-3 border-t border-subtle pt-6">
                {activeMetrics.map(m => (
                  <div key={m.id} className="flex items-center gap-2 px-3 py-1.5 bg-muted-surface rounded-full border border-theme">
                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: m.color }} />
