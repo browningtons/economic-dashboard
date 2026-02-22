@@ -999,6 +999,17 @@ export default function App() {
     return Math.max(200, Math.ceil((max + 2) / 10) * 10);
   }, [buffettData]);
 
+  const latestBuffettValue = useMemo(() => {
+    if (buffettData.length === 0) return null;
+    const latest = Number(buffettData[buffettData.length - 1].buffettValue);
+    return Number.isFinite(latest) ? latest : null;
+  }, [buffettData]);
+
+  const latestBuffettValuation = useMemo(() => {
+    if (latestBuffettValue === null) return null;
+    return getBuffettValuation(latestBuffettValue);
+  }, [latestBuffettValue]);
+
   const buffettLabelPoints = useMemo<BuffettLabelPoint[]>(() => {
     const validPoints = buffettData
       .map((point) => ({
@@ -1334,19 +1345,31 @@ export default function App() {
             </button>
           )}
           <div className="flex bg-muted-surface p-1 rounded-lg border border-theme">
-            {(['Dashboard', 'Buffett'] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
-                  activeTab === tab
-                    ? 'bg-secondary text-main shadow-sm border border-theme'
-                    : 'text-muted hover:text-main'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
+            {(['Dashboard', 'Buffett'] as const).map((tab) => {
+              const isActive = activeTab === tab;
+              const isBuffettTab = tab === 'Buffett';
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
+                    isActive
+                      ? 'bg-secondary text-main shadow-sm border border-theme'
+                      : isBuffettTab
+                        ? 'text-main border border-theme'
+                        : 'text-muted hover:text-main'
+                  }`}
+                  style={!isActive && isBuffettTab ? { backgroundColor: 'color-mix(in oklab, var(--color-brand-accent) 14%, var(--color-bg-secondary))' } : undefined}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    {tab}
+                    {isBuffettTab && !isActive && (
+                      <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--color-brand-primary)' }} />
+                    )}
+                  </span>
+                </button>
+              );
+            })}
           </div>
           <button onClick={() => setReloadKey((k) => k + 1)} className="px-3 py-1.5 text-sm font-medium rounded-md border bg-muted-surface text-main border-theme">
             Refresh data
@@ -1392,6 +1415,21 @@ export default function App() {
                     )}
                   </div>
                 )}
+                <div className="mt-3">
+                  <button
+                    onClick={() => setActiveTab('Buffett')}
+                    className="inline-flex items-center gap-2 rounded-full border border-theme px-3 py-1.5 text-xs transition hover:shadow-sm"
+                    style={{ backgroundColor: 'color-mix(in oklab, var(--color-brand-accent) 10%, var(--color-bg-secondary))' }}
+                  >
+                    <span className="font-semibold text-main">Featured: Buffett Indicator</span>
+                    {latestBuffettValuation && latestBuffettValue !== null && (
+                      <span className="text-muted">
+                        {latestBuffettValuation.label} ({latestBuffettValue.toFixed(1)}%)
+                      </span>
+                    )}
+                    <span className="font-semibold text-main">View</span>
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center gap-2 flex-wrap sm:justify-end">
