@@ -769,7 +769,7 @@ export default function App() {
   
   // Date Range State (Indices) - Initialized to a safe empty array state
   const [dateRange, setDateRange] = useState<[number, number]>([0, 0]);
-  const [datePreset, setDatePreset] = useState<'1Y' | '5Y' | '10Y' | 'MAX'>('MAX');
+  const [datePreset, setDatePreset] = useState<'1Y' | '3Y' | '5Y' | '10Y' | 'MAX'>('MAX');
 
   useEffect(() => {
     let cancelled = false;
@@ -1234,10 +1234,9 @@ export default function App() {
     if (!start || !end) return 'N/A';
     return `${new Date(start.timestamp).toLocaleDateString()} → ${new Date(end.timestamp).toLocaleDateString()}`;
   }, [data, dateRange]);
-  const latestDataAgeDays = useMemo(() => {
-    if (!data.length) return null;
-    const latest = data[data.length - 1];
-    return Math.floor((Date.now() - latest.timestamp) / 86400000);
+  const latestDataPointText = useMemo(() => {
+    if (!data.length) return 'N/A';
+    return new Date(data[data.length - 1].timestamp).toLocaleDateString();
   }, [data]);
 
   const handleDateRangeChange = useCallback((nextRange: [number, number]) => {
@@ -1246,7 +1245,7 @@ export default function App() {
     if (datePreset !== 'MAX') setDatePreset('MAX');
   }, [datePreset]);
 
-  const applyDatePreset = useCallback((preset: '1Y' | '5Y' | '10Y' | 'MAX') => {
+  const applyDatePreset = useCallback((preset: '1Y' | '3Y' | '5Y' | '10Y' | 'MAX') => {
     if (!data.length) return;
     const endIndex = data.length - 1;
     if (preset === 'MAX') {
@@ -1255,7 +1254,7 @@ export default function App() {
       return;
     }
 
-    const years = preset === '1Y' ? 1 : preset === '5Y' ? 5 : 10;
+    const years = preset === '1Y' ? 1 : preset === '3Y' ? 3 : preset === '5Y' ? 5 : 10;
     const endTs = data[endIndex].timestamp;
     const cutoff = new Date(endTs);
     cutoff.setFullYear(cutoff.getFullYear() - years);
@@ -1402,17 +1401,11 @@ export default function App() {
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                   <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-muted">{selectedMetrics.length} metrics</span>
                   <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-muted">Range: {rangeLabel}</span>
+                  <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-muted">Latest data point: {latestDataPointText}</span>
                 </div>
-                {(dataWarning || (latestDataAgeDays !== null && latestDataAgeDays > 45)) && (
+                {dataWarning && (
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                    {dataWarning && (
-                      <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-amber-800">{dataWarning}</span>
-                    )}
-                    {latestDataAgeDays !== null && latestDataAgeDays > 45 && (
-                      <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-1 text-rose-700">
-                        Data may be stale ({latestDataAgeDays} days since latest point)
-                      </span>
-                    )}
+                    <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-amber-800">{dataWarning}</span>
                   </div>
                 )}
                 <div className="mt-3">
@@ -1434,7 +1427,7 @@ export default function App() {
 
               <div className="flex items-center gap-2 flex-wrap sm:justify-end">
                 <div className="flex items-center gap-1 rounded-lg border border-theme bg-muted-surface p-1">
-                  {(['1Y', '5Y', '10Y', 'MAX'] as const).map((preset) => (
+                  {(['1Y', '3Y', '5Y', '10Y', 'MAX'] as const).map((preset) => (
                     <button
                       key={preset}
                       onClick={() => applyDatePreset(preset)}
@@ -1452,16 +1445,20 @@ export default function App() {
                     </span>
                     <HelpCircle className="w-4 h-4 text-muted hover:text-[color:var(--color-brand-primary)] transition-colors" />
                     <div className="absolute right-0 top-full mt-2 w-64 p-4 bg-main text-inverse text-xs rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none transform translate-y-1 group-hover:translate-y-0 z-30">
-                      <div className="font-bold text-sm mb-2 text-blue-400">Coefficient of Determination</div>
-                      <p className="mb-3 text-inverse-muted leading-relaxed">Measures the strength of the relationship between the two selected indicators.</p>
+                      <div className="font-bold text-sm mb-2 text-blue-400">R² made simple</div>
+                      <p className="mb-2 text-inverse-muted leading-relaxed">R² shows how much these two lines move together in your selected time range.</p>
                       <div className="space-y-2">
                         <div>
-                          <span className="text-blue-300 font-semibold block mb-0.5">Why it's interesting:</span>
-                          <span className="text-inverse-muted">It reveals if one economic metric effectively predicts or mirrors another.</span>
+                          <span className="text-blue-300 font-semibold block mb-0.5">How to read {rSquared}:</span>
+                          <span className="text-inverse-muted">About {Math.round(Number(rSquared) * 100)}% of movement is shared, and the rest is not.</span>
                         </div>
                         <div>
-                          <span className="text-emerald-300 font-semibold block mb-0.5">Why care?</span>
-                          <span className="text-inverse-muted">High correlations (near 1.0) suggest a reliable trend; sudden divergences can signal market shifts.</span>
+                          <span className="text-emerald-300 font-semibold block mb-0.5">Quick scale:</span>
+                          <span className="text-inverse-muted">Closer to 1.0 means stronger relationship; closer to 0 means weaker.</span>
+                        </div>
+                        <div>
+                          <span className="text-rose-300 font-semibold block mb-0.5">Important:</span>
+                          <span className="text-inverse-muted">High R² is correlation, not causation. Use it as a signal, not proof.</span>
                         </div>
                       </div>
                     </div>
@@ -1471,6 +1468,58 @@ export default function App() {
             </div>
 
             <div className={`flex-1 w-full ${shareMode ? 'min-h-[560px]' : 'min-h-[450px]'}`}>
+              {!shareMode && (
+                <div className="mb-3 rounded-lg border border-theme bg-muted-surface/70 p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={selectedMetrics[0] ?? METRICS[0].id}
+                      onChange={(e) => setSelectedMetrics((prev) => [e.target.value, prev[1] ?? prev[0] ?? e.target.value])}
+                      className="rounded-md border border-theme bg-secondary px-3 py-2 text-sm"
+                    >
+                      {METRICS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+                    </select>
+                    <span className="text-sm text-muted">vs</span>
+                    <select
+                      value={selectedMetrics[1] ?? METRICS[1].id}
+                      onChange={(e) => setSelectedMetrics((prev) => [prev[0] ?? METRICS[0].id, e.target.value])}
+                      className="rounded-md border border-theme bg-secondary px-3 py-2 text-sm"
+                    >
+                      {METRICS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+                    </select>
+                    <div className="ml-auto flex items-center gap-2">
+                      <button onClick={() => setViewMode('raw')} className={`rounded-md border px-3 py-2 text-sm ${viewMode === 'raw' ? 'bg-muted-surface border-theme' : 'border-theme'}`}>Raw</button>
+                      <button onClick={() => setViewMode('relative')} className={`rounded-md border px-3 py-2 text-sm ${viewMode === 'relative' ? 'bg-muted-surface border-theme' : 'border-theme'}`}>Relative</button>
+                      <details className="relative">
+                        <summary className="cursor-pointer list-none rounded-md border border-theme px-3 py-2 text-sm">More Filters</summary>
+                        <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-theme bg-secondary p-3 shadow-lg">
+                          <input
+                            value={metricSearch}
+                            onChange={(e) => setMetricSearch(e.target.value)}
+                            placeholder="Search metrics..."
+                            className="mb-3 w-full rounded-md border border-theme bg-secondary px-2.5 py-1.5 text-sm text-main"
+                          />
+                          <div className="max-h-72 space-y-3 overflow-y-auto pr-1">
+                            {Object.entries(filteredMetricsByCategory).map(([category, catMetrics]) => (
+                              <div key={category}>
+                                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted">{category}</p>
+                                <div className="space-y-1">
+                                  {catMetrics.map((m) => (
+                                    <label key={m.id} className="flex items-center gap-2 rounded px-1 py-1 text-sm hover:bg-muted-surface">
+                                      <input type="checkbox" checked={selectedMetrics.includes(m.id)} onChange={() => toggleMetric(m.id)} />
+                                      <span>{m.label}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </details>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {data.length > 1 && (
                 <DateRangeSlider
                   min={0}
@@ -1586,7 +1635,7 @@ export default function App() {
             </div>
 
             {/* NEW BOTTOM LEGEND SECTION */}
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-3 border-t border-subtle pt-4">
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3 border-t border-subtle pt-5">
                {activeMetrics.map(m => (
                  <div key={m.id} className="flex items-center gap-2 px-3 py-1.5 bg-muted-surface rounded-full border border-theme">
                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: m.color }} />
@@ -1601,56 +1650,6 @@ export default function App() {
 
           {activeTab === 'Dashboard' && !shareMode && (
             <>
-              <Card className="p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <select
-                    value={selectedMetrics[0] ?? METRICS[0].id}
-                    onChange={(e) => setSelectedMetrics((prev) => [e.target.value, prev[1] ?? prev[0] ?? e.target.value])}
-                    className="rounded-md border border-theme bg-secondary px-3 py-2 text-sm"
-                  >
-                    {METRICS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-                  </select>
-                  <span className="text-sm text-muted">vs</span>
-                  <select
-                    value={selectedMetrics[1] ?? METRICS[1].id}
-                    onChange={(e) => setSelectedMetrics((prev) => [prev[0] ?? METRICS[0].id, e.target.value])}
-                    className="rounded-md border border-theme bg-secondary px-3 py-2 text-sm"
-                  >
-                    {METRICS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-                  </select>
-                  <div className="ml-auto flex items-center gap-2">
-                    <button onClick={() => setViewMode('raw')} className={`rounded-md border px-3 py-2 text-sm ${viewMode === 'raw' ? 'bg-muted-surface border-theme' : 'border-theme'}`}>Raw</button>
-                    <button onClick={() => setViewMode('relative')} className={`rounded-md border px-3 py-2 text-sm ${viewMode === 'relative' ? 'bg-muted-surface border-theme' : 'border-theme'}`}>Relative</button>
-                    <details className="relative">
-                      <summary className="cursor-pointer list-none rounded-md border border-theme px-3 py-2 text-sm">More Filters</summary>
-                      <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-theme bg-secondary p-3 shadow-lg">
-                        <input
-                          value={metricSearch}
-                          onChange={(e) => setMetricSearch(e.target.value)}
-                          placeholder="Search metrics..."
-                          className="mb-3 w-full rounded-md border border-theme bg-secondary px-2.5 py-1.5 text-sm text-main"
-                        />
-                        <div className="max-h-72 space-y-3 overflow-y-auto pr-1">
-                          {Object.entries(filteredMetricsByCategory).map(([category, catMetrics]) => (
-                            <div key={category}>
-                              <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted">{category}</p>
-                              <div className="space-y-1">
-                                {catMetrics.map((m) => (
-                                  <label key={m.id} className="flex items-center gap-2 rounded px-1 py-1 text-sm hover:bg-muted-surface">
-                                    <input type="checkbox" checked={selectedMetrics.includes(m.id)} onChange={() => toggleMetric(m.id)} />
-                                    <span>{m.label}</span>
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </details>
-                  </div>
-                </div>
-              </Card>
-
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
                 {activeMetrics.slice(0, 4).map((m) => {
                   const validPoints = data.filter(d => d[m.id] !== undefined);
