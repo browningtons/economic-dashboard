@@ -1364,7 +1364,7 @@ export default function App() {
           {/* Chart Section */}
           {activeTab === 'Dashboard' && (
           <Card className={`flex-1 flex flex-col relative ${shareMode ? 'min-h-[760px]' : 'min-h-[500px]'} p-7`}>
-            <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-start ${shareMode ? 'mb-5 gap-3' : 'mb-8 gap-4'} z-10`}>
+            <div className={`flex flex-col ${shareMode ? 'mb-5 gap-3' : 'mb-8 gap-4'} z-10`}>
               <div>
                 <h2 className="text-3xl md:text-4xl font-semibold text-main flex items-center gap-2">
                   {viewMode === 'relative' ? 'Relative Performance Index' : 'Trends'}
@@ -1387,47 +1387,6 @@ export default function App() {
                 {dataWarning && (
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                     <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-muted">{dataWarning}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 flex-wrap sm:justify-end">
-                <div className="flex items-center gap-1 rounded-lg border border-theme bg-muted-surface p-1">
-                  {(['1Y', '3Y', '5Y', '10Y', 'MAX'] as const).map((preset) => (
-                    <button
-                      key={preset}
-                      onClick={() => applyDatePreset(preset)}
-                      className={`rounded-md px-2.5 py-1.5 text-xs font-medium ${datePreset === preset ? 'bg-secondary text-main shadow-sm border border-theme' : 'text-muted hover:text-main'}`}
-                    >
-                      {preset}
-                    </button>
-                  ))}
-                </div>
-
-                {activeMetrics.length === 2 && rSquared && (
-                  <div className="group relative flex items-center gap-2 bg-secondary px-3 py-1.5 rounded-lg shadow-sm border border-theme">
-                    <span className="text-sm font-bold text-main">
-                      R<sup>2</sup> = {rSquared}
-                    </span>
-                    <HelpCircle className="w-4 h-4 text-muted hover:text-[color:var(--color-brand-primary)] transition-colors" />
-                    <div className="absolute right-0 top-full mt-2 w-64 p-4 bg-main text-inverse text-xs rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none transform translate-y-1 group-hover:translate-y-0 z-30">
-                      <div className="font-bold text-sm mb-2 text-link">R² made simple</div>
-                      <p className="mb-2 text-inverse-muted leading-relaxed">R² shows how much these two lines move together in your selected time range.</p>
-                      <div className="space-y-2">
-                        <div>
-                          <span className="font-semibold block mb-0.5" style={{ color: 'var(--color-brand-secondary)' }}>How to read {rSquared}:</span>
-                          <span className="text-inverse-muted">About {Math.round(Number(rSquared) * 100)}% of movement is shared, and the rest is not.</span>
-                        </div>
-                        <div>
-                          <span className="font-semibold block mb-0.5" style={{ color: 'var(--color-brand-accent)' }}>Quick scale:</span>
-                          <span className="text-inverse-muted">Closer to 1.0 means stronger relationship; closer to 0 means weaker.</span>
-                        </div>
-                        <div>
-                          <span className="font-semibold block mb-0.5" style={{ color: 'var(--color-brand-primary)' }}>Important:</span>
-                          <span className="text-inverse-muted">High R² is correlation, not causation. Use it as a signal, not proof.</span>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 )}
               </div>
@@ -1495,6 +1454,47 @@ export default function App() {
                   data={data}
                 />
               )}
+
+              <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+                <div className="flex items-center gap-1 rounded-lg border border-theme bg-muted-surface p-1">
+                  {(['1Y', '3Y', '5Y', '10Y', 'MAX'] as const).map((preset) => (
+                    <button
+                      key={preset}
+                      onClick={() => applyDatePreset(preset)}
+                      className={`rounded-md px-2.5 py-1.5 text-xs font-medium ${datePreset === preset ? 'bg-secondary text-main shadow-sm border border-theme' : 'text-muted hover:text-main'}`}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+
+                {activeMetrics.length === 2 && rSquared && (
+                  <div className="group relative flex items-center gap-2 bg-secondary px-3 py-1.5 rounded-lg shadow-sm border border-theme">
+                    <span className="text-sm font-bold text-main">
+                      R<sup>2</sup> = {rSquared}
+                    </span>
+                    <HelpCircle className="w-4 h-4 text-muted hover:text-[color:var(--color-brand-primary)] transition-colors" />
+                    <div className="absolute right-0 top-full mt-2 w-64 p-4 bg-main text-inverse text-xs rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none transform translate-y-1 group-hover:translate-y-0 z-30">
+                      <div className="font-bold text-sm mb-2 text-link">R² made simple</div>
+                      <p className="mb-2 text-inverse-muted leading-relaxed">R² shows how much these two lines move together in your selected time range.</p>
+                      <div className="space-y-2">
+                        <div>
+                          <span className="font-semibold block mb-0.5" style={{ color: 'var(--color-brand-secondary)' }}>How to read {rSquared}:</span>
+                          <span className="text-inverse-muted">About {Math.round(Number(rSquared) * 100)}% of movement is shared, and the rest is not.</span>
+                        </div>
+                        <div>
+                          <span className="font-semibold block mb-0.5" style={{ color: 'var(--color-brand-accent)' }}>Quick scale:</span>
+                          <span className="text-inverse-muted">Closer to 1.0 means stronger relationship; closer to 0 means weaker.</span>
+                        </div>
+                        <div>
+                          <span className="font-semibold block mb-0.5" style={{ color: 'var(--color-brand-primary)' }}>Important:</span>
+                          <span className="text-inverse-muted">High R² is correlation, not causation. Use it as a signal, not proof.</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <div className={`${shareMode ? 'h-[640px]' : 'h-[560px]'} w-full`}>
                 <ResponsiveContainer width="100%" height="100%">
