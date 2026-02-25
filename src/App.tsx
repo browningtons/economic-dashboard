@@ -200,17 +200,17 @@ const RAW_CSV_DATA = `Observed Date,Unemployment Rate,Avg Weeks Unemployeed,Medi
 
 // --- REFERENCE ZONES ---
 const REFERENCE_ZONES: ReferenceZone[] = [
-  { label: "Dot Com", start: "2001-03-01", end: "2001-11-01", color: "#9ca3af", opacity: 0.3, labelPos: 'insideTopLeft' },
-  { label: "Great Recession", start: "2007-12-01", end: "2009-06-01", color: "#9ca3af", opacity: 0.3, labelPos: 'insideTopLeft' },
-  { label: "COVID-19", start: "2020-02-01", end: "2020-04-01", color: "#9ca3af", opacity: 0.3, labelPos: 'insideTop' },
-  { label: "ChatGPT Launch", start: "2022-11-01", end: "2023-01-01", color: "#9ca3af", opacity: 0.3, labelPos: 'insideBottom' },
+  { label: "Dot Com", start: "2001-03-01", end: "2001-11-01", color: "#4C6F86", opacity: 0.22, labelPos: 'insideTopLeft' },
+  { label: "Great Recession", start: "2007-12-01", end: "2009-06-01", color: "#4C6F86", opacity: 0.22, labelPos: 'insideTopLeft' },
+  { label: "COVID-19", start: "2020-02-01", end: "2020-04-01", color: "#4C6F86", opacity: 0.22, labelPos: 'insideTop' },
+  { label: "ChatGPT Launch", start: "2022-11-01", end: "2023-01-01", color: "#4C6F86", opacity: 0.22, labelPos: 'insideBottom' },
 ];
 
 const BUFFETT_ZONES: BuffettZone[] = [
-  { label: 'Undervalued', min: 45, max: 83, color: '#5D8AA8', legendRange: '< 83%' },
-  { label: 'Fair Value', min: 83, max: 127, color: '#6DA36D', legendRange: '83% - 127%' },
-  { label: 'Overvalued', min: 127, max: 150, color: '#E6A35C', legendRange: '127% - 150%' },
-  { label: 'Significantly Overvalued', min: 150, max: 200, color: '#D65D5D', legendRange: '> 150%' },
+  { label: 'Undervalued', min: 45, max: 83, color: '#4C6F86', legendRange: '< 83%' },
+  { label: 'Fair Value', min: 83, max: 127, color: '#2CB6C0', legendRange: '83% - 127%' },
+  { label: 'Overvalued', min: 127, max: 150, color: '#FF7A33', legendRange: '127% - 150%' },
+  { label: 'Significantly Overvalued', min: 150, max: 200, color: '#F04A00', legendRange: '> 150%' },
 ];
 const BUFFETT_ZONE_FILL_OPACITY = 0.28;
 const BUFFETT_QUOTE = {
@@ -268,7 +268,7 @@ const METRICS: MetricConfig[] = [
     id: 'Unemployment Rate', 
     label: 'Unemployment Rate', 
     icon: Percent, 
-    color: '#D65D5D', // Terra Cotta
+    color: '#F04A00',
     desc: 'Percentage of labor force jobless.',
     isMacro: false,
     format: (v) => `${v}%`,
@@ -279,7 +279,7 @@ const METRICS: MetricConfig[] = [
     id: 'Unemployeed Count', 
     label: 'Unemployment Count', 
     icon: Users, 
-    color: '#E6A35C', // Sunset Gold
+    color: '#FF7A33',
     desc: 'Total number of unemployed persons.',
     isMacro: true, // Counts are often large (Millions)
     isPercentage: false,
@@ -290,7 +290,7 @@ const METRICS: MetricConfig[] = [
     id: 'Avg Weeks Unemployeed', 
     label: 'Avg Weeks Unemployed', 
     icon: Clock, 
-    color: '#6DA36D', // Fern Green
+    color: '#0E7C86',
     desc: 'Average duration of unemployment.',
     isMacro: false, // Small count (Weeks)
     isPercentage: false,
@@ -301,7 +301,7 @@ const METRICS: MetricConfig[] = [
     id: 'Unemployed 27 weeks', 
     label: 'Unemployed 27+ Weeks', 
     icon: AlertCircle, 
-    color: '#5D8AA8', // Giverny Blue
+    color: '#4C6F86',
     desc: 'Long-term unemployed (27 weeks+).',
     isMacro: true, // Counts are often large (Millions)
     isPercentage: false,
@@ -313,7 +313,7 @@ const METRICS: MetricConfig[] = [
     label: 'Job Openings', 
     sub: 'Total non-farm', 
     icon: Briefcase, 
-    color: '#818CF8', // Iris
+    color: '#2CB6C0',
     desc: 'Measure of labor demand (JOLTS).',
     isMacro: true, // Counts are often large (Millions)
     isPercentage: false,
@@ -324,7 +324,7 @@ const METRICS: MetricConfig[] = [
     id: 'Labor Participation Rate', 
     label: 'Labor Participation', 
     icon: Activity, 
-    color: '#F472B6', // Rose
+    color: '#0F3D57',
     desc: 'Active workforce percentage.',
     isMacro: false, // Percentage
     isPercentage: true,
@@ -337,7 +337,7 @@ const METRICS: MetricConfig[] = [
     id: 'Fed Rate', 
     label: 'Fed Funds Rate', 
     icon: DollarSign, 
-    color: '#D9534F', 
+    color: '#B53300', 
     desc: 'Interest rate for lending balances.',
     isMacro: false, // Percentage
     isPercentage: true,
@@ -348,7 +348,7 @@ const METRICS: MetricConfig[] = [
     id: '30 year mortgage', 
     label: '30Y Mortgage', 
     icon: Building, 
-    color: '#4EA8DE', 
+    color: '#4C6F86', 
     desc: 'Average 30-year fixed mortgage rate.',
     isMacro: false, // Percentage
     isPercentage: true,
@@ -359,7 +359,7 @@ const METRICS: MetricConfig[] = [
     id: '15 year mortgage', 
     label: '15Y Mortgage', 
     icon: Building, 
-    color: '#2563eb', 
+    color: '#0F3D57', 
     desc: 'Average 15-year fixed mortgage rate.',
     isMacro: false, // Percentage
     isPercentage: true,
@@ -371,7 +371,7 @@ const METRICS: MetricConfig[] = [
     id: 'Housing Price Index', 
     label: 'Housing Price Index', 
     icon: Home, 
-    color: '#2C6E49', 
+    color: '#0E7C86', 
     desc: 'US National Home Price Index.',
     isMacro: true, // Large Index Number
     isPercentage: false,
@@ -383,7 +383,7 @@ const METRICS: MetricConfig[] = [
     id: 'S&P 500', 
     label: 'S&P 500', 
     icon: TrendingUp, 
-    color: '#4C956C', 
+    color: '#0F3D57', 
     desc: 'Market cap index of 500 leading US companies.',
     isMacro: true, // Large Index Number
     isPercentage: false,
@@ -394,7 +394,7 @@ const METRICS: MetricConfig[] = [
     id: 'CPI', 
     label: 'CPI (Inflation)', 
     icon: BarChart3, 
-    color: '#9B5DE5', 
+    color: '#FF7A33', 
     desc: 'Consumer Price Index.',
     isMacro: true, // Large Index Number
     isPercentage: false,
@@ -405,7 +405,7 @@ const METRICS: MetricConfig[] = [
     id: 'National Debt (b)', 
     label: 'National Debt', 
     icon: TrendingDown, 
-    color: '#6C757D', 
+    color: '#4C6F86', 
     desc: 'Total US National Debt (Billions).',
     isMacro: true, // Large Billions/Trillions
     isPercentage: false,
@@ -416,7 +416,7 @@ const METRICS: MetricConfig[] = [
     id: 'GDP', 
     label: 'US GDP', 
     icon: Globe, 
-    color: '#E6A35C', // Sunset Gold
+    color: '#FF7A33',
     desc: 'Gross Domestic Product.',
     isMacro: true, // Large Billions/Trillions
     isPercentage: false,
@@ -427,7 +427,7 @@ const METRICS: MetricConfig[] = [
     id: 'Stock Market (b)', 
     label: 'Stock Market Value', 
     icon: Coins, 
-    color: '#5D8AA8', // Giverny Blue
+    color: '#2CB6C0',
     desc: 'Total value of US Stock Market.',
     isMacro: true, // Large Billions/Trillions
     isPercentage: false,
@@ -603,8 +603,6 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, i
              const originalValue = entry.payload?.[`original_${entry.dataKey}`];
              const rawData = entry.payload;
              const showCount = entry.name === 'Unemployment Rate' && rawData?.['Unemployeed Count'] !== undefined;
-             const metricKey = typeof entry.dataKey === 'string' ? entry.dataKey : '';
-             const source = metricKey ? METRIC_SOURCES[metricKey] : undefined;
              return (
               <div key={index} className="flex flex-col gap-0.5 mb-2 last:mb-0">
                 <div className="flex items-center justify-between gap-4 text-sm">
@@ -628,18 +626,6 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, i
                 {showCount && (
                   <div className="flex justify-end text-[10px] text-muted -mt-1 mb-1 font-mono">
                     Count: {(Number(rawData?.['Unemployeed Count']) / 1000).toFixed(1)}M
-                  </div>
-                )}
-                {source && (
-                  <div className="flex justify-end text-[10px]">
-                    <a
-                      href={source.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-link underline text-link-hover"
-                    >
-                      Source: {source.provider} ({source.seriesId})
-                    </a>
                   </div>
                 )}
               </div>
@@ -747,7 +733,7 @@ const RenderLabel = ({ viewBox, label, labelPos }: RenderLabelProps) => {
   }
 
   return (
-    <text x={textX} y={textY} fill="#94a3b8" fontSize={9} fontWeight="600" textAnchor={textAnchor}>
+    <text x={textX} y={textY} fill="var(--color-text-muted)" fontSize={9} fontWeight="600" textAnchor={textAnchor}>
       {label}
     </text>
   );
@@ -1014,9 +1000,9 @@ export default function App() {
     const latestPoint = validPoints[validPoints.length - 1];
 
     const candidates = [
-      { id: 'min', point: minPoint, title: 'Min', color: '#5D8AA8', position: 'bottom' as const },
-      { id: 'max', point: maxPoint, title: 'Max', color: '#D65D5D', position: 'top' as const },
-      { id: 'latest', point: latestPoint, title: 'Latest', color: '#111827', position: 'left' as const },
+      { id: 'min', point: minPoint, title: 'Min', color: '#4C6F86', position: 'bottom' as const },
+      { id: 'max', point: maxPoint, title: 'Max', color: '#F04A00', position: 'top' as const },
+      { id: 'latest', point: latestPoint, title: 'Latest', color: '#0F172A', position: 'left' as const },
     ];
 
     const grouped = new Map<string, { point: { timestamp: number; value: number }; labels: string[]; color: string; position: 'top' | 'bottom' | 'left' }>();
@@ -1157,6 +1143,12 @@ export default function App() {
     if (activeMetrics.length === 2) return `${activeMetrics[0].label} vs ${activeMetrics[1].label}`;
     return `${activeMetrics[0].label}, ${activeMetrics[1].label} +${activeMetrics.length - 2} more`;
   }, [activeMetrics]);
+
+  const activeMetricSources = useMemo(() => (
+    activeMetrics
+      .map((metric) => ({ metric, source: METRIC_SOURCES[metric.id] }))
+      .filter((entry): entry is { metric: MetricConfig; source: DataSourceInfo } => Boolean(entry.source))
+  ), [activeMetrics]);
 
   const leftAxisMetrics = useMemo(() => {
     if (viewMode === 'relative') return activeMetrics;
@@ -1394,7 +1386,7 @@ export default function App() {
                 </div>
                 {dataWarning && (
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                    <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-amber-800">{dataWarning}</span>
+                    <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-muted">{dataWarning}</span>
                   </div>
                 )}
               </div>
@@ -1419,19 +1411,19 @@ export default function App() {
                     </span>
                     <HelpCircle className="w-4 h-4 text-muted hover:text-[color:var(--color-brand-primary)] transition-colors" />
                     <div className="absolute right-0 top-full mt-2 w-64 p-4 bg-main text-inverse text-xs rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none transform translate-y-1 group-hover:translate-y-0 z-30">
-                      <div className="font-bold text-sm mb-2 text-blue-400">R² made simple</div>
+                      <div className="font-bold text-sm mb-2 text-link">R² made simple</div>
                       <p className="mb-2 text-inverse-muted leading-relaxed">R² shows how much these two lines move together in your selected time range.</p>
                       <div className="space-y-2">
                         <div>
-                          <span className="text-blue-300 font-semibold block mb-0.5">How to read {rSquared}:</span>
+                          <span className="font-semibold block mb-0.5" style={{ color: 'var(--color-brand-secondary)' }}>How to read {rSquared}:</span>
                           <span className="text-inverse-muted">About {Math.round(Number(rSquared) * 100)}% of movement is shared, and the rest is not.</span>
                         </div>
                         <div>
-                          <span className="text-emerald-300 font-semibold block mb-0.5">Quick scale:</span>
+                          <span className="font-semibold block mb-0.5" style={{ color: 'var(--color-brand-accent)' }}>Quick scale:</span>
                           <span className="text-inverse-muted">Closer to 1.0 means stronger relationship; closer to 0 means weaker.</span>
                         </div>
                         <div>
-                          <span className="text-rose-300 font-semibold block mb-0.5">Important:</span>
+                          <span className="font-semibold block mb-0.5" style={{ color: 'var(--color-brand-primary)' }}>Important:</span>
                           <span className="text-inverse-muted">High R² is correlation, not causation. Use it as a signal, not proof.</span>
                         </div>
                       </div>
@@ -1504,9 +1496,9 @@ export default function App() {
                 />
               )}
 
-              <div className={`${shareMode ? 'h-[620px]' : 'h-[520px]'} w-full`}>
+              <div className={`${shareMode ? 'h-[640px]' : 'h-[560px]'} w-full`}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 72 }}>
+                  <LineChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 46 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" vertical={false} />
                   
                   <XAxis 
@@ -1519,9 +1511,9 @@ export default function App() {
                        const d = new Date(val);
                        return `${d.getMonth() + 1}/${d.getFullYear().toString().slice(2)}`;
                     }}
-                    tickMargin={15}
+                    tickMargin={10}
                     minTickGap={40}
-                    axisLine={false}
+                    axisLine={{ stroke: 'var(--color-chart-grid)', strokeWidth: 1 }}
                     tickLine={false}
                   />
                   
@@ -1611,17 +1603,36 @@ export default function App() {
             </div>
 
             {/* NEW BOTTOM LEGEND SECTION */}
-            <div className="mt-12 flex flex-wrap items-center justify-center gap-3 border-t border-subtle pt-6">
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-2.5 border-t border-subtle pt-4">
                {activeMetrics.map(m => (
                  <div key={m.id} className="flex items-center gap-2 px-3 py-1.5 bg-muted-surface rounded-full border border-theme">
                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: m.color }} />
-                   <span className={`${shareMode ? 'text-[22px]' : 'text-[19px]'} font-medium text-main`}>
+                   <span className={`${shareMode ? 'text-[19px]' : 'text-[16px]'} font-medium text-main`}>
                      {m.label}
                    </span>
                  </div>
                ))}
             </div>
           </Card>
+          )}
+
+          {activeTab === 'Dashboard' && activeMetricSources.length > 0 && (
+            <Card className="p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Metric Sources</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {activeMetricSources.map(({ metric, source }) => (
+                  <a
+                    key={metric.id}
+                    href={source.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center rounded-full border border-theme bg-muted-surface px-3 py-1 text-xs font-medium text-link text-link-hover"
+                  >
+                    {metric.label}: {source.provider} ({source.seriesId})
+                  </a>
+                ))}
+              </div>
+            </Card>
           )}
 
           {activeTab === 'Dashboard' && !shareMode && (
@@ -1638,7 +1649,7 @@ export default function App() {
                     <Card key={`headline-${m.id}`} className="p-4">
                       <p className="text-xs uppercase tracking-wider text-muted">{m.label}</p>
                       <p className="mt-1 text-2xl font-semibold text-main">{m.format(lastValue)}</p>
-                      <p className={`mt-1 text-xs ${delta >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{delta >= 0 ? '+' : ''}{delta.toFixed(1)}%</p>
+                      <p className={`mt-1 text-xs ${delta >= 0 ? 'text-link' : 'text-[color:var(--color-brand-primary)]'}`}>{delta >= 0 ? '+' : ''}{delta.toFixed(1)}%</p>
                     </Card>
                   )
                 })}

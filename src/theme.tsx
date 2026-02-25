@@ -20,11 +20,7 @@ function getInitialMode(): ThemeMode {
   const saved = typeof window !== 'undefined' ? window.localStorage.getItem('theme') : null;
   if (saved === 'light' || saved === 'dark') return saved;
 
-  // 2) system preference
-  if (typeof window !== 'undefined' && window.matchMedia) {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  }
-
+  // 2) default to light mode for first-time visitors
   return 'light';
 }
 
