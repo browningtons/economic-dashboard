@@ -565,7 +565,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, i
                     href={stockSource.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="block text-[10px] underline mt-0.5 text-muted hover:text-main"
+                    className="block text-[10px] underline mt-0.5 text-link text-link-hover"
                   >
                     Source
                   </a>
@@ -579,7 +579,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, i
                     href={gdpSource.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="block text-[10px] underline mt-0.5 text-muted hover:text-main"
+                    className="block text-[10px] underline mt-0.5 text-link text-link-hover"
                   >
                     Source
                   </a>
@@ -636,7 +636,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, i
                       href={source.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-muted underline hover:text-main"
+                      className="text-link underline text-link-hover"
                     >
                       Source: {source.provider} ({source.seriesId})
                     </a>
@@ -998,17 +998,6 @@ export default function App() {
     // Keep a small headroom so the top zone/border is visible and never clipped.
     return Math.max(200, Math.ceil((max + 2) / 10) * 10);
   }, [buffettData]);
-
-  const latestBuffettValue = useMemo(() => {
-    if (buffettData.length === 0) return null;
-    const latest = Number(buffettData[buffettData.length - 1].buffettValue);
-    return Number.isFinite(latest) ? latest : null;
-  }, [buffettData]);
-
-  const latestBuffettValuation = useMemo(() => {
-    if (latestBuffettValue === null) return null;
-    return getBuffettValuation(latestBuffettValue);
-  }, [latestBuffettValue]);
 
   const buffettLabelPoints = useMemo<BuffettLabelPoint[]>(() => {
     const validPoints = buffettData
@@ -1386,7 +1375,7 @@ export default function App() {
             <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-start ${shareMode ? 'mb-5 gap-3' : 'mb-8 gap-4'} z-10`}>
               <div>
                 <h2 className="text-3xl md:text-4xl font-semibold text-main flex items-center gap-2">
-                  {viewMode === 'relative' ? 'Relative Performance Index' : 'Economic Trends'}
+                  {viewMode === 'relative' ? 'Relative Performance Index' : 'Trends'}
                 </h2>
                 {chartMetricTitle && (
                   <p className="text-sm text-muted mt-1 font-medium">
@@ -1408,21 +1397,6 @@ export default function App() {
                     <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-amber-800">{dataWarning}</span>
                   </div>
                 )}
-                <div className="mt-3">
-                  <button
-                    onClick={() => setActiveTab('Buffett')}
-                    className="inline-flex items-center gap-2 rounded-full border border-theme px-3 py-1.5 text-xs transition hover:shadow-sm"
-                    style={{ backgroundColor: 'color-mix(in oklab, var(--color-brand-accent) 10%, var(--color-bg-secondary))' }}
-                  >
-                    <span className="font-semibold text-main">Featured: Buffett Indicator</span>
-                    {latestBuffettValuation && latestBuffettValue !== null && (
-                      <span className="text-muted">
-                        {latestBuffettValuation.label} ({latestBuffettValue.toFixed(1)}%)
-                      </span>
-                    )}
-                    <span className="font-semibold text-main">View</span>
-                  </button>
-                </div>
               </div>
 
               <div className="flex items-center gap-2 flex-wrap sm:justify-end">
@@ -1467,7 +1441,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className={`flex-1 w-full ${shareMode ? 'min-h-[560px]' : 'min-h-[450px]'} pb-2`}>
+            <div className="w-full">
               {!shareMode && (
                 <div className="mb-3 rounded-lg border border-theme bg-muted-surface/70 p-3">
                   <div className="flex flex-wrap items-center gap-2">
@@ -1530,8 +1504,9 @@ export default function App() {
                 />
               )}
 
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 56 }}>
+              <div className={`${shareMode ? 'h-[620px]' : 'h-[520px]'} w-full`}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 72 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" vertical={false} />
                   
                   <XAxis 
@@ -1630,8 +1605,9 @@ export default function App() {
                     />
                   )}
 
-                </LineChart>
-              </ResponsiveContainer>
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </div>
 
             {/* NEW BOTTOM LEGEND SECTION */}
@@ -1709,7 +1685,7 @@ export default function App() {
                   href={BUFFETT_QUOTE.sourceUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-block text-sm text-muted underline mt-2 hover:text-main"
+                  className="inline-block text-sm text-link underline mt-2 text-link-hover"
                 >
                   {BUFFETT_QUOTE.sourceLabel}
                 </a>

@@ -1,24 +1,26 @@
-// src/ThemeToggle.jsx
 import React from 'react';
-import { useTheme } from './ThemeContext';
-import { Moon, Sun } from 'lucide-react'; // Ensure you have lucide-react installed
+import { useTheme } from './theme';
 
-const ThemeToggle = () => {
-  const { theme, toggleTheme } = useTheme();
+export function ThemeToggle() {
+  const { mode, toggle } = useTheme();
 
   return (
-    <button 
-      onClick={toggleTheme}
-      className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-      title="Toggle Dark Mode"
+    <button
+      onClick={toggle}
+      style={{
+        background: 'var(--surface)',
+        color: 'var(--text)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius)',
+        padding: '10px 12px',
+        boxShadow: 'var(--shadow)',
+        cursor: 'pointer',
+      }}
+      title={mode === 'dark' ? 'Switch to light' : 'Switch to dark'}
     >
-      {theme === 'light' ? (
-        <Moon className="w-5 h-5 text-gray-600" />
-      ) : (
-        <Sun className="w-5 h-5 text-yellow-400" />
-      )}
+      {mode === 'dark' ? 'Switch to light' : 'Switch to dark'}
     </button>
   );
-};
+}
 
 export default ThemeToggle;

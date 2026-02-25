@@ -13,6 +13,8 @@
     --color-brand-primary: #F04A00;
     --color-brand-secondary: #0F3D57;
     --color-brand-accent: #2CB6C0;
+    --color-link: #2CB6C0;
+    --color-link-hover: #0F3D57;
     --color-border: #C8D6DE;
     --color-border-subtle: #E3ECF1;
     --color-surface-muted: #EAF1F5;
@@ -35,8 +37,10 @@
     --color-text-muted: #A8B0C0;
 
     --color-brand-primary: #F04A00;
-    --color-brand-secondary: #334155;
-    --color-brand-accent: #F59E0B;
+    --color-brand-secondary: #0F3D57;
+    --color-brand-accent: #2CB6C0;
+    --color-link: #2CB6C0;
+    --color-link-hover: #0F3D57;
     --color-border: #2B3446;
     --color-border-subtle: #39445B;
     --color-surface-muted: #1B2436;
@@ -64,6 +68,8 @@
 
   .text-main     { color: var(--color-text-main); }
   .text-muted    { color: var(--color-text-muted); }
+  .text-link     { color: var(--color-link); }
+  .text-link-hover:hover { color: var(--color-link-hover); }
   .text-inverse  { color: var(--color-text-inverse); }
   .text-inverse-muted { color: var(--color-text-inverse-muted); }
 
@@ -90,6 +96,14 @@
 /* --------------------------------------------- */
 body {
   @apply bg-primary text-main transition-colors duration-300;
+}
+
+a {
+  color: var(--color-link);
+}
+
+a:hover {
+  color: var(--color-link-hover);
 }
 
 /* Subtle dual-range slider thumbs used above the main chart */

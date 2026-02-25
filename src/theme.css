@@ -1,0 +1,105 @@
+:root {
+  /* Core identity */
+  --ink: #0F172A;        /* Text */
+  --link: #2CB6C0;       /* Link */
+  --accent: #F04A00;     /* Primary accent */
+  --accent2: #0F3D57;    /* Secondary accent */
+
+  /* Neutrals */
+  --bg: #F8FAFC;         /* Page background */
+  --surface: #FFFFFF;    /* Cards/panels */
+  --border: #E2E8F0;     /* Dividers */
+  --muted: #64748B;      /* Subtext */
+  --surface-2: #F1F5F9;  /* Subtle alt surface */
+
+  /* Teal system */
+  --teal-50: #D8F3F5;
+  --teal-200: #8EDBE0;
+  --teal-500: #2CB6C0;
+  --teal-700: #0E7C86;
+
+  /* Orange system */
+  --orange-100: #FFD9C7;
+  --orange-400: #FF7A33;
+  --orange-500: #F04A00;
+  --orange-700: #B53300;
+
+  /* Blue depth */
+  --blue-100: #D6E6F0;
+  --blue-500: #4C6F86;
+  --blue-700: #0F3D57;
+  --blue-900: #082535;
+
+  /* Semantic tokens */
+  --text: var(--ink);
+  --text-muted: var(--muted);
+  --primary: var(--accent);
+  --primary-contrast: #FFFFFF;
+  --secondary: var(--accent2);
+  --secondary-contrast: #FFFFFF;
+
+  --focus: color-mix(in srgb, var(--link) 65%, white);
+  --radius: 14px;
+  --shadow: 0 8px 24px rgba(15, 23, 42, 0.10);
+
+  /* Compatibility aliases for existing app styles */
+  --color-bg-primary: var(--bg);
+  --color-bg-secondary: var(--surface);
+  --color-text-main: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-brand-primary: var(--primary);
+  --color-brand-secondary: var(--secondary);
+  --color-brand-accent: var(--link);
+  --color-link: var(--link);
+  --color-link-hover: var(--accent2);
+  --color-border: var(--border);
+  --color-border-subtle: color-mix(in srgb, var(--border) 75%, white);
+  --color-surface-muted: var(--surface-2);
+  --color-text-inverse: #EAF1F5;
+  --color-text-inverse-muted: #C9DDE6;
+  --color-chart-grid: color-mix(in srgb, var(--blue-500) 20%, white);
+  --color-chart-axis: var(--blue-500);
+  --color-chart-baseline: color-mix(in srgb, var(--blue-700) 45%, white);
+  --color-zone-weak: var(--orange-500);
+  --color-zone-average: var(--teal-500);
+  --color-zone-fit: var(--blue-700);
+}
+
+[data-theme="dark"] {
+  --bg: #0B1220;
+  --surface: #0F172A;
+  --surface-2: #111C2E;
+  --border: rgba(226, 232, 240, 0.10);
+
+  --text: #E5E7EB;
+  --text-muted: rgba(229, 231, 235, 0.70);
+
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+
+  --color-text-inverse: #F8FAFC;
+  --color-text-inverse-muted: #CBD5E1;
+  --color-chart-grid: color-mix(in srgb, #94A3B8 28%, transparent);
+  --color-chart-axis: #B8C2D8;
+  --color-chart-baseline: #64748B;
+}
+
+/* Minimal base styles (optional) */
+html, body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+a {
+  color: var(--link);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
