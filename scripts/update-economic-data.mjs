@@ -19,7 +19,7 @@ const SERIES_CONFIG = [
   { column: 'Housing Price Index', seriesId: 'CSUSHPINSA', cadence: 'monthly', aggregation: 'last', scale: 1 },
   { column: 'CPI', seriesId: 'CPIAUCSL', cadence: 'monthly', aggregation: 'last', scale: 1 },
   { column: 'GDP', seriesId: 'GDP', cadence: 'quarterly', aggregation: 'last', scale: 1 },
-  { column: 'Stock Market (b)', seriesId: 'NCBCEL', cadence: 'quarterly', aggregation: 'last', scale: 1 },
+  { column: 'Stock Market (b)', seriesId: 'NCBCEL', cadence: 'quarterly', aggregation: 'last', scale: 0.001 },
   { column: 'National Debt (b)', seriesId: 'GFDEBTN', cadence: 'quarterly', aggregation: 'last', scale: 0.001 },
 ];
 
