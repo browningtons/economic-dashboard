@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const SERIES_CONFIG = [
@@ -27,6 +27,12 @@ function getArg(name, fallback = undefined) {
   const index = process.argv.indexOf(name);
   if (index === -1) return fallback;
   return process.argv[index + 1] ?? fallback;
+}
+
+function parseObservedMonth(observedDate) {
+  const [m, _d, y] = observedDate.split('/').map(Number);
+  const fullYear = y < 100 ? 2000 + y : y;
+  return `${fullYear}-${String(m).padStart(2, '0')}`;
 }
 
 function monthKeyFromDate(isoDate) {
@@ -154,10 +160,33 @@ async function main() {
   const startMonthOverride = process.env.DASHBOARD_START_MONTH || '2000-01';
   const dryRun = process.argv.includes('--dry-run');
   const fredApiKey = process.env.FRED_API_KEY;
+  const existingByMonth = new Map();
+  let existingLastMonth = null;
 
   if (!fredApiKey) {
     console.error('Missing required env var: FRED_API_KEY');
     process.exit(1);
+  }
+
+  try {
+    const existingRaw = await readFile(outputPath, 'utf8');
+    const lines = existingRaw.trim().split(/\r?\n/);
+    const headers = lines[0].split(',');
+    for (const line of lines.slice(1)) {
+      if (!line.trim()) continue;
+      const values = line.split(',');
+      const observedDate = values[0];
+      const monthKey = parseObservedMonth(observedDate);
+      if (!monthKey) continue;
+      const row = {};
+      headers.forEach((header, index) => {
+        row[header] = values[index];
+      });
+      existingByMonth.set(monthKey, row);
+      existingLastMonth = !existingLastMonth || compareMonthKeys(monthKey, existingLastMonth) > 0 ? monthKey : existingLastMonth;
+    }
+  } catch {
+    // First run or missing file: no fallback history available.
   }
 
   const seriesRows = [];
@@ -190,12 +219,16 @@ async function main() {
     throw new Error('Unable to compute common date range.');
   }
 
-  const startMonth = compareMonthKeys(startMonthOverride, commonStart) > 0 ? startMonthOverride : commonStart;
-  if (compareMonthKeys(startMonth, commonEnd) > 0) {
-    throw new Error(`Computed range is invalid: ${startMonth} > ${commonEnd}`);
+  const startMonth = startMonthOverride;
+  const endMonth = existingLastMonth && compareMonthKeys(existingLastMonth, commonEnd) > 0
+    ? existingLastMonth
+    : commonEnd;
+
+  if (compareMonthKeys(startMonth, endMonth) > 0) {
+    throw new Error(`Computed range is invalid: ${startMonth} > ${endMonth}`);
   }
 
-  const months = getMonthRange(startMonth, commonEnd);
+  const months = getMonthRange(startMonth, endMonth);
 
   const filledSeries = seriesRows.map((series) => {
     const filled = new Map();
@@ -214,16 +247,23 @@ async function main() {
   const lines = [headers.join(',')];
 
   for (const monthKey of months) {
+    const existingRow = existingByMonth.get(monthKey);
     const row = { 'Observed Date': formatObservedDate(monthKey) };
     let valid = true;
 
     for (const series of filledSeries) {
       const value = series.filled.get(monthKey);
-      if (!Number.isFinite(value)) {
+      if (Number.isFinite(value)) {
+        row[series.config.column] = sanitizeNumeric(value * (series.config.scale ?? 1));
+        continue;
+      }
+
+      const fallback = Number(existingRow?.[series.config.column]);
+      if (!Number.isFinite(fallback)) {
         valid = false;
         break;
       }
-      row[series.config.column] = sanitizeNumeric(value * (series.config.scale ?? 1));
+      row[series.config.column] = sanitizeNumeric(fallback);
     }
 
     if (!valid) continue;
@@ -234,14 +274,14 @@ async function main() {
 
   const csvContent = `${lines.join('\n')}\n`;
   if (dryRun) {
-    console.log(`Dry run complete: ${lines.length - 1} rows (${startMonth} -> ${commonEnd}).`);
+    console.log(`Dry run complete: ${lines.length - 1} rows (${startMonth} -> ${endMonth}).`);
     return;
   }
 
   await mkdir(path.dirname(outputPath), { recursive: true });
   await writeFile(outputPath, csvContent, 'utf8');
   console.log(`Wrote ${lines.length - 1} rows to ${outputPath}`);
-  console.log(`Coverage: ${startMonth} -> ${commonEnd}`);
+  console.log(`Coverage: ${startMonth} -> ${endMonth}`);
 }
 
 main().catch((error) => {

@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "predeploy": "npm run build",
-    "update:data": "node scripts/update-economic-data.mjs"
+    "update:data": "node scripts/update-economic-data.mjs",
+    "validate:data": "node scripts/validate-economic-data.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.555.0",

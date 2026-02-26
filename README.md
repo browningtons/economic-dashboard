@@ -26,7 +26,9 @@ This rebuilds `public/data/economic_indicators.csv` from API data.
 This repo now includes `.github/workflows/update-data.yml`, which:
 - runs on weekdays (13:15 UTC) and on manual dispatch,
 - pulls fresh data from FRED,
-- commits only if `public/data/economic_indicators.csv` changed.
+- validates refreshed data against thresholds (value drift + forward-fill limits),
+- opens a GitHub Issue automatically when validation fails,
+- commits only if `public/data/economic_indicators.csv` changed and validation passes.
 
 Required repo secret:
 - `FRED_API_KEY`

@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 jobs:
   update-data:
@@ -32,6 +33,66 @@ jobs:
           FRED_OBSERVATION_START: '2000-01-01'
           DASHBOARD_START_MONTH: '2000-01'
         run: npm run update:data
+
+      - name: Validate refreshed data against thresholds
+        id: validate
+        continue-on-error: true
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          VALIDATE_OBSERVATION_START: '2024-01-01'
+          VALIDATE_MONTH_WINDOW: '6'
+        run: npm run validate:data
+
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: data-validation-report
+          path: reports/data-validation-latest.md
+
+      - name: Open issue if validation fails
+        if: steps.validate.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const reportPath = 'reports/data-validation-latest.md';
+            const body = fs.existsSync(reportPath)
+              ? fs.readFileSync(reportPath, 'utf8').slice(0, 65000)
+              : 'Validation failed but no report file was produced.';
+
+            const title = 'Data validation alert';
+            const { data: openIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+
+            const existing = openIssues.find((issue) => issue.title === title);
+            const stampedBody = `## ${new Date().toISOString()}\n\n${body}`;
+
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: stampedBody
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body: stampedBody
+              });
+            }
+
+      - name: Stop workflow on validation failure
+        if: steps.validate.outcome == 'failure'
+        run: |
+          echo "Validation failed. See issue + artifact report."
+          exit 1
 
       - name: Commit and push if data changed
         run: |
