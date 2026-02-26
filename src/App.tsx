@@ -1259,10 +1259,6 @@ export default function App() {
     if (!data.length) return 'N/A';
     return new Date(data[data.length - 1].timestamp).toLocaleDateString();
   }, [data]);
-  const latestMonthText = useMemo(() => {
-    if (!data.length) return 'N/A';
-    return new Date(data[data.length - 1].timestamp).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-  }, [data]);
   const monthsBehind = useMemo(() => {
     if (!data.length) return 0;
     const latest = new Date(data[data.length - 1].timestamp);
@@ -1458,9 +1454,6 @@ export default function App() {
             <ThemeToggle />
           </div>
           <div className="flex basis-full flex-col gap-1 text-[11px] leading-tight text-muted md:basis-auto md:items-end md:ml-2">
-            <span className="rounded-full border border-theme bg-muted-surface px-2 py-1">
-              Latest month: {latestMonthText}
-            </span>
             <span className="rounded-full border border-theme bg-muted-surface px-2 py-1">
               Next auto-refresh: {nextAutoRefreshText}
             </span>
