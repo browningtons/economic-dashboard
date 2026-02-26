@@ -20,10 +20,11 @@ This document maps dashboard fields to source series and basic transform notes.
 | CPI | FRED | `CPIAUCSL` | https://fred.stlouisfed.org/series/CPIAUCSL | Monthly | Index | Use as-is |
 | GDP | FRED | `GDP` | https://fred.stlouisfed.org/series/GDP | Quarterly | Billions USD | Forward-fill or interpolate to monthly for chart alignment |
 | National Debt (b) | FRED | `GFDEBTN` | https://fred.stlouisfed.org/series/GFDEBTN | Quarterly | Millions USD | Divide by `1000` to store/display in billions |
-| Stock Market (b) | FRED (proxy) | `NCBCEL` | https://fred.stlouisfed.org/series/NCBCEL | Quarterly | Millions USD | Divide by `1000` for billions; used as market-value proxy |
+| Stock Market (b) | Monthly CSV override (preferred) or FRED fallback | `MARKET_CAP_MONTHLY_*` or `NCBCEL` | https://fred.stlouisfed.org/series/NCBCEL | Monthly (override) / Quarterly (fallback) | Configurable (override) / Millions USD (FRED) | Monthly override expects date + market-cap columns; fallback divides `NCBCEL` by `1000` for billions |
 
 ## Notes
 
 - Keep `Observed Date` monthly in the CSV (`M/D/YY` or `M/D/YYYY`).
 - For mixed-frequency series (daily/weekly/quarterly), normalize to monthly before writing to `public/data/economic_indicators.csv`.
 - The app currently enforces required numeric values per row for key columns and will show a validation error if values are missing.
+- For monthly market cap, set `MARKET_CAP_MONTHLY_CSV_URL` (or `MARKET_CAP_MONTHLY_CSV_PATH`) plus optional column/unit env vars.

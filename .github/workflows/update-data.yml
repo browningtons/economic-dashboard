@@ -32,6 +32,10 @@ jobs:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           FRED_OBSERVATION_START: '2000-01-01'
           DASHBOARD_START_MONTH: '2000-01'
+          MARKET_CAP_MONTHLY_CSV_URL: ${{ secrets.MARKET_CAP_MONTHLY_CSV_URL }}
+          MARKET_CAP_MONTHLY_DATE_COLUMN: ${{ secrets.MARKET_CAP_MONTHLY_DATE_COLUMN }}
+          MARKET_CAP_MONTHLY_VALUE_COLUMN: ${{ secrets.MARKET_CAP_MONTHLY_VALUE_COLUMN }}
+          MARKET_CAP_MONTHLY_UNITS: ${{ secrets.MARKET_CAP_MONTHLY_UNITS }}
         run: npm run update:data
 
       - name: Validate refreshed data against thresholds
@@ -41,6 +45,10 @@ jobs:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           VALIDATE_OBSERVATION_START: '2024-01-01'
           VALIDATE_MONTH_WINDOW: '6'
+          MARKET_CAP_MONTHLY_CSV_URL: ${{ secrets.MARKET_CAP_MONTHLY_CSV_URL }}
+          MARKET_CAP_MONTHLY_DATE_COLUMN: ${{ secrets.MARKET_CAP_MONTHLY_DATE_COLUMN }}
+          MARKET_CAP_MONTHLY_VALUE_COLUMN: ${{ secrets.MARKET_CAP_MONTHLY_VALUE_COLUMN }}
+          MARKET_CAP_MONTHLY_UNITS: ${{ secrets.MARKET_CAP_MONTHLY_UNITS }}
         run: npm run validate:data
 
       - name: Upload validation report

@@ -21,7 +21,34 @@ npm run update:data
 
 This rebuilds `public/data/economic_indicators.csv` from API data.
 
-### 2) Scheduled GitHub automation
+### 2) Use a true monthly market-cap feed for Buffett (optional, recommended)
+
+By default, `Stock Market (b)` uses FRED `NCBCEL` (quarterly, forward-filled monthly).
+If you have a monthly market-cap CSV feed, set:
+
+```bash
+MARKET_CAP_MONTHLY_CSV_URL="https://example.com/us_market_cap_monthly.csv"
+MARKET_CAP_MONTHLY_DATE_COLUMN="date"          # optional
+MARKET_CAP_MONTHLY_VALUE_COLUMN="market_cap_b" # optional
+MARKET_CAP_MONTHLY_UNITS="billions"            # billions|millions|trillions
+```
+
+You can also use a local file while testing:
+
+```bash
+MARKET_CAP_MONTHLY_CSV_PATH="./data/us_market_cap_monthly.csv"
+```
+
+Sample schema: `scripts/monthly-market-cap.sample.csv`
+
+If no monthly source is configured, the scripts fall back to FRED `NCBCEL`.
+
+Where to get monthly data:
+- WFE monthly exchange market capitalization reports (aggregate US exchanges)
+- CRSP market cap series (institutional/paid)
+- Internal warehouse feed exported to CSV with month + market cap
+
+### 3) Scheduled GitHub automation
 
 This repo now includes `.github/workflows/update-data.yml`, which:
 - runs on weekdays (13:15 UTC) and on manual dispatch,
@@ -33,9 +60,15 @@ This repo now includes `.github/workflows/update-data.yml`, which:
 Required repo secret:
 - `FRED_API_KEY`
 
+Optional repo secrets for monthly market-cap override:
+- `MARKET_CAP_MONTHLY_CSV_URL`
+- `MARKET_CAP_MONTHLY_DATE_COLUMN`
+- `MARKET_CAP_MONTHLY_VALUE_COLUMN`
+- `MARKET_CAP_MONTHLY_UNITS`
+
 After it commits, your existing deploy workflow will publish the updated dashboard automatically.
 
-### 2b) Connect the dashboard "Refresh data" button to your pipeline (optional)
+### 3b) Connect the dashboard "Refresh data" button to your pipeline (optional)
 
 The button always reloads latest available CSV in the browser.
 If you also want it to trigger your update pipeline, set:
@@ -50,7 +83,7 @@ Important:
 - Do not call GitHub with a personal access token directly from frontend code.
 - Use a small serverless endpoint/webhook that securely triggers your GitHub workflow.
 
-### 3) Optional: keep Google Sheets in sync automatically
+### 4) Optional: keep Google Sheets in sync automatically
 
 If you still want Google Sheets as the source, use Apps Script to import the repo CSV on a schedule:
 

@@ -3,6 +3,8 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+const STOCK_MARKET_COLUMN = 'Stock Market (b)';
+
 const SERIES_CONFIG = [
   { column: 'Unemployment Rate', seriesId: 'UNRATE', cadence: 'monthly', scale: 1, threshold: 0.15, maxLagMonths: 2, maxForwardFillMonths: 0 },
   { column: 'Avg Weeks Unemployeed', seriesId: 'UEMPMEAN', cadence: 'monthly', scale: 1, threshold: 1.5, maxLagMonths: 2, maxForwardFillMonths: 0 },
@@ -19,7 +21,7 @@ const SERIES_CONFIG = [
   { column: 'Housing Price Index', seriesId: 'CSUSHPINSA', cadence: 'monthly', scale: 1, threshold: 1.0, maxLagMonths: 2, maxForwardFillMonths: 0 },
   { column: 'CPI', seriesId: 'CPIAUCSL', cadence: 'monthly', scale: 1, threshold: 1.0, maxLagMonths: 2, maxForwardFillMonths: 0 },
   { column: 'GDP', seriesId: 'GDP', cadence: 'quarterly', scale: 1, threshold: 10, maxLagMonths: 3, maxForwardFillMonths: 2 },
-  { column: 'Stock Market (b)', seriesId: 'NCBCEL', cadence: 'quarterly', scale: 0.001, threshold: 2500, maxLagMonths: 3, maxForwardFillMonths: 2 },
+  { column: STOCK_MARKET_COLUMN, seriesId: 'NCBCEL', cadence: 'quarterly', scale: 0.001, threshold: 2500, maxLagMonths: 3, maxForwardFillMonths: 2 },
   { column: 'National Debt (b)', seriesId: 'GFDEBTN', cadence: 'quarterly', scale: 0.001, threshold: 400, maxLagMonths: 3, maxForwardFillMonths: 2 },
 ];
 
@@ -73,6 +75,144 @@ function aggregateToMonthly(observations) {
   return monthly;
 }
 
+function parseCsvRow(line) {
+  const values = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === ',' && !inQuotes) {
+      values.push(current);
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  values.push(current);
+  return values;
+}
+
+function parseFlexibleMonthKey(rawDate) {
+  if (!rawDate) return null;
+  const value = String(rawDate).trim();
+  if (!value) return null;
+
+  const isoMatch = value.match(/^(\d{4})-(\d{1,2})(?:-\d{1,2})?$/);
+  if (isoMatch) {
+    const year = Number(isoMatch[1]);
+    const month = Number(isoMatch[2]);
+    if (month >= 1 && month <= 12) {
+      return `${year}-${String(month).padStart(2, '0')}`;
+    }
+    return null;
+  }
+
+  const slashMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (slashMatch) {
+    const month = Number(slashMatch[1]);
+    const yearRaw = Number(slashMatch[3]);
+    const year = yearRaw < 100 ? 2000 + yearRaw : yearRaw;
+    if (month >= 1 && month <= 12) {
+      return `${year}-${String(month).padStart(2, '0')}`;
+    }
+    return null;
+  }
+
+  return monthKeyFromDate(value);
+}
+
+function multiplierForUnits(rawUnits) {
+  const units = String(rawUnits ?? 'billions').trim().toLowerCase();
+  if (units === 'billions' || units === 'b') return 1;
+  if (units === 'millions' || units === 'm') return 0.001;
+  if (units === 'trillions' || units === 't') return 1000;
+  if (units === 'raw') return 1;
+  throw new Error(`Unsupported MARKET_CAP_MONTHLY_UNITS: ${rawUnits}`);
+}
+
+function pickColumnIndex(headers, explicitName, defaults) {
+  if (explicitName) {
+    const explicitIndex = headers.findIndex((h) => h.trim().toLowerCase() === explicitName.trim().toLowerCase());
+    if (explicitIndex !== -1) return explicitIndex;
+    throw new Error(`Could not find required column "${explicitName}" in monthly market-cap CSV.`);
+  }
+
+  for (const option of defaults) {
+    const index = headers.findIndex((h) => h.trim().toLowerCase() === option);
+    if (index !== -1) return index;
+  }
+
+  return -1;
+}
+
+async function loadMonthlyMarketCapMap() {
+  const sourceUrl = process.env.MARKET_CAP_MONTHLY_CSV_URL;
+  const sourcePath = process.env.MARKET_CAP_MONTHLY_CSV_PATH;
+  if (!sourceUrl && !sourcePath) return null;
+
+  let raw = '';
+  if (sourceUrl) {
+    const response = await fetch(sourceUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to load MARKET_CAP_MONTHLY_CSV_URL: HTTP ${response.status}`);
+    }
+    raw = await response.text();
+  } else {
+    raw = await readFile(path.resolve(process.cwd(), sourcePath), 'utf8');
+  }
+
+  const lines = raw.split(/\r?\n/).filter((line) => line.trim());
+  if (lines.length < 2) {
+    throw new Error('Monthly market-cap CSV is empty or missing data rows.');
+  }
+
+  const headers = parseCsvRow(lines[0]);
+  const dateIndex = pickColumnIndex(
+    headers,
+    process.env.MARKET_CAP_MONTHLY_DATE_COLUMN,
+    ['date', 'month', 'observed date', 'period']
+  );
+  const valueIndex = pickColumnIndex(
+    headers,
+    process.env.MARKET_CAP_MONTHLY_VALUE_COLUMN,
+    ['market_cap_b', 'market cap (b)', 'market cap', 'market_cap']
+  );
+
+  if (dateIndex === -1 || valueIndex === -1) {
+    throw new Error('Monthly market-cap CSV must include date + value columns.');
+  }
+
+  const unitMultiplier = multiplierForUnits(process.env.MARKET_CAP_MONTHLY_UNITS);
+  const monthly = new Map();
+
+  for (const line of lines.slice(1)) {
+    const row = parseCsvRow(line);
+    const monthKey = parseFlexibleMonthKey(row[dateIndex]);
+    const value = Number(row[valueIndex]);
+    if (!monthKey || !Number.isFinite(value)) continue;
+    monthly.set(monthKey, value * unitMultiplier);
+  }
+
+  if (!monthly.size) {
+    throw new Error('Monthly market-cap CSV parsed, but no valid month/value rows were found.');
+  }
+
+  return monthly;
+}
+
 function expandQuarterlyMonths(monthlyValues) {
   const expanded = new Map(monthlyValues);
   for (const key of [...monthlyValues.keys()].sort(compareMonthKeys)) {
@@ -113,6 +253,7 @@ async function main() {
   const reportPath = path.resolve(process.cwd(), 'reports/data-validation-latest.md');
   const observationStart = process.env.VALIDATE_OBSERVATION_START || '2024-01-01';
   const compareMonths = Number(process.env.VALIDATE_MONTH_WINDOW || 6);
+  const monthlyMarketCapMap = await loadMonthlyMarketCapMap();
 
   const raw = await readFile(csvPath, 'utf8');
   const lines = raw.trim().split(/\r?\n/);
@@ -132,12 +273,20 @@ async function main() {
       continue;
     }
 
-    const observations = await fetchSeries(config.seriesId, apiKey, observationStart);
-    let fredMonthly = aggregateToMonthly(observations);
-    if (config.cadence === 'quarterly') fredMonthly = expandQuarterlyMonths(fredMonthly);
+    let sourceMonthly = null;
+    let sourceLabel = `FRED:${config.seriesId}`;
 
-    const fredMonths = [...fredMonthly.keys()].sort(compareMonthKeys);
-    const fredLatest = fredMonths.at(-1);
+    if (config.column === STOCK_MARKET_COLUMN && monthlyMarketCapMap?.size) {
+      sourceMonthly = monthlyMarketCapMap;
+      sourceLabel = 'MONTHLY_CSV:MARKET_CAP';
+    } else {
+      const observations = await fetchSeries(config.seriesId, apiKey, observationStart);
+      sourceMonthly = aggregateToMonthly(observations);
+      if (config.cadence === 'quarterly') sourceMonthly = expandQuarterlyMonths(sourceMonthly);
+    }
+
+    const sourceMonths = [...sourceMonthly.keys()].sort(compareMonthKeys);
+    const sourceLatest = sourceMonths.at(-1);
 
     let csvLatest = null;
     for (const [month, row] of [...rowByMonth.entries()].sort((a, b) => compareMonthKeys(a[0], b[0]))) {
@@ -147,32 +296,32 @@ async function main() {
 
     let lag = null;
     let forwardFill = 0;
-    if (csvLatest && fredLatest) {
-      lag = Math.max(0, monthDiff(csvLatest, fredLatest));
-      forwardFill = Math.max(0, monthDiff(fredLatest, csvLatest));
+    if (csvLatest && sourceLatest) {
+      lag = Math.max(0, monthDiff(csvLatest, sourceLatest));
+      forwardFill = Math.max(0, monthDiff(sourceLatest, csvLatest));
     }
 
     const overlapMonths = getRecentMonths(
-      fredMonths.filter((m) => rowByMonth.has(m)),
+      sourceMonths.filter((m) => rowByMonth.has(m)),
       compareMonths
     );
 
     let mismatchCount = 0;
     let maxAbsDiff = 0;
     for (const month of overlapMonths) {
-      const fredValue = Number(fredMonthly.get(month)) * (config.scale ?? 1);
+      const sourceValue = Number(sourceMonthly.get(month)) * (config.scale ?? 1);
       const csvValue = Number(rowByMonth.get(month)[colIndex]);
-      if (!Number.isFinite(fredValue) || !Number.isFinite(csvValue)) continue;
+      if (!Number.isFinite(sourceValue) || !Number.isFinite(csvValue)) continue;
 
-      const absDiff = Math.abs(fredValue - csvValue);
+      const absDiff = Math.abs(sourceValue - csvValue);
       maxAbsDiff = Math.max(maxAbsDiff, absDiff);
       if (absDiff > config.threshold) {
         mismatchCount += 1;
         mismatchRows.push({
           column: config.column,
-          seriesId: config.seriesId,
+          seriesId: sourceLabel,
           month,
-          fredValue,
+          sourceValue,
           csvValue,
           absDiff,
           threshold: config.threshold,
@@ -197,10 +346,10 @@ async function main() {
 
     summaries.push({
       column: config.column,
-      seriesId: config.seriesId,
+      seriesId: sourceLabel,
       status,
       csvLatest: csvLatest ?? 'n/a',
-      fredLatest: fredLatest ?? 'n/a',
+      sourceLatest: sourceLatest ?? 'n/a',
       lag: lag ?? 'n/a',
       forwardFill,
       threshold: config.threshold,
@@ -220,9 +369,9 @@ async function main() {
     '',
     '## Series Summary',
     '',
-    '| Column | Series | Status | CSV Latest | FRED Latest | Source Lag (months) | Forward-Fill (months) | Threshold | Max Abs Diff | Breaches |',
+    '| Column | Series | Status | CSV Latest | Source Latest | Source Lag (months) | Forward-Fill (months) | Threshold | Max Abs Diff | Breaches |',
     '|---|---|---|---:|---:|---:|---:|---:|---:|---:|',
-    ...summaries.map((s) => `| ${s.column} | ${s.seriesId} | ${s.status} | ${s.csvLatest} | ${s.fredLatest} | ${s.lag} | ${s.forwardFill} | ${s.threshold} | ${s.maxAbsDiff} | ${s.mismatchCount} |`),
+    ...summaries.map((s) => `| ${s.column} | ${s.seriesId} | ${s.status} | ${s.csvLatest} | ${s.sourceLatest} | ${s.lag} | ${s.forwardFill} | ${s.threshold} | ${s.maxAbsDiff} | ${s.mismatchCount} |`),
     '',
     '## Top Investigations',
     '',
@@ -231,9 +380,9 @@ async function main() {
   if (topInvestigations.length === 0) {
     reportLines.push('No threshold breaches detected in the current comparison window.');
   } else {
-    reportLines.push('| Column | Series | Month | FRED | CSV | Abs Diff | Threshold |');
+    reportLines.push('| Column | Series | Month | Source | CSV | Abs Diff | Threshold |');
     reportLines.push('|---|---|---:|---:|---:|---:|---:|');
-    reportLines.push(...topInvestigations.map((r) => `| ${r.column} | ${r.seriesId} | ${r.month} | ${r.fredValue.toFixed(4)} | ${r.csvValue.toFixed(4)} | ${r.absDiff.toFixed(4)} | ${r.threshold} |`));
+    reportLines.push(...topInvestigations.map((r) => `| ${r.column} | ${r.seriesId} | ${r.month} | ${r.sourceValue.toFixed(4)} | ${r.csvValue.toFixed(4)} | ${r.absDiff.toFixed(4)} | ${r.threshold} |`));
   }
 
   if (failures.length > 0) {
