@@ -25,7 +25,9 @@ import {
   Building, 
   HelpCircle,
   Info,
+  Menu,
   Users,
+  X,
   AlertCircle,
   Globe,
   Coins
@@ -752,6 +754,7 @@ export default function App() {
   // Set default selected metrics to S&P 500 and Job Openings
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>(['S&P 500', 'Job Openings']);
   const [metricSearch, setMetricSearch] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   
   // Date Range State (Indices) - Initialized to a safe empty array state
   const [dateRange, setDateRange] = useState<[number, number]>([0, 0]);
@@ -1364,8 +1367,18 @@ export default function App() {
           {/* Chart Section */}
           {activeTab === 'Dashboard' && (
           <Card className={`flex-1 flex flex-col relative ${shareMode ? 'min-h-[760px]' : 'min-h-[500px]'} p-7`}>
+            {!shareMode && (
+              <button
+                onClick={() => setFiltersOpen((prev) => !prev)}
+                className="absolute right-7 top-7 z-20 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-theme bg-muted-surface text-main shadow-sm transition-colors hover:bg-secondary"
+                title={filtersOpen ? 'Hide filters' : 'Show filters'}
+                aria-label={filtersOpen ? 'Hide filters' : 'Show filters'}
+              >
+                {filtersOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
+            )}
             <div className={`flex flex-col ${shareMode ? 'mb-5 gap-3' : 'mb-8 gap-4'} z-10`}>
-              <div>
+              <div className={!shareMode ? 'pr-14' : ''}>
                 <h2 className="text-3xl md:text-4xl font-semibold text-main flex items-center gap-2">
                   {viewMode === 'relative' ? 'Relative Performance Index' : 'Trends'}
                 </h2>
@@ -1393,7 +1406,7 @@ export default function App() {
             </div>
 
             <div className="w-full">
-              {!shareMode && (
+              {!shareMode && filtersOpen && (
                 <div className="mb-3 rounded-lg border border-theme bg-muted-surface/70 p-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <select
