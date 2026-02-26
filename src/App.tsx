@@ -91,6 +91,7 @@ interface DataSourceInfo {
   seriesId: string;
   url: string;
   note?: string;
+  cadence?: 'daily' | 'weekly' | 'monthly' | 'quarterly';
 }
 
 interface MetricExtrema {
@@ -124,6 +125,20 @@ interface ExtremaDotProps {
   payload?: {
     timestamp?: number | string;
   };
+}
+
+interface MetricHealthRow {
+  id: string;
+  label: string;
+  source?: DataSourceInfo;
+  cadence: DataSourceInfo['cadence'];
+  lastValueDate: Date | null;
+  expectedNextDate: Date | null;
+  countdownText: string;
+  isOverdue: boolean;
+  missingCount: number;
+  missingRecentCount: number;
+  completenessPct: string;
 }
 
 // --- Data ---
@@ -247,23 +262,29 @@ const REQUIRED_COLUMNS = [
 ];
 
 const METRIC_SOURCES: Record<string, DataSourceInfo> = {
-  'Unemployment Rate': { provider: 'FRED', seriesId: 'UNRATE', url: 'https://fred.stlouisfed.org/series/UNRATE' },
-  'Avg Weeks Unemployeed': { provider: 'FRED', seriesId: 'UEMPMEAN', url: 'https://fred.stlouisfed.org/series/UEMPMEAN' },
-  'Median Weeks Unemployeed': { provider: 'FRED', seriesId: 'UEMPMED', url: 'https://fred.stlouisfed.org/series/UEMPMED' },
-  'Job Openings': { provider: 'FRED', seriesId: 'JTSJOL', url: 'https://fred.stlouisfed.org/series/JTSJOL' },
-  'Unemployed 27 weeks': { provider: 'FRED', seriesId: 'UEMP27OV', url: 'https://fred.stlouisfed.org/series/UEMP27OV' },
-  'Unemployeed Count': { provider: 'FRED', seriesId: 'UNEMPLOY', url: 'https://fred.stlouisfed.org/series/UNEMPLOY' },
-  'Fed Rate': { provider: 'FRED', seriesId: 'FEDFUNDS', url: 'https://fred.stlouisfed.org/series/FEDFUNDS' },
-  '15 year mortgage': { provider: 'FRED', seriesId: 'MORTGAGE15US', url: 'https://fred.stlouisfed.org/series/MORTGAGE15US' },
-  '30 year mortgage': { provider: 'FRED', seriesId: 'MORTGAGE30US', url: 'https://fred.stlouisfed.org/series/MORTGAGE30US' },
-  'S&P 500': { provider: 'FRED', seriesId: 'SP500', url: 'https://fred.stlouisfed.org/series/SP500' },
-  'Labor Participation Rate': { provider: 'FRED', seriesId: 'CIVPART', url: 'https://fred.stlouisfed.org/series/CIVPART' },
-  'Labor Participation Core': { provider: 'FRED', seriesId: 'LNS11300060', url: 'https://fred.stlouisfed.org/series/LNS11300060' },
-  'Housing Price Index': { provider: 'FRED', seriesId: 'CSUSHPINSA', url: 'https://fred.stlouisfed.org/series/CSUSHPINSA' },
-  'CPI': { provider: 'FRED', seriesId: 'CPIAUCSL', url: 'https://fred.stlouisfed.org/series/CPIAUCSL' },
-  'GDP': { provider: 'FRED', seriesId: 'GDP', url: 'https://fred.stlouisfed.org/series/GDP' },
-  'Stock Market (b)': { provider: 'FRED', seriesId: 'NCBCEL', url: 'https://fred.stlouisfed.org/series/NCBCEL' },
-  'National Debt (b)': { provider: 'FRED', seriesId: 'GFDEBTN', url: 'https://fred.stlouisfed.org/series/GFDEBTN' },
+  'Unemployment Rate': { provider: 'FRED', seriesId: 'UNRATE', url: 'https://fred.stlouisfed.org/series/UNRATE', cadence: 'monthly' },
+  'Avg Weeks Unemployeed': { provider: 'FRED', seriesId: 'UEMPMEAN', url: 'https://fred.stlouisfed.org/series/UEMPMEAN', cadence: 'monthly' },
+  'Median Weeks Unemployeed': { provider: 'FRED', seriesId: 'UEMPMED', url: 'https://fred.stlouisfed.org/series/UEMPMED', cadence: 'monthly' },
+  'Job Openings': { provider: 'FRED', seriesId: 'JTSJOL', url: 'https://fred.stlouisfed.org/series/JTSJOL', cadence: 'monthly' },
+  'Unemployed 27 weeks': { provider: 'FRED', seriesId: 'UEMP27OV', url: 'https://fred.stlouisfed.org/series/UEMP27OV', cadence: 'monthly' },
+  'Unemployeed Count': { provider: 'FRED', seriesId: 'UNEMPLOY', url: 'https://fred.stlouisfed.org/series/UNEMPLOY', cadence: 'monthly' },
+  'Fed Rate': { provider: 'FRED', seriesId: 'FEDFUNDS', url: 'https://fred.stlouisfed.org/series/FEDFUNDS', cadence: 'monthly' },
+  '15 year mortgage': { provider: 'FRED', seriesId: 'MORTGAGE15US', url: 'https://fred.stlouisfed.org/series/MORTGAGE15US', cadence: 'weekly' },
+  '30 year mortgage': { provider: 'FRED', seriesId: 'MORTGAGE30US', url: 'https://fred.stlouisfed.org/series/MORTGAGE30US', cadence: 'weekly' },
+  'S&P 500': { provider: 'FRED', seriesId: 'SP500', url: 'https://fred.stlouisfed.org/series/SP500', cadence: 'daily' },
+  'Labor Participation Rate': { provider: 'FRED', seriesId: 'CIVPART', url: 'https://fred.stlouisfed.org/series/CIVPART', cadence: 'monthly' },
+  'Labor Participation Core': { provider: 'FRED', seriesId: 'LNS11300060', url: 'https://fred.stlouisfed.org/series/LNS11300060', cadence: 'monthly' },
+  'Housing Price Index': { provider: 'FRED', seriesId: 'CSUSHPINSA', url: 'https://fred.stlouisfed.org/series/CSUSHPINSA', cadence: 'monthly' },
+  'CPI': { provider: 'FRED', seriesId: 'CPIAUCSL', url: 'https://fred.stlouisfed.org/series/CPIAUCSL', cadence: 'monthly' },
+  'GDP': { provider: 'FRED', seriesId: 'GDP', url: 'https://fred.stlouisfed.org/series/GDP', cadence: 'quarterly' },
+  'Stock Market (b)': {
+    provider: 'Monthly CSV / FRED',
+    seriesId: 'market_cap_monthly / NCBCEL',
+    url: 'https://fred.stlouisfed.org/series/NCBCEL',
+    cadence: 'monthly',
+    note: 'Uses monthly market-cap feed when configured; falls back to NCBCEL.',
+  },
+  'National Debt (b)': { provider: 'FRED', seriesId: 'GFDEBTN', url: 'https://fred.stlouisfed.org/series/GFDEBTN', cadence: 'quarterly' },
 };
 
 const METRICS: MetricConfig[] = [
@@ -502,6 +523,41 @@ const formatTimeRemaining = (targetDate: Date, now: Date) => {
   if (days > 0) return `${days}d ${hours}h`;
   if (hours > 0) return `${hours}h ${minutes}m`;
   return `${minutes}m`;
+};
+
+const formatDuration = (ms: number) => {
+  const totalMinutes = Math.max(0, Math.ceil(ms / 60000));
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const minutes = totalMinutes % 60;
+
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+};
+
+const addCadenceWindow = (date: Date, cadence: DataSourceInfo['cadence']) => {
+  const next = new Date(date);
+  if (cadence === 'daily') {
+    next.setDate(next.getDate() + 1);
+    return next;
+  }
+  if (cadence === 'weekly') {
+    next.setDate(next.getDate() + 7);
+    return next;
+  }
+  if (cadence === 'quarterly') {
+    next.setMonth(next.getMonth() + 3);
+    return next;
+  }
+  next.setMonth(next.getMonth() + 1);
+  return next;
+};
+
+const formatCountdownStatus = (targetDate: Date, now: Date) => {
+  const deltaMs = targetDate.getTime() - now.getTime();
+  if (deltaMs >= 0) return `Due in ${formatDuration(deltaMs)}`;
+  return `Overdue by ${formatDuration(Math.abs(deltaMs))}`;
 };
 
 // --- Parsing Helper ---
@@ -781,7 +837,7 @@ export default function App() {
   const [dataWarning, setDataWarning] = useState<string | null>(null);
   const [dataSource, setDataSource] = useState<'google' | 'local' | 'embedded'>('embedded');
   const [reloadKey, setReloadKey] = useState(0);
-  const [activeTab, setActiveTab] = useState<'Dashboard' | 'Buffett'>('Dashboard');
+  const [activeTab, setActiveTab] = useState<'Dashboard' | 'Buffett' | 'Data Table'>('Dashboard');
   const [shareMode, setShareMode] = useState(false);
   const [viewMode, setViewMode] = useState<'raw' | 'relative'>('raw');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -932,6 +988,63 @@ export default function App() {
   const activeMetrics = useMemo(() => 
     METRICS.filter(m => selectedMetrics.includes(m.id)), 
   [selectedMetrics]);
+
+  const tableMetrics = useMemo(() => {
+    const seen = new Set<string>();
+    return METRICS.filter((metric) => {
+      if (seen.has(metric.id)) return false;
+      seen.add(metric.id);
+      return true;
+    });
+  }, []);
+
+  const tableDataRows = useMemo(() => [...data].reverse(), [data]);
+
+  const metricHealthRows = useMemo<MetricHealthRow[]>(() => {
+    const recentWindowStart = Math.max(0, data.length - 12);
+
+    const rows = tableMetrics.map((metric) => {
+      const source = METRIC_SOURCES[metric.id];
+      const cadence = source?.cadence ?? 'monthly';
+      let missingCount = 0;
+      let missingRecentCount = 0;
+      let lastTimestamp: number | null = null;
+
+      data.forEach((point, index) => {
+        const value = Number(point[metric.id]);
+        const hasValue = Number.isFinite(value);
+        if (hasValue) {
+          lastTimestamp = Number(point.timestamp);
+        } else {
+          missingCount += 1;
+          if (index >= recentWindowStart) missingRecentCount += 1;
+        }
+      });
+
+      const lastValueDate = lastTimestamp ? new Date(lastTimestamp) : null;
+      const expectedNextDate = lastValueDate ? addCadenceWindow(lastValueDate, cadence) : null;
+      const isOverdue = expectedNextDate ? expectedNextDate.getTime() < clockNow.getTime() : false;
+
+      return {
+        id: metric.id,
+        label: metric.label,
+        source,
+        cadence,
+        lastValueDate,
+        expectedNextDate,
+        countdownText: expectedNextDate ? formatCountdownStatus(expectedNextDate, clockNow) : 'No observations',
+        isOverdue,
+        missingCount,
+        missingRecentCount,
+        completenessPct: data.length ? (((data.length - missingCount) / data.length) * 100).toFixed(1) : '0.0',
+      };
+    });
+
+    return rows.sort((a, b) => {
+      if (a.isOverdue !== b.isOverdue) return a.isOverdue ? -1 : 1;
+      return a.label.localeCompare(b.label);
+    });
+  }, [clockNow, data, tableMetrics]);
 
   // Filter Data based on Slider Range
   const filteredData = useMemo(() => {
@@ -1259,6 +1372,26 @@ export default function App() {
     if (!data.length) return 'N/A';
     return new Date(data[data.length - 1].timestamp).toLocaleDateString();
   }, [data]);
+  const datasetLastUpdateDate = useMemo(() => {
+    if (!data.length) return null;
+    return new Date(data[data.length - 1].timestamp);
+  }, [data]);
+  const datasetExpectedNextDate = useMemo(() => {
+    if (!datasetLastUpdateDate) return null;
+    return addCadenceWindow(datasetLastUpdateDate, 'monthly');
+  }, [datasetLastUpdateDate]);
+  const datasetCountdownText = useMemo(() => {
+    if (!datasetExpectedNextDate) return 'No schedule';
+    return formatCountdownStatus(datasetExpectedNextDate, clockNow);
+  }, [clockNow, datasetExpectedNextDate]);
+  const datasetMissingCells = useMemo(
+    () => metricHealthRows.reduce((sum, row) => sum + row.missingCount, 0),
+    [metricHealthRows]
+  );
+  const overdueMetricCount = useMemo(
+    () => metricHealthRows.filter((row) => row.isOverdue).length,
+    [metricHealthRows]
+  );
   const monthsBehind = useMemo(() => {
     if (!data.length) return 0;
     const latest = new Date(data[data.length - 1].timestamp);
@@ -1417,7 +1550,7 @@ export default function App() {
             </button>
           )}
           <div className="flex bg-muted-surface p-1 rounded-lg border border-theme">
-            {(['Dashboard', 'Buffett'] as const).map((tab) => {
+            {(['Dashboard', 'Buffett', 'Data Table'] as const).map((tab) => {
               const isActive = activeTab === tab;
               const isBuffettTab = tab === 'Buffett';
               return (
@@ -1779,6 +1912,150 @@ export default function App() {
                     ? `${activeMetrics[0].label} and ${activeMetrics[1].label} are diverging. Review trend slopes for confirmation and monitor next data release.`
                     : 'Select two indicators to generate a stronger comparative takeaway.'}
                 </p>
+              </Card>
+            </>
+          )}
+
+          {activeTab === 'Data Table' && (
+            <>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <Card className="p-4">
+                  <p className="text-xs uppercase tracking-wider text-muted">Last Update</p>
+                  <p className="mt-1 text-xl font-semibold text-main">
+                    {datasetLastUpdateDate
+                      ? datasetLastUpdateDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
+                      : 'N/A'}
+                  </p>
+                </Card>
+                <Card className="p-4">
+                  <p className="text-xs uppercase tracking-wider text-muted">Expected Next Update</p>
+                  <p className="mt-1 text-xl font-semibold text-main">
+                    {datasetExpectedNextDate
+                      ? datasetExpectedNextDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
+                      : 'N/A'}
+                  </p>
+                </Card>
+                <Card className="p-4">
+                  <p className="text-xs uppercase tracking-wider text-muted">Countdown</p>
+                  <p className="mt-1 text-xl font-semibold text-main">{datasetCountdownText}</p>
+                </Card>
+                <Card className="p-4">
+                  <p className="text-xs uppercase tracking-wider text-muted">Data Quality</p>
+                  <p className="mt-1 text-xl font-semibold text-main">{datasetMissingCells.toLocaleString()} missing cells</p>
+                  <p className={`mt-1 text-xs ${overdueMetricCount > 0 ? 'text-[color:var(--color-brand-primary)]' : 'text-link'}`}>
+                    {overdueMetricCount} metrics past expected cadence
+                  </p>
+                </Card>
+              </div>
+
+              <Card className="p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-semibold text-main">Metric Freshness and Completeness</h3>
+                    <p className="text-xs text-muted">Metric names link directly to source series.</p>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-theme text-muted">
+                        <th className="px-3 py-2 font-semibold">Metric</th>
+                        <th className="px-3 py-2 font-semibold">Cadence</th>
+                        <th className="px-3 py-2 font-semibold">Last Value</th>
+                        <th className="px-3 py-2 font-semibold">Expected Next</th>
+                        <th className="px-3 py-2 font-semibold">Countdown</th>
+                        <th className="px-3 py-2 font-semibold">Missing (All)</th>
+                        <th className="px-3 py-2 font-semibold">Missing (12M)</th>
+                        <th className="px-3 py-2 font-semibold">Completeness</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {metricHealthRows.map((row) => (
+                        <tr key={`health-${row.id}`} className="border-b border-theme/40">
+                          <td className="px-3 py-2 font-medium text-main">
+                            {row.source ? (
+                              <a href={row.source.url} target="_blank" rel="noreferrer" className="text-link underline text-link-hover">
+                                {row.label}
+                              </a>
+                            ) : (
+                              row.label
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-muted capitalize">{row.cadence ?? 'monthly'}</td>
+                          <td className="px-3 py-2 text-main">
+                            {row.lastValueDate ? row.lastValueDate.toLocaleDateString() : 'N/A'}
+                          </td>
+                          <td className="px-3 py-2 text-main">
+                            {row.expectedNextDate ? row.expectedNextDate.toLocaleDateString() : 'N/A'}
+                          </td>
+                          <td className={`px-3 py-2 font-medium ${row.isOverdue ? 'text-[color:var(--color-brand-primary)]' : 'text-link'}`}>
+                            {row.countdownText}
+                          </td>
+                          <td className={`px-3 py-2 ${row.missingCount > 0 ? 'text-[color:var(--color-brand-primary)]' : 'text-muted'}`}>
+                            {row.missingCount}
+                          </td>
+                          <td className={`px-3 py-2 ${row.missingRecentCount > 0 ? 'text-[color:var(--color-brand-primary)]' : 'text-muted'}`}>
+                            {row.missingRecentCount}
+                          </td>
+                          <td className="px-3 py-2 text-main">{row.completenessPct}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+
+              <Card className="p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-semibold text-main">Raw Data Table</h3>
+                    <p className="text-xs text-muted">Latest rows first. Headers link to source series where available.</p>
+                  </div>
+                  <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-xs text-muted">
+                    {tableDataRows.length.toLocaleString()} rows
+                  </span>
+                </div>
+                <div className="max-h-[620px] overflow-auto rounded-lg border border-theme">
+                  <table className="min-w-[1400px] text-left text-xs">
+                    <thead className="sticky top-0 z-10 bg-secondary">
+                      <tr className="border-b border-theme">
+                        <th className="px-3 py-2 font-semibold text-main">Observed Date</th>
+                        {tableMetrics.map((metric) => {
+                          const source = METRIC_SOURCES[metric.id];
+                          return (
+                            <th key={`table-header-${metric.id}`} className="px-3 py-2 font-semibold text-main">
+                              {source ? (
+                                <a href={source.url} target="_blank" rel="noreferrer" className="text-link underline text-link-hover">
+                                  {metric.label}
+                                </a>
+                              ) : (
+                                metric.label
+                              )}
+                            </th>
+                          );
+                        })}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tableDataRows.map((row, rowIndex) => (
+                        <tr key={`raw-row-${row.timestamp}-${rowIndex}`} className="border-b border-theme/30">
+                          <td className="px-3 py-2 font-mono text-main">
+                            {new Date(row.timestamp).toLocaleDateString()}
+                          </td>
+                          {tableMetrics.map((metric) => {
+                            const rawValue = Number(row[metric.id]);
+                            const hasValue = Number.isFinite(rawValue);
+                            return (
+                              <td key={`raw-${row.timestamp}-${metric.id}`} className={`px-3 py-2 ${hasValue ? 'text-main' : 'text-[color:var(--color-brand-primary)]'}`}>
+                                {hasValue ? metric.format(rawValue) : 'MISSING'}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </Card>
             </>
           )}
