@@ -1,19 +1,89 @@
 # Economic Dashboard
 
-## Data Source Setup (Google Sheets)
+## Automated Data Updates (Recommended)
 
-This app can load economic data directly from a Google Sheet CSV export.
+You can fully automate your dataset refresh from FRED and stop manually entering values in Google Sheets.
+
+### 1) Local one-command refresh
+
+1. Create a FRED API key: https://fredaccount.stlouisfed.org/apikey
+2. Export it in your shell:
+
+```bash
+export FRED_API_KEY="your_fred_api_key"
+```
+
+3. Run:
+
+```bash
+npm run update:data
+```
+
+This rebuilds `public/data/economic_indicators.csv` from API data.
+
+### 2) Scheduled GitHub automation
+
+This repo now includes `.github/workflows/update-data.yml`, which:
+- runs on weekdays (13:15 UTC) and on manual dispatch,
+- pulls fresh data from FRED,
+- commits only if `public/data/economic_indicators.csv` changed.
+
+Required repo secret:
+- `FRED_API_KEY`
+
+After it commits, your existing deploy workflow will publish the updated dashboard automatically.
+
+### 2b) Connect the dashboard "Refresh data" button to your pipeline (optional)
+
+The button always reloads latest available CSV in the browser.
+If you also want it to trigger your update pipeline, set:
+
+```bash
+VITE_REFRESH_WEBHOOK_URL="https://your-webhook-endpoint.example.com/refresh"
+```
+
+The app sends a `POST` to that URL when the button is clicked.
+
+Important:
+- Do not call GitHub with a personal access token directly from frontend code.
+- Use a small serverless endpoint/webhook that securely triggers your GitHub workflow.
+
+### 3) Optional: keep Google Sheets in sync automatically
+
+If you still want Google Sheets as the source, use Apps Script to import the repo CSV on a schedule:
+
+```javascript
+function refreshEconomicSheetFromCsv() {
+  const csvUrl = "https://raw.githubusercontent.com/<owner>/<repo>/main/public/data/economic_indicators.csv";
+  const sheetName = "Sheet1";
+
+  const csvText = UrlFetchApp.fetch(csvUrl).getContentText();
+  const rows = Utilities.parseCsv(csvText);
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  sheet.clearContents();
+  sheet.getRange(1, 1, rows.length, rows[0].length).setValues(rows);
+}
+```
+
+Then add a time-based trigger (daily/weekly) in Apps Script. This removes manual row updates.
+
+## Data Source Setup (Google Sheets, Optional)
+
+By default, the app now loads `public/data/economic_indicators.csv` (auto-updated by workflow).
+Google Sheets can still be used, but only when explicitly enabled.
 
 1. Publish your sheet/tab so it can be read as CSV.
 2. Create a `.env.local` file in the project root:
 
 ```bash
+VITE_USE_GOOGLE_SHEET="true"
 VITE_GOOGLE_SHEET_URL="https://docs.google.com/spreadsheets/d/<SHEET_ID>/edit?gid=<TAB_GID>#gid=<TAB_GID>"
 ```
 
 You can also provide a direct CSV export URL if you prefer.
 
-If `VITE_GOOGLE_SHEET_URL` is unavailable or fails, the app falls back to:
+If Google Sheets is enabled but unavailable or fails, the app falls back to:
 - `public/data/economic_indicators.csv`
 - Embedded CSV in `src/App.tsx` (last fallback)
 
