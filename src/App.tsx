@@ -1680,17 +1680,19 @@ export default function App() {
                       </details>
                     </div>
                   </div>
-                </div>
-              )}
 
-              {data.length > 1 && (
-                <DateRangeSlider
-                  min={0}
-                  max={data.length - 1}
-                  value={dateRange}
-                  onChange={handleDateRangeChange}
-                  data={data}
-                />
+                  {data.length > 1 && (
+                    <div className="mt-3">
+                      <DateRangeSlider
+                        min={0}
+                        max={data.length - 1}
+                        value={dateRange}
+                        onChange={handleDateRangeChange}
+                        data={data}
+                      />
+                    </div>
+                  )}
+                </div>
               )}
 
               <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
