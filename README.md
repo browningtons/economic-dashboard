@@ -88,6 +88,19 @@ The app sends a `POST` to that URL when the button is clicked.
 Important:
 - Do not call GitHub with a personal access token directly from frontend code.
 - Use a small serverless endpoint/webhook that securely triggers your GitHub workflow.
+- This repo includes a relay template at `api/refresh-dispatch.js`.
+
+Required env vars for `api/refresh-dispatch.js`:
+
+```bash
+GITHUB_REPO_OWNER="<owner>"
+GITHUB_REPO_NAME="<repo>"
+GITHUB_TRIGGER_TOKEN="<token_with_actions_write>"
+GITHUB_WORKFLOW_ID="update-data.yml"   # optional
+GITHUB_WORKFLOW_REF="main"             # optional
+REFRESH_ALLOWED_ORIGIN="https://your-dashboard-domain"  # optional but recommended
+REFRESH_WEBHOOK_BEARER="<shared_token>"                 # optional
+```
 
 ### 3c) Send alerts outside GitHub Issues (optional)
 
@@ -102,6 +115,15 @@ npm run alert:data
 ```
 
 By default this reads `reports/data-validation-latest.md`.
+It also reads `reports/data-status-latest.json` when available.
+
+### 3d) Status JSON for ops visibility
+
+Validation now writes:
+- `reports/data-status-latest.json` (artifact/report use)
+- `public/data/data_status.json` (dashboard UI use)
+
+The Data Table view surfaces this health status and top alerts.
 
 ### 4) Optional: keep Google Sheets in sync automatically
 

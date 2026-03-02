@@ -11,6 +11,15 @@ async function readReport(reportPath) {
   }
 }
 
+async function readStatus(statusPath) {
+  try {
+    const raw = await readFile(statusPath, 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 function summarizeFailures(report) {
   const lines = report.split(/\r?\n/);
   const failureStart = lines.findIndex((line) => line.trim() === '## Failures');
@@ -74,6 +83,7 @@ async function sendResendAlert(apiKey, from, toList, subject, summary, report) {
 
 async function main() {
   const reportPath = path.resolve(process.cwd(), process.env.ALERT_REPORT_PATH || 'reports/data-validation-latest.md');
+  const statusPath = path.resolve(process.cwd(), process.env.ALERT_STATUS_PATH || 'reports/data-status-latest.json');
   const subject = process.env.ALERT_SUBJECT || 'Economic Dashboard data validation alert';
 
   const webhookUrl = process.env.ALERT_WEBHOOK_URL?.trim();
@@ -93,12 +103,22 @@ async function main() {
   }
 
   const report = await readReport(reportPath);
+  const status = await readStatus(statusPath);
   const summary = summarizeFailures(report);
+  const statusSummary = status
+    ? [
+        `Status: ${status.status ?? 'UNKNOWN'}`,
+        `Failures: ${status.failureCount ?? 0}`,
+        `Series failing: ${status.failedSeriesCount ?? 0}/${status.totalSeriesCount ?? 0}`,
+        status.latestDataMonth ? `Latest data month: ${status.latestDataMonth}` : null,
+      ].filter(Boolean).join('\n')
+    : null;
+  const mergedSummary = statusSummary ? `${statusSummary}\n\n${summary}` : summary;
   const errors = [];
 
   if (hasWebhook) {
     try {
-      await sendWebhookAlert(webhookUrl, subject, summary, report.slice(0, 60000));
+      await sendWebhookAlert(webhookUrl, subject, mergedSummary, report.slice(0, 60000));
       console.log('Webhook alert sent.');
     } catch (error) {
       errors.push(error instanceof Error ? error.message : String(error));
@@ -107,7 +127,7 @@ async function main() {
 
   if (hasResend) {
     try {
-      await sendResendAlert(resendApiKey, resendFrom, resendTo, subject, summary, report.slice(0, 60000));
+      await sendResendAlert(resendApiKey, resendFrom, resendTo, subject, mergedSummary, report.slice(0, 60000));
       console.log('Resend alert sent.');
     } catch (error) {
       errors.push(error instanceof Error ? error.message : String(error));

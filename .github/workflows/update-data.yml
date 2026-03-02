@@ -2,6 +2,15 @@ name: Update Economic Data
 
 on:
   workflow_dispatch:
+    inputs:
+      requested_by:
+        description: Optional initiator label
+        required: false
+        type: string
+      requested_at:
+        description: Optional client request timestamp
+        required: false
+        type: string
   schedule:
     # Weekdays at 13:15 UTC
     - cron: '15 13 * * 1-5'
@@ -56,7 +65,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: data-validation-report
-          path: reports/data-validation-latest.md
+          path: |
+            reports/data-validation-latest.md
+            reports/data-status-latest.json
+            public/data/data_status.json
 
       - name: Open issue if validation fails
         if: steps.validate.outcome == 'failure'
@@ -98,7 +110,6 @@ jobs:
 
       - name: Send external validation alerts
         if: steps.validate.outcome == 'failure'
-        continue-on-error: true
         env:
           ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
@@ -122,6 +133,6 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/data/economic_indicators.csv
+          git add public/data/economic_indicators.csv public/data/data_status.json
           git commit -m "chore(data): auto-update economic indicators CSV"
           git push origin main

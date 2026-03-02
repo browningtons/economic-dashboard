@@ -37,7 +37,7 @@ import appLogo from './assets/golden_data_icon_small.png';
 import Card from './components/Card';
 import DateRangeSlider from './components/DateRangeSlider';
 import DataTableView from './components/DataTableView';
-import type { DataPoint, DataSourceInfo, MetricConfig } from './types/dashboard';
+import type { DataPoint, DataSourceInfo, MetricConfig, PipelineStatus } from './types/dashboard';
 
 // --- Types & Interfaces ---
 
@@ -213,6 +213,7 @@ const GOOGLE_SHEET_URL = (
 const USE_GOOGLE_SHEET = import.meta.env.VITE_USE_GOOGLE_SHEET === 'true';
 const REFRESH_WEBHOOK_URL = import.meta.env.VITE_REFRESH_WEBHOOK_URL?.trim();
 const LOCAL_DATA_URL = `${import.meta.env.BASE_URL}data/economic_indicators.csv`;
+const STATUS_DATA_URL = `${import.meta.env.BASE_URL}data/data_status.json`;
 const REQUIRED_COLUMNS = [
   'Observed Date',
   'Unemployment Rate',
@@ -690,6 +691,7 @@ const RenderLabel = ({ viewBox, label, labelPos }: RenderLabelProps) => {
 
 export default function App() {
   const [data, setData] = useState<DataPoint[]>([]);
+  const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
   const [dataWarning, setDataWarning] = useState<string | null>(null);
@@ -733,6 +735,16 @@ export default function App() {
       }
 
       return { text: RAW_CSV_DATA };
+    };
+
+    const getStatusData = async (): Promise<PipelineStatus | null> => {
+      try {
+        const response = await fetch(STATUS_DATA_URL, { cache: 'no-store' });
+        if (!response.ok) return null;
+        return await response.json();
+      } catch {
+        return null;
+      }
     };
 
     const loadData = async () => {
@@ -828,6 +840,9 @@ export default function App() {
         
         setData(parsedData);
         setDateRange([0, parsedData.length - 1]);
+
+        const status = await getStatusData();
+        if (!cancelled) setPipelineStatus(status);
       } catch (error) {
         setDataError(`Data load failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       } finally {
@@ -1664,7 +1679,7 @@ export default function App() {
           )}
 
           {activeTab === 'Data Table' && (
-            <DataTableView data={data} metrics={METRICS} metricSources={METRIC_SOURCES} now={clockNow} />
+            <DataTableView data={data} metrics={METRICS} metricSources={METRIC_SOURCES} now={clockNow} pipelineStatus={pipelineStatus} />
           )}
 
           {activeTab === 'Buffett' && (

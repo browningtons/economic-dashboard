@@ -1,0 +1,13 @@
+{
+  "generatedAt": null,
+  "nextScheduledRefreshUtc": null,
+  "status": "UNKNOWN",
+  "failureCount": 0,
+  "failedSeriesCount": 0,
+  "totalSeriesCount": 0,
+  "latestDataMonth": null,
+  "latestBuffettRatio": null,
+  "failures": [],
+  "topAlerts": [],
+  "series": []
+}

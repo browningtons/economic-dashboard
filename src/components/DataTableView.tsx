@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Card from './Card';
-import type { Cadence, DataPoint, DataSourceInfo, MetricConfig } from '../types/dashboard';
+import type { Cadence, DataPoint, DataSourceInfo, MetricConfig, PipelineStatus } from '../types/dashboard';
 
 interface MetricHealthRow {
   id: string;
@@ -21,6 +21,7 @@ interface DataTableViewProps {
   metrics: MetricConfig[];
   metricSources: Record<string, DataSourceInfo>;
   now: Date;
+  pipelineStatus?: PipelineStatus | null;
 }
 
 const ROW_HEIGHT = 36;
@@ -68,7 +69,7 @@ function csvEscape(value: string | number | undefined) {
   return `"${raw.replace(/"/g, '""')}"`;
 }
 
-export default function DataTableView({ data, metrics, metricSources, now }: DataTableViewProps) {
+export default function DataTableView({ data, metrics, metricSources, now, pipelineStatus }: DataTableViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [yearFilter, setYearFilter] = useState('ALL');
   const [showMissingOnly, setShowMissingOnly] = useState(false);
@@ -180,6 +181,12 @@ export default function DataTableView({ data, metrics, metricSources, now }: Dat
     () => metricHealthRows.filter((row) => row.isOverdue).length,
     [metricHealthRows]
   );
+
+  const pipelineHealthText = pipelineStatus?.status === 'FAIL'
+    ? 'Validation issues detected in the last pipeline run.'
+    : pipelineStatus?.status === 'PASS'
+      ? 'Latest validation passed.'
+      : 'Pipeline status unavailable.';
 
   const years = useMemo(() => {
     const uniques = new Set<number>();
@@ -317,6 +324,38 @@ export default function DataTableView({ data, metrics, metricSources, now }: Dat
           </p>
         </Card>
       </div>
+
+      <Card className="p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-muted">Pipeline Health</p>
+            <p className={`mt-1 text-sm font-semibold ${pipelineStatus?.status === 'FAIL' ? 'text-[color:var(--color-brand-primary)]' : 'text-main'}`}>
+              {pipelineHealthText}
+            </p>
+            <p className="mt-1 text-xs text-muted">
+              {pipelineStatus?.generatedAt
+                ? `Last validation: ${new Date(pipelineStatus.generatedAt).toLocaleString()}`
+                : 'Validation timestamp not available.'}
+            </p>
+          </div>
+          <div className="text-xs text-muted">
+            <p>Failed checks: {pipelineStatus?.failureCount ?? 0}</p>
+            <p>Series failing: {pipelineStatus?.failedSeriesCount ?? 0} / {pipelineStatus?.totalSeriesCount ?? metrics.length}</p>
+          </div>
+        </div>
+        {pipelineStatus?.topAlerts && pipelineStatus.topAlerts.length > 0 && (
+          <div className="mt-3 rounded-lg border border-theme bg-muted-surface p-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted">Top Alerts</p>
+            <ul className="mt-2 space-y-1 text-xs text-main">
+              {pipelineStatus.topAlerts.slice(0, 4).map((alert, index) => (
+                <li key={`alert-${alert.type}-${alert.column}-${alert.month}-${index}`}>
+                  <span className="font-medium">{alert.type}</span> · {alert.column} · {alert.month}: {alert.details}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </Card>
 
       <Card className="p-4">
         <div className="mb-3 flex items-center justify-between gap-3">

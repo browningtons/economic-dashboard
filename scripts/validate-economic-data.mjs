@@ -53,6 +53,23 @@ function compareMonthKeys(a, b) {
   return a.localeCompare(b);
 }
 
+function getNextAutoRefreshUtc(fromDate) {
+  const next = new Date(fromDate);
+  next.setUTCSeconds(0, 0);
+  next.setUTCHours(13, 15, 0, 0);
+
+  if (next <= fromDate) {
+    next.setUTCDate(next.getUTCDate() + 1);
+  }
+
+  while (next.getUTCDay() === 0 || next.getUTCDay() === 6) {
+    next.setUTCDate(next.getUTCDate() + 1);
+    next.setUTCHours(13, 15, 0, 0);
+  }
+
+  return next;
+}
+
 function getRecentMonths(monthKeys, count) {
   return [...monthKeys].sort(compareMonthKeys).slice(-count);
 }
@@ -251,6 +268,8 @@ async function main() {
 
   const csvPath = path.resolve(process.cwd(), 'public/data/economic_indicators.csv');
   const reportPath = path.resolve(process.cwd(), 'reports/data-validation-latest.md');
+  const statusReportPath = path.resolve(process.cwd(), 'reports/data-status-latest.json');
+  const publicStatusPath = path.resolve(process.cwd(), 'public/data/data_status.json');
   const observationStart = process.env.VALIDATE_OBSERVATION_START || '2024-01-01';
   const compareMonths = Number(process.env.VALIDATE_MONTH_WINDOW || 6);
   const monthlyMarketCapMap = await loadMonthlyMarketCapMap();
@@ -261,6 +280,7 @@ async function main() {
   const rows = lines.slice(1).map((line) => line.split(','));
   const rowByMonth = new Map();
   for (const row of rows) rowByMonth.set(parseObservedMonth(row[0]), row);
+  const csvMonths = [...rowByMonth.keys()].sort(compareMonthKeys);
 
   const failures = [];
   const summaries = [];
@@ -503,14 +523,62 @@ async function main() {
     reportLines.push(...sanityRows.map((item) => `| ${item.type} | ${item.column} | ${item.month} | ${item.details} |`));
   }
 
+  const latestMonth = csvMonths.at(-1) ?? null;
+  const latestRow = latestMonth ? rowByMonth.get(latestMonth) : null;
+  const latestGdp = latestRow && gdpIndex !== -1 ? Number(latestRow[gdpIndex]) : null;
+  const latestStock = latestRow && stockIndex !== -1 ? Number(latestRow[stockIndex]) : null;
+  const latestBuffett = Number.isFinite(latestGdp) && Number.isFinite(latestStock) && latestGdp > 0
+    ? (latestStock / latestGdp) * 100
+    : null;
+
+  const topAlerts = [
+    ...topInvestigations.map((item) => ({
+      type: 'Threshold',
+      column: item.column,
+      month: item.month,
+      details: `Source ${item.sourceValue.toFixed(4)} vs CSV ${item.csvValue.toFixed(4)} (diff ${item.absDiff.toFixed(4)} > ${item.threshold})`,
+      severity: item.absDiff,
+    })),
+    ...sanityRows.map((item) => ({
+      type: item.type,
+      column: item.column,
+      month: item.month,
+      details: item.details,
+      severity: item.severity,
+    })),
+  ]
+    .sort((a, b) => b.severity - a.severity)
+    .slice(0, 10)
+    .map(({ severity, ...rest }) => rest);
+
+  const statusPayload = {
+    generatedAt: new Date().toISOString(),
+    nextScheduledRefreshUtc: getNextAutoRefreshUtc(new Date()).toISOString(),
+    status: failures.length > 0 ? 'FAIL' : 'PASS',
+    failureCount: failures.length,
+    failedSeriesCount: summaries.filter((item) => item.status === 'FAIL').length,
+    totalSeriesCount: summaries.length,
+    latestDataMonth: latestMonth,
+    latestBuffettRatio: latestBuffett !== null ? Number(latestBuffett.toFixed(4)) : null,
+    failures,
+    topAlerts,
+    series: summaries,
+  };
+
   if (failures.length > 0) {
     reportLines.push('', '## Failures', '', ...failures.map((f) => `- ${f}`));
   }
 
   await mkdir(path.dirname(reportPath), { recursive: true });
   await writeFile(reportPath, `${reportLines.join('\n')}\n`, 'utf8');
+  await mkdir(path.dirname(statusReportPath), { recursive: true });
+  await writeFile(statusReportPath, `${JSON.stringify(statusPayload, null, 2)}\n`, 'utf8');
+  await mkdir(path.dirname(publicStatusPath), { recursive: true });
+  await writeFile(publicStatusPath, `${JSON.stringify(statusPayload, null, 2)}\n`, 'utf8');
 
   console.log(`Validation report written to ${reportPath}`);
+  console.log(`Status report written to ${statusReportPath}`);
+  console.log(`Public status written to ${publicStatusPath}`);
   if (failures.length > 0) {
     console.error(`Validation failed with ${failures.length} issue(s).`);
     process.exit(1);

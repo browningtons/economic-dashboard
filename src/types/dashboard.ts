@@ -29,3 +29,23 @@ export interface DataSourceInfo {
   note?: string;
   cadence?: Cadence;
 }
+
+export interface PipelineStatusAlert {
+  type: string;
+  column: string;
+  month: string;
+  details: string;
+}
+
+export interface PipelineStatus {
+  generatedAt?: string;
+  nextScheduledRefreshUtc?: string;
+  status?: 'PASS' | 'FAIL' | string;
+  failureCount?: number;
+  failedSeriesCount?: number;
+  totalSeriesCount?: number;
+  latestDataMonth?: string | null;
+  latestBuffettRatio?: number | null;
+  failures?: string[];
+  topAlerts?: PipelineStatusAlert[];
+}
