@@ -118,13 +118,8 @@ jobs:
           ALERT_SUBJECT: 'Economic Dashboard validation failed'
         run: npm run alert:data
 
-      - name: Stop workflow on validation failure
-        if: steps.validate.outcome == 'failure'
-        run: |
-          echo "Validation failed. See issue + artifact report."
-          exit 1
-
       - name: Commit and push if data changed
+        if: steps.validate.outcome != 'failure'
         run: |
           if git diff --quiet -- public/data/economic_indicators.csv; then
             echo "No data change detected."
