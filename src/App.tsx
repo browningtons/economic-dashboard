@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { 
   LineChart, 
   Line, 
@@ -34,28 +34,12 @@ import {
 } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import appLogo from './assets/golden_data_icon_small.png';
+import Card from './components/Card';
+import DateRangeSlider from './components/DateRangeSlider';
+import DataTableView from './components/DataTableView';
+import type { DataPoint, DataSourceInfo, MetricConfig } from './types/dashboard';
 
 // --- Types & Interfaces ---
-
-interface DataPoint {
-  date: string;
-  year: number;
-  timestamp: number;
-  [key: string]: string | number | undefined;
-}
-
-interface MetricConfig {
-  id: string;
-  label: string;
-  sub?: string;
-  icon: React.ElementType;
-  color: string;
-  desc: string;
-  isMacro: boolean; // TRUE for large numbers (S&P, GDP, Debt), FALSE for small (Rates, Counts)
-  format: (val: number) => string;
-  isPercentage: boolean;
-  category: 'Labor Market' | 'Monetary Policy' | 'Housing' | 'Macro & Markets';
-}
 
 type ReferenceLabelPosition = 'insideTopLeft' | 'insideTop' | 'insideBottom';
 
@@ -125,20 +109,6 @@ interface ExtremaDotProps {
   payload?: {
     timestamp?: number | string;
   };
-}
-
-interface MetricHealthRow {
-  id: string;
-  label: string;
-  source?: DataSourceInfo;
-  cadence: DataSourceInfo['cadence'];
-  lastValueDate: Date | null;
-  expectedNextDate: Date | null;
-  countdownText: string;
-  isOverdue: boolean;
-  missingCount: number;
-  missingRecentCount: number;
-  completenessPct: string;
 }
 
 // --- Data ---
@@ -525,41 +495,6 @@ const formatTimeRemaining = (targetDate: Date, now: Date) => {
   return `${minutes}m`;
 };
 
-const formatDuration = (ms: number) => {
-  const totalMinutes = Math.max(0, Math.ceil(ms / 60000));
-  const days = Math.floor(totalMinutes / (60 * 24));
-  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
-  const minutes = totalMinutes % 60;
-
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
-};
-
-const addCadenceWindow = (date: Date, cadence: DataSourceInfo['cadence']) => {
-  const next = new Date(date);
-  if (cadence === 'daily') {
-    next.setDate(next.getDate() + 1);
-    return next;
-  }
-  if (cadence === 'weekly') {
-    next.setDate(next.getDate() + 7);
-    return next;
-  }
-  if (cadence === 'quarterly') {
-    next.setMonth(next.getMonth() + 3);
-    return next;
-  }
-  next.setMonth(next.getMonth() + 1);
-  return next;
-};
-
-const formatCountdownStatus = (targetDate: Date, now: Date) => {
-  const deltaMs = targetDate.getTime() - now.getTime();
-  if (deltaMs >= 0) return `Due in ${formatDuration(deltaMs)}`;
-  return `Overdue by ${formatDuration(Math.abs(deltaMs))}`;
-};
-
 // --- Parsing Helper ---
 const parseLine = (line: string): string[] => {
   const result: string[] = [];
@@ -608,12 +543,6 @@ const getBuffettValuation = (value: number): BuffettZone => {
 };
 
 // --- Components ---
-
-const Card: React.FC<{ children: React.ReactNode; className?: string; style?: React.CSSProperties }> = ({ children, className = "", style }) => (
-  <div className={`bg-secondary border border-theme/70 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300 ${className}`} style={style}>
-    {children}
-  </div>
-);
 
 const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, isRelative, mode = 'Dashboard' }) => {
   if (active && payload && payload.length && label !== undefined) {
@@ -727,77 +656,6 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, i
     );
   }
   return null;
-};
-
-// --- Custom Dual Range Slider Component ---
-const DateRangeSlider: React.FC<{
-  min: number;
-  max: number;
-  value: [number, number];
-  onChange: (val: [number, number]) => void;
-  data: DataPoint[];
-}> = ({ min, max, value, onChange, data }) => {
-  if (max <= min) return null;
-
-  const total = max - min;
-  const leftPercent = ((value[0] - min) / total) * 100;
-  const rightPercent = ((value[1] - min) / total) * 100;
-
-  const formatLabel = (idx: number) => {
-    const point = data[idx];
-    if (!point) return '';
-    return new Date(point.timestamp).toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
-  };
-
-  const onMinChange = (nextRaw: number) => {
-    const next = Math.max(min, Math.min(nextRaw, value[1] - 1));
-    onChange([next, value[1]]);
-  };
-
-  const onMaxChange = (nextRaw: number) => {
-    const next = Math.min(max, Math.max(nextRaw, value[0] + 1));
-    onChange([value[0], next]);
-  };
-
-  return (
-    <div className="mb-3 rounded-lg border border-theme/50 px-3 py-2" style={{ backgroundColor: 'color-mix(in oklab, var(--color-surface-muted) 38%, transparent)' }}>
-      <div className="mb-1 flex items-center justify-between text-[10px] text-muted/80">
-        <span>{formatLabel(value[0])}</span>
-        <span>{formatLabel(value[1])}</span>
-      </div>
-
-      <div className="relative h-6">
-        <div className="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 rounded-full" style={{ backgroundColor: 'color-mix(in oklab, var(--color-text-muted) 16%, transparent)' }} />
-        <div
-          className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full"
-          style={{
-            left: `${leftPercent}%`,
-            right: `${100 - rightPercent}%`,
-            backgroundColor: 'color-mix(in oklab, var(--color-brand-secondary) 34%, transparent)',
-          }}
-        />
-
-        <input
-          type="range"
-          min={min}
-          max={max}
-          value={value[0]}
-          onChange={(e) => onMinChange(Number(e.target.value))}
-          className="range-input pointer-events-none absolute inset-0 h-6 w-full appearance-none bg-transparent"
-          aria-label="Start date"
-        />
-        <input
-          type="range"
-          min={min}
-          max={max}
-          value={value[1]}
-          onChange={(e) => onMaxChange(Number(e.target.value))}
-          className="range-input pointer-events-none absolute inset-0 h-6 w-full appearance-none bg-transparent"
-          aria-label="End date"
-        />
-      </div>
-    </div>
-  );
 };
 
 interface RenderLabelProps {
@@ -986,63 +844,6 @@ export default function App() {
   const activeMetrics = useMemo(() => 
     METRICS.filter(m => selectedMetrics.includes(m.id)), 
   [selectedMetrics]);
-
-  const tableMetrics = useMemo(() => {
-    const seen = new Set<string>();
-    return METRICS.filter((metric) => {
-      if (seen.has(metric.id)) return false;
-      seen.add(metric.id);
-      return true;
-    });
-  }, []);
-
-  const tableDataRows = useMemo(() => [...data].reverse(), [data]);
-
-  const metricHealthRows = useMemo<MetricHealthRow[]>(() => {
-    const recentWindowStart = Math.max(0, data.length - 12);
-
-    const rows = tableMetrics.map((metric) => {
-      const source = METRIC_SOURCES[metric.id];
-      const cadence = source?.cadence ?? 'monthly';
-      let missingCount = 0;
-      let missingRecentCount = 0;
-      let lastTimestamp: number | null = null;
-
-      data.forEach((point, index) => {
-        const value = Number(point[metric.id]);
-        const hasValue = Number.isFinite(value);
-        if (hasValue) {
-          lastTimestamp = Number(point.timestamp);
-        } else {
-          missingCount += 1;
-          if (index >= recentWindowStart) missingRecentCount += 1;
-        }
-      });
-
-      const lastValueDate = lastTimestamp ? new Date(lastTimestamp) : null;
-      const expectedNextDate = lastValueDate ? addCadenceWindow(lastValueDate, cadence) : null;
-      const isOverdue = expectedNextDate ? expectedNextDate.getTime() < clockNow.getTime() : false;
-
-      return {
-        id: metric.id,
-        label: metric.label,
-        source,
-        cadence,
-        lastValueDate,
-        expectedNextDate,
-        countdownText: expectedNextDate ? formatCountdownStatus(expectedNextDate, clockNow) : 'No observations',
-        isOverdue,
-        missingCount,
-        missingRecentCount,
-        completenessPct: data.length ? (((data.length - missingCount) / data.length) * 100).toFixed(1) : '0.0',
-      };
-    });
-
-    return rows.sort((a, b) => {
-      if (a.isOverdue !== b.isOverdue) return a.isOverdue ? -1 : 1;
-      return a.label.localeCompare(b.label);
-    });
-  }, [clockNow, data, tableMetrics]);
 
   // Filter Data based on Slider Range
   const filteredData = useMemo(() => {
@@ -1369,26 +1170,6 @@ export default function App() {
     if (!data.length) return 'N/A';
     return new Date(data[data.length - 1].timestamp).toLocaleDateString();
   }, [data]);
-  const datasetLastUpdateDate = useMemo(() => {
-    if (!data.length) return null;
-    return new Date(data[data.length - 1].timestamp);
-  }, [data]);
-  const datasetExpectedNextDate = useMemo(() => {
-    if (!datasetLastUpdateDate) return null;
-    return addCadenceWindow(datasetLastUpdateDate, 'monthly');
-  }, [datasetLastUpdateDate]);
-  const datasetCountdownText = useMemo(() => {
-    if (!datasetExpectedNextDate) return 'No schedule';
-    return formatCountdownStatus(datasetExpectedNextDate, clockNow);
-  }, [clockNow, datasetExpectedNextDate]);
-  const datasetMissingCells = useMemo(
-    () => metricHealthRows.reduce((sum, row) => sum + row.missingCount, 0),
-    [metricHealthRows]
-  );
-  const overdueMetricCount = useMemo(
-    () => metricHealthRows.filter((row) => row.isOverdue).length,
-    [metricHealthRows]
-  );
   const nextAutoRefreshText = useMemo(() => {
     const nextRun = getNextAutoRefreshUtc(clockNow);
     return `${formatTimeRemaining(nextRun, clockNow)} (${nextRun.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })})`;
@@ -1464,30 +1245,6 @@ export default function App() {
       setRefreshStatus(error instanceof Error ? error.message : 'Refresh request failed.');
     } finally {
       setIsRefreshing(false);
-    }
-  }, []);
-
-  const exportSocialImage = useCallback(async (aspect: '4:5' | '1.91:1') => {
-    if (!exportRef.current) return;
-    try {
-      setExporting(true);
-      const canvasWidth = aspect === '4:5' ? 1080 : 1200;
-      const canvasHeight = aspect === '4:5' ? 1350 : 628;
-      const dataUrl = await toPng(exportRef.current, {
-        cacheBust: true,
-        pixelRatio: 2,
-        backgroundColor: '#ffffff',
-        canvasWidth,
-        canvasHeight,
-      });
-      const link = document.createElement('a');
-      link.download = `economic-dashboard-${aspect.replace(':', 'x')}.png`;
-      link.href = dataUrl;
-      link.click();
-    } catch (error) {
-      console.error('Export failed', error);
-    } finally {
-      setExporting(false);
     }
   }, []);
 
@@ -1907,147 +1664,7 @@ export default function App() {
           )}
 
           {activeTab === 'Data Table' && (
-            <>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <Card className="p-4">
-                  <p className="text-xs uppercase tracking-wider text-muted">Last Update</p>
-                  <p className="mt-1 text-xl font-semibold text-main">
-                    {datasetLastUpdateDate
-                      ? datasetLastUpdateDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
-                      : 'N/A'}
-                  </p>
-                </Card>
-                <Card className="p-4">
-                  <p className="text-xs uppercase tracking-wider text-muted">Expected Next Update</p>
-                  <p className="mt-1 text-xl font-semibold text-main">
-                    {datasetExpectedNextDate
-                      ? datasetExpectedNextDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
-                      : 'N/A'}
-                  </p>
-                </Card>
-                <Card className="p-4">
-                  <p className="text-xs uppercase tracking-wider text-muted">Countdown</p>
-                  <p className="mt-1 text-xl font-semibold text-main">{datasetCountdownText}</p>
-                </Card>
-                <Card className="p-4">
-                  <p className="text-xs uppercase tracking-wider text-muted">Data Quality</p>
-                  <p className="mt-1 text-xl font-semibold text-main">{datasetMissingCells.toLocaleString()} missing cells</p>
-                  <p className={`mt-1 text-xs ${overdueMetricCount > 0 ? 'text-[color:var(--color-brand-primary)]' : 'text-link'}`}>
-                    {overdueMetricCount} metrics past expected cadence
-                  </p>
-                </Card>
-              </div>
-
-              <Card className="p-4">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-base font-semibold text-main">Metric Freshness and Completeness</h3>
-                    <p className="text-xs text-muted">Metric names link directly to source series.</p>
-                  </div>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-theme text-muted">
-                        <th className="px-3 py-2 font-semibold">Metric</th>
-                        <th className="px-3 py-2 font-semibold">Cadence</th>
-                        <th className="px-3 py-2 font-semibold">Last Value</th>
-                        <th className="px-3 py-2 font-semibold">Expected Next</th>
-                        <th className="px-3 py-2 font-semibold">Countdown</th>
-                        <th className="px-3 py-2 font-semibold">Missing (All)</th>
-                        <th className="px-3 py-2 font-semibold">Missing (12M)</th>
-                        <th className="px-3 py-2 font-semibold">Completeness</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {metricHealthRows.map((row) => (
-                        <tr key={`health-${row.id}`} className="border-b border-theme/40">
-                          <td className="px-3 py-2 font-medium text-main">
-                            {row.source ? (
-                              <a href={row.source.url} target="_blank" rel="noreferrer" className="text-link underline text-link-hover">
-                                {row.label}
-                              </a>
-                            ) : (
-                              row.label
-                            )}
-                          </td>
-                          <td className="px-3 py-2 text-muted capitalize">{row.cadence ?? 'monthly'}</td>
-                          <td className="px-3 py-2 text-main">
-                            {row.lastValueDate ? row.lastValueDate.toLocaleDateString() : 'N/A'}
-                          </td>
-                          <td className="px-3 py-2 text-main">
-                            {row.expectedNextDate ? row.expectedNextDate.toLocaleDateString() : 'N/A'}
-                          </td>
-                          <td className={`px-3 py-2 font-medium ${row.isOverdue ? 'text-[color:var(--color-brand-primary)]' : 'text-link'}`}>
-                            {row.countdownText}
-                          </td>
-                          <td className={`px-3 py-2 ${row.missingCount > 0 ? 'text-[color:var(--color-brand-primary)]' : 'text-muted'}`}>
-                            {row.missingCount}
-                          </td>
-                          <td className={`px-3 py-2 ${row.missingRecentCount > 0 ? 'text-[color:var(--color-brand-primary)]' : 'text-muted'}`}>
-                            {row.missingRecentCount}
-                          </td>
-                          <td className="px-3 py-2 text-main">{row.completenessPct}%</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-
-              <Card className="p-4">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-base font-semibold text-main">Raw Data Table</h3>
-                    <p className="text-xs text-muted">Latest rows first. Headers link to source series where available.</p>
-                  </div>
-                  <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-xs text-muted">
-                    {tableDataRows.length.toLocaleString()} rows
-                  </span>
-                </div>
-                <div className="max-h-[620px] overflow-auto rounded-lg border border-theme">
-                  <table className="min-w-[1400px] text-left text-xs">
-                    <thead className="sticky top-0 z-10 bg-secondary">
-                      <tr className="border-b border-theme">
-                        <th className="px-3 py-2 font-semibold text-main">Observed Date</th>
-                        {tableMetrics.map((metric) => {
-                          const source = METRIC_SOURCES[metric.id];
-                          return (
-                            <th key={`table-header-${metric.id}`} className="px-3 py-2 font-semibold text-main">
-                              {source ? (
-                                <a href={source.url} target="_blank" rel="noreferrer" className="text-link underline text-link-hover">
-                                  {metric.label}
-                                </a>
-                              ) : (
-                                metric.label
-                              )}
-                            </th>
-                          );
-                        })}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tableDataRows.map((row, rowIndex) => (
-                        <tr key={`raw-row-${row.timestamp}-${rowIndex}`} className="border-b border-theme/30">
-                          <td className="px-3 py-2 font-mono text-main">
-                            {new Date(row.timestamp).toLocaleDateString()}
-                          </td>
-                          {tableMetrics.map((metric) => {
-                            const rawValue = Number(row[metric.id]);
-                            const hasValue = Number.isFinite(rawValue);
-                            return (
-                              <td key={`raw-${row.timestamp}-${metric.id}`} className={`px-3 py-2 ${hasValue ? 'text-main' : 'text-[color:var(--color-brand-primary)]'}`}>
-                                {hasValue ? metric.format(rawValue) : 'MISSING'}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            </>
+            <DataTableView data={data} metrics={METRICS} metricSources={METRIC_SOURCES} now={clockNow} />
           )}
 
           {activeTab === 'Buffett' && (

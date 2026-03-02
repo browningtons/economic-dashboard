@@ -53,7 +53,7 @@ Where to get monthly data:
 This repo now includes `.github/workflows/update-data.yml`, which:
 - runs on weekdays (13:15 UTC) and on manual dispatch,
 - pulls fresh data from FRED,
-- validates refreshed data against thresholds (value drift + forward-fill limits),
+- validates refreshed data against drift thresholds plus sanity checks (bounds, MoM spikes, Buffett ratio),
 - opens a GitHub Issue automatically when validation fails,
 - commits only if `public/data/economic_indicators.csv` changed and validation passes.
 
@@ -65,6 +65,12 @@ Optional repo secrets for monthly market-cap override:
 - `MARKET_CAP_MONTHLY_DATE_COLUMN`
 - `MARKET_CAP_MONTHLY_VALUE_COLUMN`
 - `MARKET_CAP_MONTHLY_UNITS`
+
+Optional repo secrets for external alerts:
+- `ALERT_WEBHOOK_URL` (Slack/Teams/custom webhook)
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
+- `RESEND_TO_EMAIL` (comma-separated recipients)
 
 After it commits, your existing deploy workflow will publish the updated dashboard automatically.
 
@@ -82,6 +88,20 @@ The app sends a `POST` to that URL when the button is clicked.
 Important:
 - Do not call GitHub with a personal access token directly from frontend code.
 - Use a small serverless endpoint/webhook that securely triggers your GitHub workflow.
+
+### 3c) Send alerts outside GitHub Issues (optional)
+
+When validation fails, workflow can also send:
+- webhook payloads (`ALERT_WEBHOOK_URL`)
+- email via Resend (`RESEND_*` secrets)
+
+Manual test:
+
+```bash
+npm run alert:data
+```
+
+By default this reads `reports/data-validation-latest.md`.
 
 ### 4) Optional: keep Google Sheets in sync automatically
 

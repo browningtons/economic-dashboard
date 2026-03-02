@@ -96,6 +96,17 @@ jobs:
               });
             }
 
+      - name: Send external validation alerts
+        if: steps.validate.outcome == 'failure'
+        continue-on-error: true
+        env:
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+          RESEND_TO_EMAIL: ${{ secrets.RESEND_TO_EMAIL }}
+          ALERT_SUBJECT: 'Economic Dashboard validation failed'
+        run: npm run alert:data
+
       - name: Stop workflow on validation failure
         if: steps.validate.outcome == 'failure'
         run: |
