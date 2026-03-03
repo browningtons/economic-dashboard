@@ -6,23 +6,23 @@ import path from 'node:path';
 const STOCK_MARKET_COLUMN = 'Stock Market (b)';
 
 const SERIES_CONFIG = [
-  { column: 'Unemployment Rate', seriesId: 'UNRATE', cadence: 'monthly', scale: 1, threshold: 0.15, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 0, maxValue: 40, maxMoMPct: 80 },
-  { column: 'Avg Weeks Unemployeed', seriesId: 'UEMPMEAN', cadence: 'monthly', scale: 1, threshold: 1.5, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 0, maxValue: 80, maxMoMPct: 80 },
-  { column: 'Median Weeks Unemployeed', seriesId: 'UEMPMED', cadence: 'monthly', scale: 1, threshold: 1.5, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 0, maxValue: 80, maxMoMPct: 80 },
-  { column: 'Job Openings', seriesId: 'JTSJOL', cadence: 'monthly', scale: 1, threshold: 350, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 1000, maxValue: 25000, maxMoMPct: 35 },
-  { column: 'Unemployed 27 weeks', seriesId: 'UEMP27OV', cadence: 'monthly', scale: 1, threshold: 300, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 100, maxValue: 10000, maxMoMPct: 70 },
-  { column: 'Unemployeed Count', seriesId: 'UNEMPLOY', cadence: 'monthly', scale: 1, threshold: 400, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 500, maxValue: 35000, maxMoMPct: 60 },
-  { column: 'Fed Rate', seriesId: 'FEDFUNDS', cadence: 'monthly', scale: 1, threshold: 0.2, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 0, maxValue: 25, maxMoMPct: 250 },
-  { column: '15 year mortgage', seriesId: 'MORTGAGE15US', cadence: 'weekly', scale: 1, threshold: 0.15, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 0, maxValue: 20, maxMoMPct: 35 },
-  { column: '30 year mortgage', seriesId: 'MORTGAGE30US', cadence: 'weekly', scale: 1, threshold: 0.15, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 0, maxValue: 20, maxMoMPct: 35 },
-  { column: 'S&P 500', seriesId: 'SP500', cadence: 'daily', scale: 1, threshold: 125, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 100, maxValue: 15000, maxMoMPct: 35 },
-  { column: 'Labor Participation Rate', seriesId: 'CIVPART', cadence: 'monthly', scale: 1, threshold: 0.2, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 40, maxValue: 80, maxMoMPct: 10 },
-  { column: 'Labor Participation Core', seriesId: 'LNS11300060', cadence: 'monthly', scale: 1, threshold: 0.2, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 60, maxValue: 95, maxMoMPct: 8 },
-  { column: 'Housing Price Index', seriesId: 'CSUSHPINSA', cadence: 'monthly', scale: 1, threshold: 1.0, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 50, maxValue: 500, maxMoMPct: 10 },
-  { column: 'CPI', seriesId: 'CPIAUCSL', cadence: 'monthly', scale: 1, threshold: 1.0, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 50, maxValue: 500, maxMoMPct: 5 },
-  { column: 'GDP', seriesId: 'GDP', cadence: 'quarterly', scale: 1, threshold: 10, maxLagMonths: 3, maxForwardFillMonths: 2, minValue: 1000, maxValue: 100000, maxMoMPct: 20 },
-  { column: STOCK_MARKET_COLUMN, seriesId: 'NCBCEL', cadence: 'quarterly', scale: 0.001, threshold: 2500, maxLagMonths: 3, maxForwardFillMonths: 2, minValue: 2000, maxValue: 250000, maxMoMPct: 60 },
-  { column: 'National Debt (b)', seriesId: 'GFDEBTN', cadence: 'quarterly', scale: 0.001, threshold: 400, maxLagMonths: 3, maxForwardFillMonths: 2, minValue: 1000, maxValue: 100000, maxMoMPct: 10 },
+  { column: 'Unemployment Rate', seriesId: 'UNRATE', cadence: 'monthly', scale: 1, threshold: 0.15, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 0, maxValue: 40, maxMoMPct: 80, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
+  { column: 'Avg Weeks Unemployeed', seriesId: 'UEMPMEAN', cadence: 'monthly', scale: 1, threshold: 1.5, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 0, maxValue: 80, maxMoMPct: 80, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
+  { column: 'Median Weeks Unemployeed', seriesId: 'UEMPMED', cadence: 'monthly', scale: 1, threshold: 1.5, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 0, maxValue: 80, maxMoMPct: 80, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
+  { column: 'Job Openings', seriesId: 'JTSJOL', cadence: 'monthly', scale: 1, threshold: 350, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 1000, maxValue: 25000, maxMoMPct: 35, releaseLagMinMonths: 2, releaseLagMaxMonths: 3 },
+  { column: 'Unemployed 27 weeks', seriesId: 'UEMP27OV', cadence: 'monthly', scale: 1, threshold: 300, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 100, maxValue: 10000, maxMoMPct: 70, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
+  { column: 'Unemployeed Count', seriesId: 'UNEMPLOY', cadence: 'monthly', scale: 1, threshold: 400, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 500, maxValue: 35000, maxMoMPct: 60, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
+  { column: 'Fed Rate', seriesId: 'FEDFUNDS', cadence: 'monthly', scale: 1, threshold: 0.2, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 0, maxValue: 25, maxMoMPct: 250, releaseLagMinMonths: 0, releaseLagMaxMonths: 1 },
+  { column: '15 year mortgage', seriesId: 'MORTGAGE15US', cadence: 'weekly', scale: 1, threshold: 0.15, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 0, maxValue: 20, maxMoMPct: 35, releaseLagMinMonths: 0, releaseLagMaxMonths: 1 },
+  { column: '30 year mortgage', seriesId: 'MORTGAGE30US', cadence: 'weekly', scale: 1, threshold: 0.15, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 0, maxValue: 20, maxMoMPct: 35, releaseLagMinMonths: 0, releaseLagMaxMonths: 1 },
+  { column: 'S&P 500', seriesId: 'SP500', cadence: 'daily', scale: 1, threshold: 125, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 100, maxValue: 15000, maxMoMPct: 35, releaseLagMinMonths: 0, releaseLagMaxMonths: 1 },
+  { column: 'Labor Participation Rate', seriesId: 'CIVPART', cadence: 'monthly', scale: 1, threshold: 0.2, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 40, maxValue: 80, maxMoMPct: 10, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
+  { column: 'Labor Participation Core', seriesId: 'LNS11300060', cadence: 'monthly', scale: 1, threshold: 0.2, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 60, maxValue: 95, maxMoMPct: 8, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
+  { column: 'Housing Price Index', seriesId: 'CSUSHPINSA', cadence: 'monthly', scale: 1, threshold: 1.0, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 50, maxValue: 500, maxMoMPct: 10, releaseLagMinMonths: 2, releaseLagMaxMonths: 4 },
+  { column: 'CPI', seriesId: 'CPIAUCSL', cadence: 'monthly', scale: 1, threshold: 1.0, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 50, maxValue: 500, maxMoMPct: 5, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
+  { column: 'GDP', seriesId: 'GDP', cadence: 'quarterly', scale: 1, threshold: 10, maxLagMonths: 3, maxForwardFillMonths: 2, minValue: 1000, maxValue: 100000, maxMoMPct: 20, releaseLagMinMonths: 2, releaseLagMaxMonths: 4 },
+  { column: STOCK_MARKET_COLUMN, seriesId: 'NCBCEL', cadence: 'quarterly', scale: 0.001, threshold: 2500, maxLagMonths: 3, maxForwardFillMonths: 2, minValue: 2000, maxValue: 250000, maxMoMPct: 60, releaseLagMinMonths: 1, releaseLagMaxMonths: 3 },
+  { column: 'National Debt (b)', seriesId: 'GFDEBTN', cadence: 'quarterly', scale: 0.001, threshold: 400, maxLagMonths: 3, maxForwardFillMonths: 2, minValue: 1000, maxValue: 100000, maxMoMPct: 10, releaseLagMinMonths: 3, releaseLagMaxMonths: 5 },
 ];
 
 function monthKeyFromDate(dateStr) {
@@ -51,6 +51,21 @@ function monthDiff(older, newer) {
 
 function compareMonthKeys(a, b) {
   return a.localeCompare(b);
+}
+
+function currentMonthKey(now = new Date()) {
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+function expectedReleaseWindow(config, nowMonthKey) {
+  const minLag = config.releaseLagMinMonths ?? 0;
+  const maxLag = config.releaseLagMaxMonths ?? minLag;
+  return {
+    earliestExpected: addMonths(nowMonthKey, -maxLag),
+    latestExpected: addMonths(nowMonthKey, -minLag),
+    minLag,
+    maxLag,
+  };
 }
 
 function getNextAutoRefreshUtc(fromDate) {
@@ -288,6 +303,8 @@ async function main() {
   const rangeBreaches = [];
   const momentumBreaches = [];
   const buffettBreaches = [];
+  const releaseWindowBreaches = [];
+  const nowMonthKey = currentMonthKey();
 
   for (const config of SERIES_CONFIG) {
     const colIndex = headers.indexOf(config.column);
@@ -323,6 +340,10 @@ async function main() {
       lag = Math.max(0, monthDiff(csvLatest, sourceLatest));
       forwardFill = Math.max(0, monthDiff(sourceLatest, csvLatest));
     }
+    const releaseWindow = expectedReleaseWindow(config, nowMonthKey);
+    const releaseWindowGapMonths = csvLatest && compareMonthKeys(csvLatest, releaseWindow.earliestExpected) < 0
+      ? monthDiff(csvLatest, releaseWindow.earliestExpected)
+      : 0;
 
     const overlapMonths = getRecentMonths(
       sourceMonths.filter((m) => rowByMonth.has(m)),
@@ -406,7 +427,8 @@ async function main() {
     const mismatchFailed = mismatchCount > 0;
     const rangeFailed = rangeBreachCount > 0;
     const momentumFailed = momentumBreachCount > 0;
-    const status = lagFailed || mismatchFailed || forwardFillFailed || rangeFailed || momentumFailed ? 'FAIL' : 'PASS';
+    const releaseWindowFailed = !csvLatest || compareMonthKeys(csvLatest, releaseWindow.earliestExpected) < 0;
+    const status = lagFailed || mismatchFailed || forwardFillFailed || rangeFailed || momentumFailed || releaseWindowFailed ? 'FAIL' : 'PASS';
 
     if (lagFailed) {
       failures.push(`${config.column}: lag ${lag} months > ${config.maxLagMonths} months`);
@@ -423,6 +445,16 @@ async function main() {
     if (momentumFailed) {
       failures.push(`${config.column}: ${momentumBreachCount} month-over-month change(s) exceeded ${config.maxMoMPct}%`);
     }
+    if (releaseWindowFailed) {
+      failures.push(`${config.column}: latest CSV month ${csvLatest ?? 'n/a'} is outside expected release window (${releaseWindow.earliestExpected} to ${releaseWindow.latestExpected})`);
+      releaseWindowBreaches.push({
+        column: config.column,
+        latestCsvMonth: csvLatest,
+        expectedEarliest: releaseWindow.earliestExpected,
+        expectedLatest: releaseWindow.latestExpected,
+        lagMonthsBeyondWindow: releaseWindowGapMonths,
+      });
+    }
 
     summaries.push({
       column: config.column,
@@ -435,6 +467,9 @@ async function main() {
       threshold: config.threshold,
       maxAbsDiff: maxAbsDiff.toFixed(4),
       mismatchCount,
+      expectedReleaseWindow: `${releaseWindow.earliestExpected}..${releaseWindow.latestExpected}`,
+      releaseWindowStatus: releaseWindowFailed ? 'FAIL' : 'PASS',
+      releaseWindowGapMonths,
     });
   }
 
@@ -472,9 +507,9 @@ async function main() {
     '',
     '## Series Summary',
     '',
-    '| Column | Series | Status | CSV Latest | Source Latest | Source Lag (months) | Forward-Fill (months) | Threshold | Max Abs Diff | Breaches |',
-    '|---|---|---|---:|---:|---:|---:|---:|---:|---:|',
-    ...summaries.map((s) => `| ${s.column} | ${s.seriesId} | ${s.status} | ${s.csvLatest} | ${s.sourceLatest} | ${s.lag} | ${s.forwardFill} | ${s.threshold} | ${s.maxAbsDiff} | ${s.mismatchCount} |`),
+    '| Column | Series | Status | CSV Latest | Source Latest | Expected Release Window | Release Window Status | Window Gap (months) | Source Lag (months) | Forward-Fill (months) | Threshold | Max Abs Diff | Breaches |',
+    '|---|---|---|---:|---:|---|---|---:|---:|---:|---:|---:|---:|',
+    ...summaries.map((s) => `| ${s.column} | ${s.seriesId} | ${s.status} | ${s.csvLatest} | ${s.sourceLatest} | ${s.expectedReleaseWindow} | ${s.releaseWindowStatus} | ${s.releaseWindowGapMonths} | ${s.lag} | ${s.forwardFill} | ${s.threshold} | ${s.maxAbsDiff} | ${s.mismatchCount} |`),
     '',
     '## Top Investigations',
     '',
@@ -523,6 +558,15 @@ async function main() {
     reportLines.push(...sanityRows.map((item) => `| ${item.type} | ${item.column} | ${item.month} | ${item.details} |`));
   }
 
+  reportLines.push('', '## Release Calendar Alerts', '');
+  if (releaseWindowBreaches.length === 0) {
+    reportLines.push('No release calendar breaches detected.');
+  } else {
+    reportLines.push('| Column | Latest CSV Month | Expected Window | Gap (months) |');
+    reportLines.push('|---|---:|---|---:|');
+    reportLines.push(...releaseWindowBreaches.map((item) => `| ${item.column} | ${item.latestCsvMonth ?? 'n/a'} | ${item.expectedEarliest}..${item.expectedLatest} | ${item.lagMonthsBeyondWindow} |`));
+  }
+
   const latestMonth = csvMonths.at(-1) ?? null;
   const latestRow = latestMonth ? rowByMonth.get(latestMonth) : null;
   const latestGdp = latestRow && gdpIndex !== -1 ? Number(latestRow[gdpIndex]) : null;
@@ -546,6 +590,13 @@ async function main() {
       details: item.details,
       severity: item.severity,
     })),
+    ...releaseWindowBreaches.map((item) => ({
+      type: 'Release Calendar',
+      column: item.column,
+      month: item.latestCsvMonth ?? 'n/a',
+      details: `Expected ${item.expectedEarliest}..${item.expectedLatest}, got ${item.latestCsvMonth ?? 'n/a'}`,
+      severity: Math.max(1, item.lagMonthsBeyondWindow),
+    })),
   ]
     .sort((a, b) => b.severity - a.severity)
     .slice(0, 10)
@@ -553,6 +604,7 @@ async function main() {
 
   const statusPayload = {
     generatedAt: new Date().toISOString(),
+    evaluatedMonth: nowMonthKey,
     nextScheduledRefreshUtc: getNextAutoRefreshUtc(new Date()).toISOString(),
     status: failures.length > 0 ? 'FAIL' : 'PASS',
     failureCount: failures.length,
@@ -562,6 +614,7 @@ async function main() {
     latestBuffettRatio: latestBuffett !== null ? Number(latestBuffett.toFixed(4)) : null,
     failures,
     topAlerts,
+    releaseCalendarBreaches: releaseWindowBreaches,
     series: summaries,
   };
 

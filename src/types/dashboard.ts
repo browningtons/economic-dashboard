@@ -22,6 +22,41 @@ export interface MetricConfig {
   category: 'Labor Market' | 'Monetary Policy' | 'Housing' | 'Macro & Markets';
 }
 
+export type ReferenceLabelPosition = 'insideTopLeft' | 'insideTop' | 'insideBottom';
+
+export interface ReferenceZone {
+  label: string;
+  start: string;
+  end: string;
+  color: string;
+  opacity: number;
+  labelPos: ReferenceLabelPosition;
+}
+
+export interface MetricExtrema {
+  minValue: number;
+  maxValue: number;
+  minTimestamp: number;
+  maxTimestamp: number;
+}
+
+export interface BuffettLabelPoint {
+  key: string;
+  timestamp: number;
+  value: number;
+  label: string;
+  color: string;
+  position: 'top' | 'bottom' | 'left';
+}
+
+export interface BuffettZone {
+  label: 'Undervalued' | 'Fair Value' | 'Overvalued' | 'Significantly Overvalued';
+  min: number;
+  max: number;
+  color: string;
+  legendRange: string;
+}
+
 export interface DataSourceInfo {
   provider: string;
   seriesId: string;
@@ -37,8 +72,33 @@ export interface PipelineStatusAlert {
   details: string;
 }
 
+export interface PipelineReleaseCalendarBreach {
+  column: string;
+  latestCsvMonth: string | null;
+  expectedEarliest: string;
+  expectedLatest: string;
+  lagMonthsBeyondWindow: number;
+}
+
+export interface PipelineSeriesStatus {
+  column: string;
+  seriesId: string;
+  status: 'PASS' | 'FAIL' | string;
+  csvLatest: string;
+  sourceLatest: string;
+  lag: number | 'n/a';
+  forwardFill: number;
+  threshold: number;
+  maxAbsDiff: string;
+  mismatchCount: number;
+  expectedReleaseWindow: string;
+  releaseWindowStatus: 'PASS' | 'FAIL' | string;
+  releaseWindowGapMonths: number;
+}
+
 export interface PipelineStatus {
   generatedAt?: string;
+  evaluatedMonth?: string;
   nextScheduledRefreshUtc?: string;
   status?: 'PASS' | 'FAIL' | string;
   failureCount?: number;
@@ -48,4 +108,6 @@ export interface PipelineStatus {
   latestBuffettRatio?: number | null;
   failures?: string[];
   topAlerts?: PipelineStatusAlert[];
+  releaseCalendarBreaches?: PipelineReleaseCalendarBreach[];
+  series?: PipelineSeriesStatus[];
 }

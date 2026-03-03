@@ -1,5 +1,6 @@
 {
   "generatedAt": null,
+  "evaluatedMonth": null,
   "nextScheduledRefreshUtc": null,
   "status": "UNKNOWN",
   "failureCount": 0,
@@ -9,5 +10,6 @@
   "latestBuffettRatio": null,
   "failures": [],
   "topAlerts": [],
+  "releaseCalendarBreaches": [],
   "series": []
 }
