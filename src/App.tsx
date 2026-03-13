@@ -759,15 +759,6 @@ export default function App() {
             continue;
           }
 
-          const missingRequiredValue = REQUIRED_COLUMNS.some((column) => {
-            if (column === 'Observed Date') return false;
-            return entry[column] === undefined;
-          });
-          if (missingRequiredValue) {
-            badRowCount++;
-            continue;
-          }
-
           if (entry['Stock Market (b)'] !== undefined && entry['GDP'] !== undefined) {
             entry.buffettValue = (Number(entry['Stock Market (b)']) / Number(entry['GDP'])) * 100;
           }
@@ -776,7 +767,7 @@ export default function App() {
         }
         
         if (badRowCount > 0) {
-          setDataWarning(`Loaded with ${badRowCount} skipped row(s) due to malformed or missing required values.`);
+          setDataWarning(`Loaded with ${badRowCount} skipped row(s) due to malformed CSV rows.`);
         }
 
         // Sort data chronologically just in case

@@ -89,6 +89,11 @@ function getRecentMonths(monthKeys, count) {
   return [...monthKeys].sort(compareMonthKeys).slice(-count);
 }
 
+function getRecentSeries(entries, count, includeLead = 0) {
+  if (!Number.isFinite(count) || count <= 0) return entries;
+  return entries.slice(-(count + includeLead));
+}
+
 function aggregateToMonthly(observations) {
   const grouped = new Map();
   for (const observation of observations) {
@@ -377,12 +382,14 @@ async function main() {
       .sort((a, b) => compareMonthKeys(a[0], b[0]))
       .map(([month, row]) => ({ month, value: Number(row[colIndex]) }))
       .filter((entry) => Number.isFinite(entry.value));
+    const recentValueSeries = getRecentSeries(csvSeries, compareMonths);
+    const recentMomentumSeries = getRecentSeries(csvSeries, compareMonths, 1);
 
     let rangeBreachCount = 0;
     let momentumBreachCount = 0;
 
     if (config.minValue !== undefined || config.maxValue !== undefined) {
-      for (const point of csvSeries) {
+      for (const point of recentValueSeries) {
         const below = config.minValue !== undefined && point.value < config.minValue;
         const above = config.maxValue !== undefined && point.value > config.maxValue;
         if (!below && !above) continue;
@@ -401,9 +408,9 @@ async function main() {
     }
 
     if (config.maxMoMPct !== undefined) {
-      for (let i = 1; i < csvSeries.length; i += 1) {
-        const previous = csvSeries[i - 1];
-        const current = csvSeries[i];
+      for (let i = 1; i < recentMomentumSeries.length; i += 1) {
+        const previous = recentMomentumSeries[i - 1];
+        const current = recentMomentumSeries[i];
         if (!Number.isFinite(previous.value) || !Number.isFinite(current.value) || previous.value === 0) continue;
 
         const pctChange = Math.abs(((current.value - previous.value) / previous.value) * 100);
@@ -440,10 +447,10 @@ async function main() {
       failures.push(`${config.column}: forward-filled ${forwardFill} months beyond latest source (limit ${config.maxForwardFillMonths ?? 0})`);
     }
     if (rangeFailed) {
-      failures.push(`${config.column}: ${rangeBreachCount} value(s) outside sanity bounds`);
+      failures.push(`${config.column}: ${rangeBreachCount} recent value(s) outside sanity bounds`);
     }
     if (momentumFailed) {
-      failures.push(`${config.column}: ${momentumBreachCount} month-over-month change(s) exceeded ${config.maxMoMPct}%`);
+      failures.push(`${config.column}: ${momentumBreachCount} recent month-over-month change(s) exceeded ${config.maxMoMPct}%`);
     }
     if (releaseWindowFailed) {
       failures.push(`${config.column}: latest CSV month ${csvLatest ?? 'n/a'} is outside expected release window (${releaseWindow.earliestExpected} to ${releaseWindow.latestExpected})`);
@@ -476,7 +483,7 @@ async function main() {
   const gdpIndex = headers.indexOf('GDP');
   const stockIndex = headers.indexOf(STOCK_MARKET_COLUMN);
   if (gdpIndex !== -1 && stockIndex !== -1) {
-    for (const [month, row] of [...rowByMonth.entries()].sort((a, b) => compareMonthKeys(a[0], b[0]))) {
+    for (const [month, row] of getRecentSeries([...rowByMonth.entries()].sort((a, b) => compareMonthKeys(a[0], b[0])), compareMonths)) {
       const gdp = Number(row[gdpIndex]);
       const stock = Number(row[stockIndex]);
       if (!Number.isFinite(gdp) || !Number.isFinite(stock) || gdp <= 0) continue;
@@ -493,7 +500,7 @@ async function main() {
   }
 
   if (buffettBreaches.length > 0) {
-    failures.push(`Buffett Ratio: ${buffettBreaches.length} value(s) outside expected 20% to 500% range`);
+    failures.push(`Buffett Ratio: ${buffettBreaches.length} recent value(s) outside expected 20% to 500% range`);
   }
 
   mismatchRows.sort((a, b) => b.absDiff - a.absDiff);

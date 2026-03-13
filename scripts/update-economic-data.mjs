@@ -6,23 +6,23 @@ import path from 'node:path';
 const STOCK_MARKET_COLUMN = 'Stock Market (b)';
 
 const SERIES_CONFIG = [
-  { column: 'Unemployment Rate', seriesId: 'UNRATE', cadence: 'monthly', aggregation: 'last', scale: 1 },
-  { column: 'Avg Weeks Unemployeed', seriesId: 'UEMPMEAN', cadence: 'monthly', aggregation: 'last', scale: 1 },
-  { column: 'Median Weeks Unemployeed', seriesId: 'UEMPMED', cadence: 'monthly', aggregation: 'last', scale: 1 },
-  { column: 'Job Openings', seriesId: 'JTSJOL', cadence: 'monthly', aggregation: 'last', scale: 1 },
-  { column: 'Unemployed 27 weeks', seriesId: 'UEMP27OV', cadence: 'monthly', aggregation: 'last', scale: 1 },
-  { column: 'Unemployeed Count', seriesId: 'UNEMPLOY', cadence: 'monthly', aggregation: 'last', scale: 1 },
-  { column: 'Fed Rate', seriesId: 'FEDFUNDS', cadence: 'monthly', aggregation: 'last', scale: 1 },
-  { column: '15 year mortgage', seriesId: 'MORTGAGE15US', cadence: 'weekly', aggregation: 'last', scale: 1 },
-  { column: '30 year mortgage', seriesId: 'MORTGAGE30US', cadence: 'weekly', aggregation: 'last', scale: 1 },
-  { column: 'S&P 500', seriesId: 'SP500', cadence: 'daily', aggregation: 'last', scale: 1 },
-  { column: 'Labor Participation Rate', seriesId: 'CIVPART', cadence: 'monthly', aggregation: 'last', scale: 1 },
-  { column: 'Labor Participation Core', seriesId: 'LNS11300060', cadence: 'monthly', aggregation: 'last', scale: 1 },
-  { column: 'Housing Price Index', seriesId: 'CSUSHPINSA', cadence: 'monthly', aggregation: 'last', scale: 1 },
-  { column: 'CPI', seriesId: 'CPIAUCSL', cadence: 'monthly', aggregation: 'last', scale: 1 },
-  { column: 'GDP', seriesId: 'GDP', cadence: 'quarterly', aggregation: 'last', scale: 1 },
-  { column: STOCK_MARKET_COLUMN, seriesId: 'NCBCEL', cadence: 'quarterly', aggregation: 'last', scale: 0.001 },
-  { column: 'National Debt (b)', seriesId: 'GFDEBTN', cadence: 'quarterly', aggregation: 'last', scale: 0.001 },
+  { column: 'Unemployment Rate', seriesId: 'UNRATE', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: 'Avg Weeks Unemployeed', seriesId: 'UEMPMEAN', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: 'Median Weeks Unemployeed', seriesId: 'UEMPMED', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: 'Job Openings', seriesId: 'JTSJOL', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 2 },
+  { column: 'Unemployed 27 weeks', seriesId: 'UEMP27OV', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: 'Unemployeed Count', seriesId: 'UNEMPLOY', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: 'Fed Rate', seriesId: 'FEDFUNDS', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: '15 year mortgage', seriesId: 'MORTGAGE15US', cadence: 'weekly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: '30 year mortgage', seriesId: 'MORTGAGE30US', cadence: 'weekly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: 'S&P 500', seriesId: 'SP500', cadence: 'daily', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: 'Labor Participation Rate', seriesId: 'CIVPART', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: 'Labor Participation Core', seriesId: 'LNS11300060', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: 'Housing Price Index', seriesId: 'CSUSHPINSA', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 2 },
+  { column: 'CPI', seriesId: 'CPIAUCSL', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: 'GDP', seriesId: 'GDP', cadence: 'quarterly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 2 },
+  { column: STOCK_MARKET_COLUMN, seriesId: 'NCBCEL', cadence: 'quarterly', aggregation: 'last', scale: 0.001, maxCarryForwardMonths: 2 },
+  { column: 'National Debt (b)', seriesId: 'GFDEBTN', cadence: 'quarterly', aggregation: 'last', scale: 0.001, maxCarryForwardMonths: 2 },
 ];
 
 function getArg(name, fallback = undefined) {
@@ -58,6 +58,10 @@ function addMonths(monthKey, delta) {
 
 function compareMonthKeys(a, b) {
   return a.localeCompare(b);
+}
+
+function lastCompleteMonthKey(now = new Date()) {
+  return addMonths(`${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`, -1);
 }
 
 function getMonthRange(startMonth, endMonth) {
@@ -300,34 +304,11 @@ async function main() {
   const startMonthOverride = process.env.DASHBOARD_START_MONTH || '2000-01';
   const dryRun = process.argv.includes('--dry-run');
   const fredApiKey = process.env.FRED_API_KEY;
-  const existingByMonth = new Map();
-  let existingLastMonth = null;
   const monthlyMarketCapMap = await loadMonthlyMarketCapMap();
 
   if (!fredApiKey) {
     console.error('Missing required env var: FRED_API_KEY');
     process.exit(1);
-  }
-
-  try {
-    const existingRaw = await readFile(outputPath, 'utf8');
-    const lines = existingRaw.trim().split(/\r?\n/);
-    const headers = lines[0].split(',');
-    for (const line of lines.slice(1)) {
-      if (!line.trim()) continue;
-      const values = line.split(',');
-      const observedDate = values[0];
-      const monthKey = parseObservedMonth(observedDate);
-      if (!monthKey) continue;
-      const row = {};
-      headers.forEach((header, index) => {
-        row[header] = values[index];
-      });
-      existingByMonth.set(monthKey, row);
-      existingLastMonth = !existingLastMonth || compareMonthKeys(monthKey, existingLastMonth) > 0 ? monthKey : existingLastMonth;
-    }
-  } catch {
-    // First run or missing file: no fallback history available.
   }
 
   const seriesRows = [];
@@ -363,18 +344,17 @@ async function main() {
     .map((s) => s.bounds.first)
     .sort(compareMonthKeys)
     .at(-1);
-  const commonEnd = seriesRows
+  const latestAvailableMonth = seriesRows
     .map((s) => s.bounds.last)
-    .sort(compareMonthKeys)[0];
+    .sort(compareMonthKeys)
+    .at(-1);
 
-  if (!commonStart || !commonEnd) {
-    throw new Error('Unable to compute common date range.');
+  if (!commonStart || !latestAvailableMonth) {
+    throw new Error('Unable to compute source date range.');
   }
 
   const startMonth = startMonthOverride;
-  const endMonth = existingLastMonth && compareMonthKeys(existingLastMonth, commonEnd) > 0
-    ? existingLastMonth
-    : commonEnd;
+  const endMonth = [lastCompleteMonthKey(), latestAvailableMonth].sort(compareMonthKeys)[0];
 
   if (compareMonthKeys(startMonth, endMonth) > 0) {
     throw new Error(`Computed range is invalid: ${startMonth} > ${endMonth}`);
@@ -385,11 +365,23 @@ async function main() {
   const filledSeries = seriesRows.map((series) => {
     const filled = new Map();
     let lastValue = null;
+    let lastObservedMonth = null;
 
     for (const monthKey of months) {
       const current = series.monthlyValues.get(monthKey);
-      if (Number.isFinite(current)) lastValue = current;
-      if (lastValue !== null) filled.set(monthKey, lastValue);
+      if (Number.isFinite(current)) {
+        lastValue = current;
+        lastObservedMonth = monthKey;
+        filled.set(monthKey, lastValue);
+        continue;
+      }
+
+      if (lastValue !== null && lastObservedMonth !== null) {
+        const carryForwardMonths = monthDiff(lastObservedMonth, monthKey);
+        if (carryForwardMonths <= (series.config.maxCarryForwardMonths ?? 0)) {
+          filled.set(monthKey, lastValue);
+        }
+      }
     }
 
     return { ...series, filled };
@@ -399,9 +391,7 @@ async function main() {
   const lines = [headers.join(',')];
 
   for (const monthKey of months) {
-    const existingRow = existingByMonth.get(monthKey);
     const row = { 'Observed Date': formatObservedDate(monthKey) };
-    let valid = true;
 
     for (const series of filledSeries) {
       const value = series.filled.get(monthKey);
@@ -409,16 +399,8 @@ async function main() {
         row[series.config.column] = sanitizeNumeric(value * (series.config.scale ?? 1));
         continue;
       }
-
-      const fallback = Number(existingRow?.[series.config.column]);
-      if (!Number.isFinite(fallback)) {
-        valid = false;
-        break;
-      }
-      row[series.config.column] = sanitizeNumeric(fallback);
+      row[series.config.column] = '';
     }
-
-    if (!valid) continue;
 
     const csvLine = headers.map((header) => csvEscape(row[header] ?? '')).join(',');
     lines.push(csvLine);
