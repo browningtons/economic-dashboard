@@ -56,6 +56,12 @@ function addMonths(monthKey, delta) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
+function monthDiff(older, newer) {
+  const start = parseMonthKey(older);
+  const end = parseMonthKey(newer);
+  return ((end.year - start.year) * 12) + (end.month - start.month);
+}
+
 function compareMonthKeys(a, b) {
   return a.localeCompare(b);
 }
