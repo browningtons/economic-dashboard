@@ -78,6 +78,7 @@ export interface PipelineReleaseCalendarBreach {
   expectedEarliest: string;
   expectedLatest: string;
   lagMonthsBeyondWindow: number;
+  severity?: 'WARN' | 'FAIL' | string;
 }
 
 export interface PipelineSeriesStatus {
@@ -102,11 +103,13 @@ export interface PipelineStatus {
   nextScheduledRefreshUtc?: string;
   status?: 'PASS' | 'FAIL' | string;
   failureCount?: number;
+  warningCount?: number;
   failedSeriesCount?: number;
   totalSeriesCount?: number;
   latestDataMonth?: string | null;
   latestBuffettRatio?: number | null;
   failures?: string[];
+  warnings?: string[];
   topAlerts?: PipelineStatusAlert[];
   releaseCalendarBreaches?: PipelineReleaseCalendarBreach[];
   series?: PipelineSeriesStatus[];

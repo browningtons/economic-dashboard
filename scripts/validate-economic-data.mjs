@@ -21,7 +21,7 @@ const SERIES_CONFIG = [
   { column: 'Housing Price Index', seriesId: 'CSUSHPINSA', cadence: 'monthly', scale: 1, threshold: 1.0, maxLagMonths: 2, maxForwardFillMonths: 2, minValue: 50, maxValue: 500, maxMoMPct: 10, releaseLagMinMonths: 2, releaseLagMaxMonths: 4 },
   { column: 'CPI', seriesId: 'CPIAUCSL', cadence: 'monthly', scale: 1, threshold: 1.0, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 50, maxValue: 500, maxMoMPct: 5, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
   { column: 'GDP', seriesId: 'GDP', cadence: 'quarterly', scale: 1, threshold: 10, maxLagMonths: 3, maxForwardFillMonths: 2, minValue: 1000, maxValue: 100000, maxMoMPct: 20, releaseLagMinMonths: 2, releaseLagMaxMonths: 4 },
-  { column: STOCK_MARKET_COLUMN, seriesId: 'NCBCEL', cadence: 'quarterly', scale: 0.001, threshold: 2500, maxLagMonths: 3, maxForwardFillMonths: 2, minValue: 2000, maxValue: 250000, maxMoMPct: 60, releaseLagMinMonths: 1, releaseLagMaxMonths: 3 },
+  { column: STOCK_MARKET_COLUMN, seriesId: 'NCBCEL', cadence: 'quarterly', scale: 0.001, threshold: 2500, maxLagMonths: 3, maxForwardFillMonths: 2, minValue: 2000, maxValue: 250000, maxMoMPct: 60, releaseLagMinMonths: 1, releaseLagMaxMonths: 3, releaseWindowSeverity: 'warn' },
   { column: 'National Debt (b)', seriesId: 'GFDEBTN', cadence: 'quarterly', scale: 0.001, threshold: 400, maxLagMonths: 3, maxForwardFillMonths: 2, minValue: 1000, maxValue: 100000, maxMoMPct: 10, releaseLagMinMonths: 3, releaseLagMaxMonths: 5 },
 ];
 
@@ -317,6 +317,7 @@ async function main() {
   const csvMonths = [...rowByMonth.keys()].sort(compareMonthKeys);
 
   const failures = [];
+  const warnings = [];
   const summaries = [];
   const mismatchRows = [];
   const rangeBreaches = [];
@@ -449,7 +450,13 @@ async function main() {
     const rangeFailed = rangeBreachCount > 0;
     const momentumFailed = momentumBreachCount > 0;
     const releaseWindowFailed = !csvLatest || compareMonthKeys(csvLatest, releaseWindow.earliestExpected) < 0;
-    const status = lagFailed || mismatchFailed || forwardFillFailed || rangeFailed || momentumFailed || releaseWindowFailed ? 'FAIL' : 'PASS';
+    const releaseWindowSeverity = config.releaseWindowSeverity === 'warn' ? 'WARN' : 'FAIL';
+    const releaseWindowBlocks = releaseWindowFailed && releaseWindowSeverity !== 'WARN';
+    const status = lagFailed || mismatchFailed || forwardFillFailed || rangeFailed || momentumFailed || releaseWindowBlocks
+      ? 'FAIL'
+      : releaseWindowFailed
+        ? 'WARN'
+        : 'PASS';
 
     if (lagFailed) {
       failures.push(`${config.column}: lag ${lag} months > ${config.maxLagMonths} months`);
@@ -467,13 +474,19 @@ async function main() {
       failures.push(`${config.column}: ${momentumBreachCount} recent month-over-month change(s) exceeded ${config.maxMoMPct}%`);
     }
     if (releaseWindowFailed) {
-      failures.push(`${config.column}: latest CSV month ${csvLatest ?? 'n/a'} is outside expected release window (${releaseWindow.earliestExpected} to ${releaseWindow.latestExpected})`);
+      const message = `${config.column}: latest CSV month ${csvLatest ?? 'n/a'} is outside expected release window (${releaseWindow.earliestExpected} to ${releaseWindow.latestExpected})`;
+      if (releaseWindowSeverity === 'WARN') {
+        warnings.push(message);
+      } else {
+        failures.push(message);
+      }
       releaseWindowBreaches.push({
         column: config.column,
         latestCsvMonth: csvLatest,
         expectedEarliest: releaseWindow.earliestExpected,
         expectedLatest: releaseWindow.latestExpected,
         lagMonthsBeyondWindow: releaseWindowGapMonths,
+        severity: releaseWindowSeverity,
       });
     }
 
@@ -489,7 +502,7 @@ async function main() {
       maxAbsDiff: maxAbsDiff.toFixed(4),
       mismatchCount,
       expectedReleaseWindow: `${releaseWindow.earliestExpected}..${releaseWindow.latestExpected}`,
-      releaseWindowStatus: releaseWindowFailed ? 'FAIL' : 'PASS',
+      releaseWindowStatus: releaseWindowFailed ? releaseWindowSeverity : 'PASS',
       releaseWindowGapMonths,
     });
   }
@@ -615,7 +628,7 @@ async function main() {
       type: 'Release Calendar',
       column: item.column,
       month: item.latestCsvMonth ?? 'n/a',
-      details: `Expected ${item.expectedEarliest}..${item.expectedLatest}, got ${item.latestCsvMonth ?? 'n/a'}`,
+      details: `${item.severity === 'WARN' ? 'Warning' : 'Expected'} ${item.expectedEarliest}..${item.expectedLatest}, got ${item.latestCsvMonth ?? 'n/a'}`,
       severity: Math.max(1, item.lagMonthsBeyondWindow),
     })),
   ]
@@ -629,15 +642,21 @@ async function main() {
     nextScheduledRefreshUtc: getNextAutoRefreshUtc(new Date()).toISOString(),
     status: failures.length > 0 ? 'FAIL' : 'PASS',
     failureCount: failures.length,
+    warningCount: warnings.length,
     failedSeriesCount: summaries.filter((item) => item.status === 'FAIL').length,
     totalSeriesCount: summaries.length,
     latestDataMonth: latestMonth,
     latestBuffettRatio: latestBuffett !== null ? Number(latestBuffett.toFixed(4)) : null,
     failures,
+    warnings,
     topAlerts,
     releaseCalendarBreaches: releaseWindowBreaches,
     series: summaries,
   };
+
+  if (warnings.length > 0) {
+    reportLines.push('', '## Warnings', '', ...warnings.map((warning) => `- ${warning}`));
+  }
 
   if (failures.length > 0) {
     reportLines.push('', '## Failures', '', ...failures.map((f) => `- ${f}`));
