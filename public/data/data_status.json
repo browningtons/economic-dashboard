@@ -1,102 +1,38 @@
 {
-  "generatedAt": "2026-03-18T04:14:10.942Z",
+  "generatedAt": "2026-03-18T04:41:01.659Z",
   "evaluatedMonth": "2026-03",
   "nextScheduledRefreshUtc": "2026-03-18T13:15:00.000Z",
   "status": "FAIL",
-  "failureCount": 19,
-  "failedSeriesCount": 11,
+  "failureCount": 1,
+  "failedSeriesCount": 1,
   "totalSeriesCount": 17,
   "latestDataMonth": "2026-02",
   "latestBuffettRatio": 0,
   "failures": [
-    "Unemployment Rate: 1 recent month-over-month change(s) exceeded 80%",
-    "Avg Weeks Unemployeed: 1 recent month-over-month change(s) exceeded 80%",
-    "Median Weeks Unemployeed: 1 recent month-over-month change(s) exceeded 80%",
-    "Job Openings: forward-filled 1 months beyond latest source (limit 0)",
-    "Unemployed 27 weeks: 1 recent value(s) outside sanity bounds",
-    "Unemployed 27 weeks: 1 recent month-over-month change(s) exceeded 70%",
-    "Unemployeed Count: 1 recent value(s) outside sanity bounds",
-    "Unemployeed Count: 1 recent month-over-month change(s) exceeded 60%",
-    "Labor Participation Rate: 1 recent value(s) outside sanity bounds",
-    "Labor Participation Rate: 1 recent month-over-month change(s) exceeded 10%",
-    "Labor Participation Core: 1 recent value(s) outside sanity bounds",
-    "Labor Participation Core: 1 recent month-over-month change(s) exceeded 8%",
-    "Housing Price Index: forward-filled 2 months beyond latest source (limit 0)",
-    "CPI: 1 recent value(s) outside sanity bounds",
-    "CPI: 1 recent month-over-month change(s) exceeded 5%",
-    "Stock Market (b): forward-filled 5 months beyond latest source (limit 2)",
-    "Stock Market (b): 3 recent value(s) outside sanity bounds",
-    "Stock Market (b): 1 recent month-over-month change(s) exceeded 60%",
-    "Buffett Ratio: 3 recent value(s) outside expected 20% to 500% range"
+    "Stock Market (b): latest CSV month 2025-11 is outside expected release window (2025-12 to 2026-02)"
   ],
   "topAlerts": [
     {
-      "type": "Range",
+      "type": "Release Calendar",
       "column": "Stock Market (b)",
-      "month": "2025-12",
-      "details": "0.0000 (below 2000.0000)"
-    },
-    {
-      "type": "Range",
-      "column": "Stock Market (b)",
-      "month": "2026-01",
-      "details": "0.0000 (below 2000.0000)"
-    },
-    {
-      "type": "Range",
-      "column": "Stock Market (b)",
-      "month": "2026-02",
-      "details": "0.0000 (below 2000.0000)"
-    },
-    {
-      "type": "Range",
-      "column": "Unemployeed Count",
-      "month": "2025-10",
-      "details": "0.0000 (below 500.0000)"
-    },
-    {
-      "type": "Range",
-      "column": "Unemployed 27 weeks",
-      "month": "2025-10",
-      "details": "0.0000 (below 100.0000)"
-    },
-    {
-      "type": "MoM Spike",
-      "column": "Unemployment Rate",
-      "month": "2025-10",
-      "details": "100.00% (threshold 80%)"
-    },
-    {
-      "type": "MoM Spike",
-      "column": "Avg Weeks Unemployeed",
-      "month": "2025-10",
-      "details": "100.00% (threshold 80%)"
-    },
-    {
-      "type": "MoM Spike",
-      "column": "Median Weeks Unemployeed",
-      "month": "2025-10",
-      "details": "100.00% (threshold 80%)"
-    },
-    {
-      "type": "MoM Spike",
-      "column": "Unemployed 27 weeks",
-      "month": "2025-10",
-      "details": "100.00% (threshold 70%)"
-    },
-    {
-      "type": "MoM Spike",
-      "column": "Unemployeed Count",
-      "month": "2025-10",
-      "details": "100.00% (threshold 60%)"
+      "month": "2025-11",
+      "details": "Expected 2025-12..2026-02, got 2025-11"
     }
   ],
-  "releaseCalendarBreaches": [],
+  "releaseCalendarBreaches": [
+    {
+      "column": "Stock Market (b)",
+      "latestCsvMonth": "2025-11",
+      "expectedEarliest": "2025-12",
+      "expectedLatest": "2026-02",
+      "lagMonthsBeyondWindow": 1
+    }
+  ],
   "series": [
     {
       "column": "Unemployment Rate",
       "seriesId": "FRED:UNRATE",
-      "status": "FAIL",
+      "status": "PASS",
       "csvLatest": "2026-02",
       "sourceLatest": "2026-02",
       "lag": 0,
@@ -111,7 +47,7 @@
     {
       "column": "Avg Weeks Unemployeed",
       "seriesId": "FRED:UEMPMEAN",
-      "status": "FAIL",
+      "status": "PASS",
       "csvLatest": "2026-02",
       "sourceLatest": "2026-02",
       "lag": 0,
@@ -126,7 +62,7 @@
     {
       "column": "Median Weeks Unemployeed",
       "seriesId": "FRED:UEMPMED",
-      "status": "FAIL",
+      "status": "PASS",
       "csvLatest": "2026-02",
       "sourceLatest": "2026-02",
       "lag": 0,
@@ -141,7 +77,7 @@
     {
       "column": "Job Openings",
       "seriesId": "FRED:JTSJOL",
-      "status": "FAIL",
+      "status": "PASS",
       "csvLatest": "2026-02",
       "sourceLatest": "2026-01",
       "lag": 0,
@@ -156,7 +92,7 @@
     {
       "column": "Unemployed 27 weeks",
       "seriesId": "FRED:UEMP27OV",
-      "status": "FAIL",
+      "status": "PASS",
       "csvLatest": "2026-02",
       "sourceLatest": "2026-02",
       "lag": 0,
@@ -171,7 +107,7 @@
     {
       "column": "Unemployeed Count",
       "seriesId": "FRED:UNEMPLOY",
-      "status": "FAIL",
+      "status": "PASS",
       "csvLatest": "2026-02",
       "sourceLatest": "2026-02",
       "lag": 0,
@@ -246,7 +182,7 @@
     {
       "column": "Labor Participation Rate",
       "seriesId": "FRED:CIVPART",
-      "status": "FAIL",
+      "status": "PASS",
       "csvLatest": "2026-02",
       "sourceLatest": "2026-02",
       "lag": 0,
@@ -261,7 +197,7 @@
     {
       "column": "Labor Participation Core",
       "seriesId": "FRED:LNS11300060",
-      "status": "FAIL",
+      "status": "PASS",
       "csvLatest": "2026-02",
       "sourceLatest": "2026-02",
       "lag": 0,
@@ -276,7 +212,7 @@
     {
       "column": "Housing Price Index",
       "seriesId": "FRED:CSUSHPINSA",
-      "status": "FAIL",
+      "status": "PASS",
       "csvLatest": "2026-02",
       "sourceLatest": "2025-12",
       "lag": 0,
@@ -291,7 +227,7 @@
     {
       "column": "CPI",
       "seriesId": "FRED:CPIAUCSL",
-      "status": "FAIL",
+      "status": "PASS",
       "csvLatest": "2026-02",
       "sourceLatest": "2026-02",
       "lag": 0,
@@ -322,16 +258,16 @@
       "column": "Stock Market (b)",
       "seriesId": "FRED:NCBCEL",
       "status": "FAIL",
-      "csvLatest": "2026-02",
+      "csvLatest": "2025-11",
       "sourceLatest": "2025-09",
       "lag": 0,
-      "forwardFill": 5,
+      "forwardFill": 2,
       "threshold": 2500,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
       "expectedReleaseWindow": "2025-12..2026-02",
-      "releaseWindowStatus": "PASS",
-      "releaseWindowGapMonths": 0
+      "releaseWindowStatus": "FAIL",
+      "releaseWindowGapMonths": 1
     },
     {
       "column": "National Debt (b)",
