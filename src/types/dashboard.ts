@@ -97,6 +97,17 @@ export interface PipelineSeriesStatus {
   releaseWindowGapMonths: number;
 }
 
+export type MetricConfidenceLevel = 'fresh' | 'carry-forward' | 'lagging' | 'warning' | 'unknown';
+
+export interface DashboardMetricConfidence {
+  metric: MetricConfig;
+  source: DataSourceInfo;
+  pipeline?: PipelineSeriesStatus;
+  level: MetricConfidenceLevel;
+  label: string;
+  detail: string;
+}
+
 export interface PipelineStatus {
   generatedAt?: string;
   evaluatedMonth?: string;

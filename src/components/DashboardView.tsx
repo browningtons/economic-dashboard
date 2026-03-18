@@ -13,7 +13,14 @@ import {
 import { HelpCircle, Menu, X } from 'lucide-react';
 import Card from './Card';
 import DateRangeSlider from './DateRangeSlider';
-import type { DataPoint, DataSourceInfo, MetricConfig, ReferenceLabelPosition, ReferenceZone } from '../types/dashboard';
+import type {
+  DashboardMetricConfidence,
+  DataPoint,
+  MetricConfidenceLevel,
+  MetricConfig,
+  ReferenceLabelPosition,
+  ReferenceZone,
+} from '../types/dashboard';
 
 interface ExtremaDotProps {
   cx?: number;
@@ -59,7 +66,82 @@ interface DashboardViewProps {
   referenceZones: ReferenceZone[];
   renderReferenceLabel: (props: { viewBox: { x: number; y: number; width: number; height: number } }, label: string, labelPos: ReferenceLabelPosition) => React.ReactNode;
   dashboardTooltip: React.ReactElement;
-  activeMetricSources: Array<{ metric: MetricConfig; source: DataSourceInfo }>;
+  activeMetricConfidence: DashboardMetricConfidence[];
+}
+
+function getConfidenceTone(level: MetricConfidenceLevel) {
+  if (level === 'fresh') {
+    return {
+      surface: {
+        backgroundColor: 'color-mix(in oklab, var(--color-brand-accent) 8%, var(--color-bg-secondary))',
+        borderColor: 'color-mix(in oklab, var(--color-brand-accent) 22%, var(--color-border))',
+      },
+      badge: {
+        backgroundColor: 'color-mix(in oklab, var(--color-brand-accent) 14%, var(--color-bg-secondary))',
+        borderColor: 'color-mix(in oklab, var(--color-brand-accent) 35%, var(--color-border))',
+        color: 'var(--color-brand-accent)',
+      },
+      dot: { backgroundColor: 'var(--color-brand-accent)' },
+    };
+  }
+
+  if (level === 'carry-forward') {
+    return {
+      surface: {
+        backgroundColor: 'color-mix(in oklab, var(--color-brand-primary) 6%, var(--color-bg-secondary))',
+        borderColor: 'color-mix(in oklab, var(--color-brand-primary) 18%, var(--color-border))',
+      },
+      badge: {
+        backgroundColor: 'color-mix(in oklab, var(--color-brand-primary) 12%, var(--color-bg-secondary))',
+        borderColor: 'color-mix(in oklab, var(--color-brand-primary) 28%, var(--color-border))',
+        color: 'var(--color-brand-primary)',
+      },
+      dot: { backgroundColor: 'var(--color-brand-primary)' },
+    };
+  }
+
+  if (level === 'warning') {
+    return {
+      surface: {
+        backgroundColor: 'color-mix(in oklab, var(--color-brand-secondary) 6%, var(--color-bg-secondary))',
+        borderColor: 'color-mix(in oklab, var(--color-brand-secondary) 18%, var(--color-border))',
+      },
+      badge: {
+        backgroundColor: 'color-mix(in oklab, var(--color-brand-secondary) 10%, var(--color-bg-secondary))',
+        borderColor: 'color-mix(in oklab, var(--color-brand-secondary) 24%, var(--color-border))',
+        color: 'var(--color-brand-secondary)',
+      },
+      dot: { backgroundColor: 'var(--color-brand-secondary)' },
+    };
+  }
+
+  if (level === 'lagging') {
+    return {
+      surface: {
+        backgroundColor: 'color-mix(in oklab, var(--color-brand-primary) 9%, var(--color-bg-secondary))',
+        borderColor: 'color-mix(in oklab, var(--color-brand-primary) 24%, var(--color-border))',
+      },
+      badge: {
+        backgroundColor: 'color-mix(in oklab, var(--color-brand-primary) 15%, var(--color-bg-secondary))',
+        borderColor: 'color-mix(in oklab, var(--color-brand-primary) 34%, var(--color-border))',
+        color: 'var(--color-brand-primary)',
+      },
+      dot: { backgroundColor: 'var(--color-brand-primary)' },
+    };
+  }
+
+  return {
+    surface: {
+      backgroundColor: 'var(--color-surface-muted)',
+      borderColor: 'var(--color-border)',
+    },
+    badge: {
+      backgroundColor: 'var(--color-bg-secondary)',
+      borderColor: 'var(--color-border)',
+      color: 'var(--color-text-muted)',
+    },
+    dot: { backgroundColor: 'var(--color-text-muted)' },
+  };
 }
 
 export default function DashboardView({
@@ -97,7 +179,7 @@ export default function DashboardView({
   referenceZones,
   renderReferenceLabel,
   dashboardTooltip,
-  activeMetricSources,
+  activeMetricConfidence,
 }: DashboardViewProps) {
   return (
     <>
@@ -135,6 +217,47 @@ export default function DashboardView({
             {dataWarning && (
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                 <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-muted">{dataWarning}</span>
+              </div>
+            )}
+            {activeMetricConfidence.length > 0 && (
+              <div className="mt-4 rounded-xl border border-theme bg-muted-surface/70 p-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Data Confidence</p>
+                    <p className="mt-1 text-xs text-muted">Freshness and carry-forward status for the indicators in this chart.</p>
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+                  {activeMetricConfidence.map((entry) => {
+                    const tone = getConfidenceTone(entry.level);
+                    return (
+                      <div
+                        key={`confidence-${entry.metric.id}`}
+                        className="rounded-xl border p-3 shadow-sm"
+                        style={tone.surface}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="h-2.5 w-2.5 rounded-full" style={tone.dot} />
+                              <p className="truncate text-sm font-semibold text-main">{entry.metric.label}</p>
+                            </div>
+                            <p className="mt-1 text-xs text-muted">{entry.detail}</p>
+                            <p className="mt-1 text-[11px] text-muted">
+                              {entry.source.provider} ({entry.source.seriesId})
+                            </p>
+                          </div>
+                          <span
+                            className="inline-flex shrink-0 rounded-full border px-2 py-1 text-[11px] font-semibold leading-none"
+                            style={tone.badge}
+                          >
+                            {entry.label}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
@@ -358,21 +481,30 @@ export default function DashboardView({
         </div>
       </Card>
 
-      {activeMetricSources.length > 0 && (
+      {activeMetricConfidence.length > 0 && (
         <Card className="p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Metric Sources</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            {activeMetricSources.map(({ metric, source }) => (
+            {activeMetricConfidence.map((entry) => {
+              const tone = getConfidenceTone(entry.level);
+              return (
               <a
-                key={metric.id}
-                href={source.url}
+                key={entry.metric.id}
+                href={entry.source.url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center rounded-full border border-theme bg-muted-surface px-3 py-1 text-xs font-medium text-link text-link-hover"
+                className="inline-flex items-center gap-2 rounded-full border border-theme bg-muted-surface px-3 py-1 text-xs font-medium text-link text-link-hover"
               >
-                {metric.label}: {source.provider} ({source.seriesId})
+                <span>{entry.metric.label}: {entry.source.provider} ({entry.source.seriesId})</span>
+                <span
+                  className="inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold leading-none"
+                  style={tone.badge}
+                >
+                  {entry.label}
+                </span>
               </a>
-            ))}
+              );
+            })}
           </div>
         </Card>
       )}

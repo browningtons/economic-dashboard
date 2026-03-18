@@ -24,10 +24,12 @@ import type {
   BuffettLabelPoint,
   BuffettZone,
   DataPoint,
+  DashboardMetricConfidence,
   DataSourceInfo,
   MetricConfig,
   MetricExtrema,
   PipelineStatus,
+  PipelineSeriesStatus,
   ReferenceLabelPosition,
   ReferenceZone,
 } from './types/dashboard';
@@ -1058,6 +1060,82 @@ export default function App() {
       .filter((entry): entry is { metric: MetricConfig; source: DataSourceInfo } => Boolean(entry.source))
   ), [activeMetrics]);
 
+  const pipelineSeriesByColumn = useMemo(() => {
+    const entries = (pipelineStatus?.series ?? [])
+      .map((series) => [series.column, series] as const);
+    return new Map<string, PipelineSeriesStatus>(entries);
+  }, [pipelineStatus]);
+
+  const releaseBreachByColumn = useMemo(() => {
+    const entries = (pipelineStatus?.releaseCalendarBreaches ?? [])
+      .map((breach) => [breach.column, breach] as const);
+    return new Map(entries);
+  }, [pipelineStatus]);
+
+  const activeMetricConfidence = useMemo<DashboardMetricConfidence[]>(() => (
+    activeMetricSources.map(({ metric, source }) => {
+      const pipeline = pipelineSeriesByColumn.get(metric.label);
+      const breach = releaseBreachByColumn.get(metric.label);
+
+      if (!pipeline) {
+        return {
+          metric,
+          source,
+          level: 'unknown',
+          label: 'Unknown',
+          detail: 'Pipeline status unavailable for this metric.',
+        };
+      }
+
+      const hasReleaseGap = (pipeline.releaseWindowGapMonths ?? 0) > 0 || Boolean(breach);
+      const releaseStatus = String(pipeline.releaseWindowStatus ?? '').toUpperCase();
+      const seriesStatus = String(pipeline.status ?? '').toUpperCase();
+      const breachSeverity = String(breach?.severity ?? '').toUpperCase();
+
+      if (seriesStatus === 'WARN' || releaseStatus === 'WARN' || breachSeverity === 'WARN') {
+        return {
+          metric,
+          source,
+          pipeline,
+          level: 'warning',
+          label: 'Watch',
+          detail: `Latest source month ${pipeline.sourceLatest}`,
+        };
+      }
+
+      if (seriesStatus === 'FAIL' || releaseStatus === 'FAIL' || hasReleaseGap) {
+        return {
+          metric,
+          source,
+          pipeline,
+          level: 'lagging',
+          label: 'Lagging',
+          detail: `CSV ${pipeline.csvLatest} vs source ${pipeline.sourceLatest}`,
+        };
+      }
+
+      if ((pipeline.forwardFill ?? 0) > 0) {
+        return {
+          metric,
+          source,
+          pipeline,
+          level: 'carry-forward',
+          label: 'Carry-forward',
+          detail: `${pipeline.forwardFill} month${pipeline.forwardFill === 1 ? '' : 's'} carried from ${pipeline.sourceLatest}`,
+        };
+      }
+
+      return {
+        metric,
+        source,
+        pipeline,
+        level: 'fresh',
+        label: 'Fresh',
+        detail: `Current through ${pipeline.csvLatest}`,
+      };
+    })
+  ), [activeMetricSources, pipelineSeriesByColumn, releaseBreachByColumn]);
+
   const leftAxisMetrics = useMemo(() => {
     if (viewMode === 'relative') return activeMetrics;
 
@@ -1340,7 +1418,7 @@ export default function App() {
                 <RenderLabel {...props} label={label} labelPos={labelPos} />
               )}
               dashboardTooltip={<CustomTooltip isRelative={viewMode === 'relative'} />}
-              activeMetricSources={activeMetricSources}
+              activeMetricConfidence={activeMetricConfidence}
             />
           )}
 
