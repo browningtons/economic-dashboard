@@ -9,7 +9,7 @@ const SERIES_CONFIG = [
   { column: 'Unemployment Rate', seriesId: 'UNRATE', cadence: 'monthly', scale: 1, threshold: 0.15, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 0, maxValue: 40, maxMoMPct: 80, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
   { column: 'Avg Weeks Unemployeed', seriesId: 'UEMPMEAN', cadence: 'monthly', scale: 1, threshold: 1.5, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 0, maxValue: 80, maxMoMPct: 80, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
   { column: 'Median Weeks Unemployeed', seriesId: 'UEMPMED', cadence: 'monthly', scale: 1, threshold: 1.5, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 0, maxValue: 80, maxMoMPct: 80, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
-  { column: 'Job Openings', seriesId: 'JTSJOL', cadence: 'monthly', scale: 1, threshold: 350, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 1000, maxValue: 25000, maxMoMPct: 35, releaseLagMinMonths: 2, releaseLagMaxMonths: 3 },
+  { column: 'Job Openings', seriesId: 'JTSJOL', cadence: 'monthly', scale: 1, threshold: 350, maxLagMonths: 2, maxForwardFillMonths: 2, minValue: 1000, maxValue: 25000, maxMoMPct: 35, releaseLagMinMonths: 2, releaseLagMaxMonths: 3 },
   { column: 'Unemployed 27 weeks', seriesId: 'UEMP27OV', cadence: 'monthly', scale: 1, threshold: 300, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 100, maxValue: 10000, maxMoMPct: 70, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
   { column: 'Unemployeed Count', seriesId: 'UNEMPLOY', cadence: 'monthly', scale: 1, threshold: 400, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 500, maxValue: 35000, maxMoMPct: 60, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
   { column: 'Fed Rate', seriesId: 'FEDFUNDS', cadence: 'monthly', scale: 1, threshold: 0.2, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 0, maxValue: 25, maxMoMPct: 250, releaseLagMinMonths: 0, releaseLagMaxMonths: 1 },
@@ -18,7 +18,7 @@ const SERIES_CONFIG = [
   { column: 'S&P 500', seriesId: 'SP500', cadence: 'daily', scale: 1, threshold: 125, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 100, maxValue: 15000, maxMoMPct: 35, releaseLagMinMonths: 0, releaseLagMaxMonths: 1 },
   { column: 'Labor Participation Rate', seriesId: 'CIVPART', cadence: 'monthly', scale: 1, threshold: 0.2, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 40, maxValue: 80, maxMoMPct: 10, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
   { column: 'Labor Participation Core', seriesId: 'LNS11300060', cadence: 'monthly', scale: 1, threshold: 0.2, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 60, maxValue: 95, maxMoMPct: 8, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
-  { column: 'Housing Price Index', seriesId: 'CSUSHPINSA', cadence: 'monthly', scale: 1, threshold: 1.0, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 50, maxValue: 500, maxMoMPct: 10, releaseLagMinMonths: 2, releaseLagMaxMonths: 4 },
+  { column: 'Housing Price Index', seriesId: 'CSUSHPINSA', cadence: 'monthly', scale: 1, threshold: 1.0, maxLagMonths: 2, maxForwardFillMonths: 2, minValue: 50, maxValue: 500, maxMoMPct: 10, releaseLagMinMonths: 2, releaseLagMaxMonths: 4 },
   { column: 'CPI', seriesId: 'CPIAUCSL', cadence: 'monthly', scale: 1, threshold: 1.0, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 50, maxValue: 500, maxMoMPct: 5, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
   { column: 'GDP', seriesId: 'GDP', cadence: 'quarterly', scale: 1, threshold: 10, maxLagMonths: 3, maxForwardFillMonths: 2, minValue: 1000, maxValue: 100000, maxMoMPct: 20, releaseLagMinMonths: 2, releaseLagMaxMonths: 4 },
   { column: STOCK_MARKET_COLUMN, seriesId: 'NCBCEL', cadence: 'quarterly', scale: 0.001, threshold: 2500, maxLagMonths: 3, maxForwardFillMonths: 2, minValue: 2000, maxValue: 250000, maxMoMPct: 60, releaseLagMinMonths: 1, releaseLagMaxMonths: 3 },
@@ -35,6 +35,44 @@ function parseObservedMonth(dateStr) {
   const [m, _d, y] = dateStr.split('/').map(Number);
   const year = y < 100 ? 2000 + y : y;
   return `${year}-${String(m).padStart(2, '0')}`;
+}
+
+function parseCsvRow(line) {
+  const values = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === ',' && !inQuotes) {
+      values.push(current);
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  values.push(current);
+  return values;
+}
+
+function parseCsvNumber(raw) {
+  if (raw === undefined || raw === null) return null;
+  const value = String(raw).trim();
+  if (!value) return null;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
 }
 
 function addMonths(monthKey, delta) {
@@ -110,36 +148,6 @@ function aggregateToMonthly(observations) {
     monthly.set(monthKey, values[values.length - 1]);
   }
   return monthly;
-}
-
-function parseCsvRow(line) {
-  const values = [];
-  let current = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i += 1) {
-    const char = line[i];
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
-        i += 1;
-      } else {
-        inQuotes = !inQuotes;
-      }
-      continue;
-    }
-
-    if (char === ',' && !inQuotes) {
-      values.push(current);
-      current = '';
-      continue;
-    }
-
-    current += char;
-  }
-
-  values.push(current);
-  return values;
 }
 
 function parseFlexibleMonthKey(rawDate) {
@@ -302,8 +310,8 @@ async function main() {
 
   const raw = await readFile(csvPath, 'utf8');
   const lines = raw.trim().split(/\r?\n/);
-  const headers = lines[0].split(',');
-  const rows = lines.slice(1).map((line) => line.split(','));
+  const headers = parseCsvRow(lines[0]);
+  const rows = lines.slice(1).map((line) => parseCsvRow(line));
   const rowByMonth = new Map();
   for (const row of rows) rowByMonth.set(parseObservedMonth(row[0]), row);
   const csvMonths = [...rowByMonth.keys()].sort(compareMonthKeys);
@@ -341,8 +349,8 @@ async function main() {
 
     let csvLatest = null;
     for (const [month, row] of [...rowByMonth.entries()].sort((a, b) => compareMonthKeys(a[0], b[0]))) {
-      const value = Number(row[colIndex]);
-      if (Number.isFinite(value)) csvLatest = month;
+      const value = parseCsvNumber(row[colIndex]);
+      if (value !== null) csvLatest = month;
     }
 
     let lag = null;
@@ -365,8 +373,8 @@ async function main() {
     let maxAbsDiff = 0;
     for (const month of overlapMonths) {
       const sourceValue = Number(sourceMonthly.get(month)) * (config.scale ?? 1);
-      const csvValue = Number(rowByMonth.get(month)[colIndex]);
-      if (!Number.isFinite(sourceValue) || !Number.isFinite(csvValue)) continue;
+      const csvValue = parseCsvNumber(rowByMonth.get(month)[colIndex]);
+      if (!Number.isFinite(sourceValue) || csvValue === null) continue;
 
       const absDiff = Math.abs(sourceValue - csvValue);
       maxAbsDiff = Math.max(maxAbsDiff, absDiff);
@@ -386,8 +394,8 @@ async function main() {
 
     const csvSeries = [...rowByMonth.entries()]
       .sort((a, b) => compareMonthKeys(a[0], b[0]))
-      .map(([month, row]) => ({ month, value: Number(row[colIndex]) }))
-      .filter((entry) => Number.isFinite(entry.value));
+      .map(([month, row]) => ({ month, value: parseCsvNumber(row[colIndex]) }))
+      .filter((entry) => entry.value !== null);
     const recentValueSeries = getRecentSeries(csvSeries, compareMonths);
     const recentMomentumSeries = getRecentSeries(csvSeries, compareMonths, 1);
 
@@ -490,9 +498,9 @@ async function main() {
   const stockIndex = headers.indexOf(STOCK_MARKET_COLUMN);
   if (gdpIndex !== -1 && stockIndex !== -1) {
     for (const [month, row] of getRecentSeries([...rowByMonth.entries()].sort((a, b) => compareMonthKeys(a[0], b[0])), compareMonths)) {
-      const gdp = Number(row[gdpIndex]);
-      const stock = Number(row[stockIndex]);
-      if (!Number.isFinite(gdp) || !Number.isFinite(stock) || gdp <= 0) continue;
+      const gdp = parseCsvNumber(row[gdpIndex]);
+      const stock = parseCsvNumber(row[stockIndex]);
+      if (gdp === null || stock === null || gdp <= 0) continue;
       const ratio = (stock / gdp) * 100;
       if (ratio >= 20 && ratio <= 500) continue;
 
