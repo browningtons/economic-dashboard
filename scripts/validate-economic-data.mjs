@@ -292,7 +292,13 @@ async function main() {
   const publicStatusPath = path.resolve(process.cwd(), 'public/data/data_status.json');
   const observationStart = process.env.VALIDATE_OBSERVATION_START || '2024-01-01';
   const compareMonths = Number(process.env.VALIDATE_MONTH_WINDOW || 6);
-  const monthlyMarketCapMap = await loadMonthlyMarketCapMap();
+  let monthlyMarketCapMap = null;
+
+  try {
+    monthlyMarketCapMap = await loadMonthlyMarketCapMap();
+  } catch (error) {
+    console.warn(`Monthly market-cap source unavailable during validation. Falling back to FRED NCBCEL. ${error instanceof Error ? error.message : String(error)}`);
+  }
 
   const raw = await readFile(csvPath, 'utf8');
   const lines = raw.trim().split(/\r?\n/);

@@ -36,6 +36,27 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Preflight workflow configuration
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          MARKET_CAP_MONTHLY_CSV_URL: ${{ secrets.MARKET_CAP_MONTHLY_CSV_URL }}
+          MARKET_CAP_MONTHLY_CSV_PATH: ${{ secrets.MARKET_CAP_MONTHLY_CSV_PATH }}
+          MARKET_CAP_MONTHLY_UNITS: ${{ secrets.MARKET_CAP_MONTHLY_UNITS }}
+        run: |
+          if [ -z "$FRED_API_KEY" ]; then
+            echo "::error::Missing required GitHub secret: FRED_API_KEY"
+            exit 1
+          fi
+
+          if [ -n "$MARKET_CAP_MONTHLY_CSV_URL" ] || [ -n "$MARKET_CAP_MONTHLY_CSV_PATH" ]; then
+            echo "Monthly market-cap override detected."
+            if [ -z "$MARKET_CAP_MONTHLY_UNITS" ]; then
+              echo "::warning::MARKET_CAP_MONTHLY_UNITS is not set. The updater will fall back to FRED NCBCEL if the override cannot be parsed."
+            fi
+          else
+            echo "No monthly market-cap override configured. Using FRED NCBCEL fallback."
+          fi
+
       - name: Pull latest economic data from FRED
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
@@ -110,6 +131,7 @@ jobs:
 
       - name: Send external validation alerts
         if: steps.validate.outcome == 'failure'
+        continue-on-error: true
         env:
           ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
@@ -131,3 +153,9 @@ jobs:
           git add public/data/economic_indicators.csv public/data/data_status.json
           git commit -m "chore(data): auto-update economic indicators snapshot"
           git push origin main
+
+      - name: Mark run failed when validation fails
+        if: steps.validate.outcome == 'failure'
+        run: |
+          echo "::error::Validation failed. See the uploaded artifact and issue comment for details."
+          exit 1

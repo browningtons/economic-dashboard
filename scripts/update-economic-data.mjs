@@ -304,11 +304,17 @@ async function main() {
   const startMonthOverride = process.env.DASHBOARD_START_MONTH || '2000-01';
   const dryRun = process.argv.includes('--dry-run');
   const fredApiKey = process.env.FRED_API_KEY;
-  const monthlyMarketCapMap = await loadMonthlyMarketCapMap();
+  let monthlyMarketCapMap = null;
 
   if (!fredApiKey) {
     console.error('Missing required env var: FRED_API_KEY');
     process.exit(1);
+  }
+
+  try {
+    monthlyMarketCapMap = await loadMonthlyMarketCapMap();
+  } catch (error) {
+    console.warn(`Monthly market-cap source unavailable. Falling back to FRED NCBCEL. ${error instanceof Error ? error.message : String(error)}`);
   }
 
   const seriesRows = [];
