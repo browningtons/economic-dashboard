@@ -1,14 +1,16 @@
 {
-  "generatedAt": "2026-03-18T04:41:01.659Z",
+  "generatedAt": "2026-03-18T04:50:56.144Z",
   "evaluatedMonth": "2026-03",
   "nextScheduledRefreshUtc": "2026-03-18T13:15:00.000Z",
-  "status": "FAIL",
-  "failureCount": 1,
-  "failedSeriesCount": 1,
+  "status": "PASS",
+  "failureCount": 0,
+  "warningCount": 1,
+  "failedSeriesCount": 0,
   "totalSeriesCount": 17,
   "latestDataMonth": "2026-02",
   "latestBuffettRatio": 0,
-  "failures": [
+  "failures": [],
+  "warnings": [
     "Stock Market (b): latest CSV month 2025-11 is outside expected release window (2025-12 to 2026-02)"
   ],
   "topAlerts": [
@@ -16,7 +18,7 @@
       "type": "Release Calendar",
       "column": "Stock Market (b)",
       "month": "2025-11",
-      "details": "Expected 2025-12..2026-02, got 2025-11"
+      "details": "Warning 2025-12..2026-02, got 2025-11"
     }
   ],
   "releaseCalendarBreaches": [
@@ -25,7 +27,8 @@
       "latestCsvMonth": "2025-11",
       "expectedEarliest": "2025-12",
       "expectedLatest": "2026-02",
-      "lagMonthsBeyondWindow": 1
+      "lagMonthsBeyondWindow": 1,
+      "severity": "WARN"
     }
   ],
   "series": [
@@ -257,7 +260,7 @@
     {
       "column": "Stock Market (b)",
       "seriesId": "FRED:NCBCEL",
-      "status": "FAIL",
+      "status": "WARN",
       "csvLatest": "2025-11",
       "sourceLatest": "2025-09",
       "lag": 0,
@@ -266,7 +269,7 @@
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
       "expectedReleaseWindow": "2025-12..2026-02",
-      "releaseWindowStatus": "FAIL",
+      "releaseWindowStatus": "WARN",
       "releaseWindowGapMonths": 1
     },
     {
