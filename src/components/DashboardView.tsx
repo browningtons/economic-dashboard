@@ -223,47 +223,6 @@ export default function DashboardView({
                 <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-muted">{dataWarning}</span>
               </div>
             )}
-            {activeMetricConfidence.length > 0 && (
-              <div className="mt-4 rounded-xl border border-theme bg-muted-surface/70 p-3">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Data Confidence</p>
-                    <p className="mt-1 text-xs text-muted">Freshness and carry-forward status for the indicators in this chart.</p>
-                  </div>
-                </div>
-                <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
-                  {activeMetricConfidence.map((entry) => {
-                    const tone = getConfidenceTone(entry.level);
-                    return (
-                      <div
-                        key={`confidence-${entry.metric.id}`}
-                        className="rounded-xl border p-3 shadow-sm"
-                        style={tone.surface}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="h-2.5 w-2.5 rounded-full" style={tone.dot} />
-                              <p className="truncate text-sm font-semibold text-main">{entry.metric.label}</p>
-                            </div>
-                            <p className="mt-1 text-xs text-muted">{entry.detail}</p>
-                            <p className="mt-1 text-[11px] text-muted">
-                              {entry.source.provider} ({entry.source.seriesId})
-                            </p>
-                          </div>
-                          <span
-                            className="inline-flex shrink-0 rounded-full border px-2 py-1 text-[11px] font-semibold leading-none"
-                            style={tone.badge}
-                          >
-                            {entry.label}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
