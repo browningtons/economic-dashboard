@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Card from './Card';
+import { BUILD_NOTES, BUILD_NOTES_TITLE, BUILD_VERSION, BUILD_VERSION_LABEL, BUILD_VERSION_SUMMARY } from '../buildNotes';
 import type { Cadence, DataPoint, DataSourceInfo, MetricConfig, PipelineStatus } from '../types/dashboard';
 
 interface MetricHealthRow {
@@ -355,6 +356,42 @@ export default function DataTableView({ data, metrics, metricSources, now, pipel
             </ul>
           </div>
         )}
+      </Card>
+
+      <Card className="p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-muted">Current Release</p>
+            <h3 className="mt-1 text-lg font-semibold text-main">{BUILD_VERSION}</h3>
+            <p className="mt-1 text-sm font-medium text-link">{BUILD_VERSION_LABEL}</p>
+            <p className="mt-2 max-w-3xl text-sm text-muted">{BUILD_VERSION_SUMMARY}</p>
+          </div>
+          <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
+            {BUILD_NOTES.length} recent commits
+          </span>
+        </div>
+        <div className="mt-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">{BUILD_NOTES_TITLE}</p>
+          <div className="mt-2 grid grid-cols-1 gap-2 lg:grid-cols-2">
+            {BUILD_NOTES.slice(0, 6).map((note) => (
+              <a
+                key={`${note.hash}-${note.date}`}
+                href={`https://github.com/browningtons/economic-dashboard/commit/${note.hash}`}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-xl border border-theme bg-muted-surface px-3 py-2 no-underline transition-colors hover:bg-secondary"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-main">{note.title}</p>
+                  <span className="shrink-0 rounded-full border border-theme px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
+                    {note.hash}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-muted">{note.date}</p>
+              </a>
+            ))}
+          </div>
+        </div>
       </Card>
 
       <Card className="p-4">

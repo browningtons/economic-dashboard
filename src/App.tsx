@@ -1459,6 +1459,7 @@ export default function App() {
               )}
               dashboardTooltip={<CustomTooltip isRelative={viewMode === 'relative'} />}
               activeMetricConfidence={activeMetricConfidence}
+              pipelineStatus={pipelineStatus}
             />
           )}
 
