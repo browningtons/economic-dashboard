@@ -181,6 +181,10 @@ export default function DashboardView({
   dashboardTooltip,
   activeMetricConfidence,
 }: DashboardViewProps) {
+  const confidenceByMetricId = new Map(
+    activeMetricConfidence.map((entry) => [entry.metric.id, entry] as const)
+  );
+
   return (
     <>
       <Card className={`flex-1 flex flex-col relative ${shareMode ? 'min-h-[760px]' : 'min-h-[500px]'} p-7`}>
@@ -513,6 +517,8 @@ export default function DashboardView({
         <>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
             {activeMetrics.slice(0, 4).map((m) => {
+              const confidence = confidenceByMetricId.get(m.id);
+              const tone = getConfidenceTone(confidence?.level ?? 'unknown');
               const validPoints = data.filter((d) => d[m.id] !== undefined);
               const lastPoint = validPoints[validPoints.length - 1];
               const prevPoint = validPoints[validPoints.length - 2];
@@ -522,11 +528,25 @@ export default function DashboardView({
               return (
                 <Card key={`headline-${m.id}`} className="p-4">
                   <p className="text-xs uppercase tracking-wider text-muted">{m.label}</p>
+                  {confidence && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full" style={tone.dot} />
+                      <span
+                        className="inline-flex rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] leading-none"
+                        style={tone.badge}
+                      >
+                        {confidence.label}
+                      </span>
+                    </div>
+                  )}
                   <p className="mt-1 text-2xl font-semibold text-main">{m.format(lastValue)}</p>
                   <p className={`mt-1 text-xs ${delta >= 0 ? 'text-link' : 'text-[color:var(--color-brand-primary)]'}`}>
                     {delta >= 0 ? '+' : ''}
                     {delta.toFixed(1)}%
                   </p>
+                  {confidence && (
+                    <p className="mt-2 text-xs text-muted">{confidence.detail}</p>
+                  )}
                 </Card>
               );
             })}

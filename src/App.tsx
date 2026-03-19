@@ -20,6 +20,7 @@ import appLogo from './assets/golden_data_icon_small.png';
 import DataTableView from './components/DataTableView';
 import DashboardView from './components/DashboardView';
 import BuffettView from './components/BuffettView';
+import { BUILD_NOTES, BUILD_NOTES_TITLE, BUILD_VERSION, BUILD_VERSION_LABEL, BUILD_VERSION_SUMMARY } from './buildNotes';
 import type {
   BuffettLabelPoint,
   BuffettZone,
@@ -1319,6 +1320,45 @@ export default function App() {
               <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-[11px] leading-tight">
                 Next auto-refresh: {nextAutoRefreshText}
               </span>
+              <details className="group relative">
+                <summary className="list-none cursor-pointer rounded-full border border-theme bg-muted-surface px-2 py-1 text-[11px] leading-tight text-main transition-colors hover:bg-secondary">
+                  Build: {BUILD_VERSION}
+                </summary>
+                <div className="absolute left-0 top-full z-30 mt-2 w-[min(32rem,calc(100vw-3rem))] rounded-2xl border border-theme bg-secondary p-4 shadow-xl">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-main">{BUILD_VERSION}</p>
+                      <p className="mt-1 text-xs font-medium text-link">{BUILD_VERSION_LABEL}</p>
+                      <p className="mt-2 text-xs leading-relaxed text-muted">{BUILD_VERSION_SUMMARY}</p>
+                    </div>
+                    <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
+                      {BUILD_NOTES.length} commits
+                    </span>
+                  </div>
+                  <div className="mt-4 border-t border-subtle pt-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">{BUILD_NOTES_TITLE}</p>
+                  </div>
+                  <div className="mt-3 max-h-80 space-y-2 overflow-y-auto pr-1">
+                    {BUILD_NOTES.map((note) => (
+                      <a
+                        key={`${note.hash}-${note.date}`}
+                        href={`https://github.com/browningtons/economic-dashboard/commit/${note.hash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block rounded-xl border border-theme bg-muted-surface/80 px-3 py-2 no-underline transition-colors hover:bg-muted-surface"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-medium text-main">{note.title}</p>
+                          <span className="shrink-0 rounded-full border border-theme px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
+                            {note.hash}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-muted">{note.date}</p>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              </details>
             </div>
           </div>
         </div>
