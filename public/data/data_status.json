@@ -1,36 +1,18 @@
 {
-  "generatedAt": "2026-03-19T14:12:47.590Z",
+  "generatedAt": "2026-03-20T14:06:22.543Z",
   "evaluatedMonth": "2026-03",
-  "nextScheduledRefreshUtc": "2026-03-20T13:15:00.000Z",
+  "nextScheduledRefreshUtc": "2026-03-23T13:15:00.000Z",
   "status": "PASS",
   "failureCount": 0,
-  "warningCount": 1,
+  "warningCount": 0,
   "failedSeriesCount": 0,
   "totalSeriesCount": 17,
   "latestDataMonth": "2026-02",
-  "latestBuffettRatio": 0,
+  "latestBuffettRatio": 232.5921,
   "failures": [],
-  "warnings": [
-    "Stock Market (b): latest CSV month 2025-11 is outside expected release window (2025-12 to 2026-02)"
-  ],
-  "topAlerts": [
-    {
-      "type": "Release Calendar",
-      "column": "Stock Market (b)",
-      "month": "2025-11",
-      "details": "Warning 2025-12..2026-02, got 2025-11"
-    }
-  ],
-  "releaseCalendarBreaches": [
-    {
-      "column": "Stock Market (b)",
-      "latestCsvMonth": "2025-11",
-      "expectedEarliest": "2025-12",
-      "expectedLatest": "2026-02",
-      "lagMonthsBeyondWindow": 1,
-      "severity": "WARN"
-    }
-  ],
+  "warnings": [],
+  "topAlerts": [],
+  "releaseCalendarBreaches": [],
   "series": [
     {
       "column": "Unemployment Rate",
@@ -260,17 +242,17 @@
     {
       "column": "Stock Market (b)",
       "seriesId": "FRED:NCBCEL",
-      "status": "WARN",
-      "csvLatest": "2025-11",
-      "sourceLatest": "2025-09",
+      "status": "PASS",
+      "csvLatest": "2026-02",
+      "sourceLatest": "2025-12",
       "lag": 0,
       "forwardFill": 2,
       "threshold": 2500,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
       "expectedReleaseWindow": "2025-12..2026-02",
-      "releaseWindowStatus": "WARN",
-      "releaseWindowGapMonths": 1
+      "releaseWindowStatus": "PASS",
+      "releaseWindowGapMonths": 0
     },
     {
       "column": "National Debt (b)",
