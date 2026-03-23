@@ -478,84 +478,45 @@ const DashboardView = React.memo(function DashboardView({
       </Card>
 
       {!shareMode && activeMetricConfidence.length > 0 && (
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[0.95fr,1.45fr]">
-          <Card className="p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Data Health</p>
-                <p className="mt-1 text-sm font-semibold text-main">{validationSummary}</p>
-                <p className="mt-1 text-xs text-muted">
-                  {pipelineStatus?.generatedAt
-                    ? `Last validated ${new Date(pipelineStatus.generatedAt).toLocaleString()}`
-                    : 'Validation timestamp unavailable.'}
-                </p>
-              </div>
-              <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
-                {activeMetricConfidence.length} tracked
-              </span>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <div className="rounded-xl border border-theme bg-muted-surface p-3">
-                <p className="text-[11px] uppercase tracking-[0.08em] text-muted">Fresh</p>
-                <p className="mt-1 text-xl font-semibold text-main">{confidenceCounts.fresh}</p>
-              </div>
-              <div className="rounded-xl border border-theme bg-muted-surface p-3">
-                <p className="text-[11px] uppercase tracking-[0.08em] text-muted">Carry-forward</p>
-                <p className="mt-1 text-xl font-semibold text-main">{confidenceCounts['carry-forward']}</p>
-              </div>
-              <div className="rounded-xl border border-theme bg-muted-surface p-3">
-                <p className="text-[11px] uppercase tracking-[0.08em] text-muted">Needs attention</p>
-                <p className="mt-1 text-xl font-semibold text-main">{visibleIssueCount}</p>
-              </div>
-              <div className="rounded-xl border border-theme bg-muted-surface p-3">
-                <p className="text-[11px] uppercase tracking-[0.08em] text-muted">Latest month</p>
-                <p className="mt-1 text-xl font-semibold text-main">{pipelineStatus?.latestDataMonth ?? 'N/A'}</p>
-              </div>
-            </div>
-            {(pipelineStatus?.warnings?.length || 0) > 0 && (
-              <p className="mt-3 text-xs text-muted">
-                Active warning: {pipelineStatus?.warnings?.[0]}
+        <Card className="p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Data Health</p>
+              <p className="mt-1 text-sm font-semibold text-main">{validationSummary}</p>
+              <p className="mt-1 text-xs text-muted">
+                {pipelineStatus?.generatedAt
+                  ? `Last validated ${new Date(pipelineStatus.generatedAt).toLocaleString()}`
+                  : 'Validation timestamp unavailable.'}
               </p>
-            )}
-          </Card>
-
-          <Card className="p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Sources & Freshness</p>
-                <p className="mt-1 text-xs text-muted">Each charted metric shows its source, series id, and current freshness state.</p>
-              </div>
             </div>
-            <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
-              {activeMetricConfidence.map((entry) => {
-                const tone = getConfidenceTone(entry.level);
-                return (
-                  <a
-                    key={entry.metric.id}
-                    href={entry.source.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-xl border border-theme bg-muted-surface p-3 no-underline transition-colors hover:bg-secondary"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-main">{entry.metric.label}</p>
-                        <p className="mt-1 text-xs text-muted">{entry.source.provider} ({entry.source.seriesId})</p>
-                        <p className="mt-2 text-xs text-muted">{entry.detail}</p>
-                      </div>
-                      <span
-                        className="inline-flex shrink-0 rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] leading-none"
-                        style={tone.badge}
-                      >
-                        {entry.label}
-                      </span>
-                    </div>
-                  </a>
-                );
-              })}
+            <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
+              {activeMetricConfidence.length} tracked
+            </span>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2 xl:grid-cols-4">
+            <div className="rounded-xl border border-theme bg-muted-surface p-3">
+              <p className="text-[11px] uppercase tracking-[0.08em] text-muted">Fresh</p>
+              <p className="mt-1 text-xl font-semibold text-main">{confidenceCounts.fresh}</p>
             </div>
-          </Card>
-        </div>
+            <div className="rounded-xl border border-theme bg-muted-surface p-3">
+              <p className="text-[11px] uppercase tracking-[0.08em] text-muted">Carry-forward</p>
+              <p className="mt-1 text-xl font-semibold text-main">{confidenceCounts['carry-forward']}</p>
+            </div>
+            <div className="rounded-xl border border-theme bg-muted-surface p-3">
+              <p className="text-[11px] uppercase tracking-[0.08em] text-muted">Needs attention</p>
+              <p className="mt-1 text-xl font-semibold text-main">{visibleIssueCount}</p>
+            </div>
+            <div className="rounded-xl border border-theme bg-muted-surface p-3">
+              <p className="text-[11px] uppercase tracking-[0.08em] text-muted">Latest month</p>
+              <p className="mt-1 text-xl font-semibold text-main">{pipelineStatus?.latestDataMonth ?? 'N/A'}</p>
+            </div>
+          </div>
+          {(pipelineStatus?.warnings?.length || 0) > 0 && (
+            <p className="mt-3 text-xs text-muted">
+              Active warning: {pipelineStatus?.warnings?.[0]}
+            </p>
+          )}
+        </Card>
       )}
 
       {!shareMode && (
