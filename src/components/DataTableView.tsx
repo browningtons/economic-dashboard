@@ -70,7 +70,7 @@ function csvEscape(value: string | number | undefined) {
   return `"${raw.replace(/"/g, '""')}"`;
 }
 
-export default function DataTableView({ data, metrics, metricSources, now, pipelineStatus }: DataTableViewProps) {
+const DataTableView = React.memo(function DataTableView({ data, metrics, metricSources, now, pipelineStatus }: DataTableViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [yearFilter, setYearFilter] = useState('ALL');
   const [showMissingOnly, setShowMissingOnly] = useState(false);
@@ -583,4 +583,6 @@ export default function DataTableView({ data, metrics, metricSources, now, pipel
       </Card>
     </>
   );
-}
+});
+
+export default DataTableView;

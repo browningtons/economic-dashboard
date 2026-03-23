@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   CartesianGrid,
   Legend,
@@ -34,8 +34,6 @@ interface ExtremaDotProps {
 
 interface DashboardViewProps {
   shareMode: boolean;
-  filtersOpen: boolean;
-  setFiltersOpen: React.Dispatch<React.SetStateAction<boolean>>;
   viewMode: 'raw' | 'relative';
   setViewMode: React.Dispatch<React.SetStateAction<'raw' | 'relative'>>;
   chartMetricTitle: string;
@@ -45,9 +43,6 @@ interface DashboardViewProps {
   dataWarning: string | null;
   metrics: MetricConfig[];
   setSelectedMetrics: React.Dispatch<React.SetStateAction<string[]>>;
-  metricSearch: string;
-  setMetricSearch: React.Dispatch<React.SetStateAction<string>>;
-  filteredMetricsByCategory: Record<string, MetricConfig[]>;
   toggleMetric: (id: string) => void;
   data: DataPoint[];
   dateRange: [number, number];
@@ -146,10 +141,8 @@ function getConfidenceTone(level: MetricConfidenceLevel) {
   };
 }
 
-export default function DashboardView({
+const DashboardView = React.memo(function DashboardView({
   shareMode,
-  filtersOpen,
-  setFiltersOpen,
   viewMode,
   setViewMode,
   chartMetricTitle,
@@ -159,9 +152,6 @@ export default function DashboardView({
   dataWarning,
   metrics,
   setSelectedMetrics,
-  metricSearch,
-  setMetricSearch,
-  filteredMetricsByCategory,
   toggleMetric,
   data,
   dateRange,
@@ -184,6 +174,30 @@ export default function DashboardView({
   activeMetricConfidence,
   pipelineStatus,
 }: DashboardViewProps) {
+  // Local UI state — kept here to avoid re-rendering sibling tabs
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [metricSearch, setMetricSearch] = useState('');
+
+  const metricsByCategory = useMemo(() => {
+    const groups: Record<string, MetricConfig[]> = {};
+    metrics.forEach(m => {
+      if (!groups[m.category]) groups[m.category] = [];
+      groups[m.category].push(m);
+    });
+    return groups;
+  }, [metrics]);
+
+  const filteredMetricsByCategory = useMemo(() => {
+    const q = metricSearch.trim().toLowerCase();
+    if (!q) return metricsByCategory;
+    const out: Record<string, MetricConfig[]> = {};
+    for (const [category, list] of Object.entries(metricsByCategory)) {
+      const matches = list.filter((m) => m.label.toLowerCase().includes(q) || m.id.toLowerCase().includes(q));
+      if (matches.length) out[category] = matches;
+    }
+    return out;
+  }, [metricsByCategory, metricSearch]);
+
   const confidenceByMetricId = new Map(
     activeMetricConfidence.map((entry) => [entry.metric.id, entry] as const)
   );
@@ -595,4 +609,6 @@ export default function DashboardView({
       )}
     </>
   );
-}
+});
+
+export default DashboardView;

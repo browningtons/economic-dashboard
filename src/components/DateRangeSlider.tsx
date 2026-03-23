@@ -9,7 +9,7 @@ interface DateRangeSliderProps {
   data: DataPoint[];
 }
 
-export default function DateRangeSlider({ min, max, value, onChange, data }: DateRangeSliderProps) {
+const DateRangeSlider = React.memo(function DateRangeSlider({ min, max, value, onChange, data }: DateRangeSliderProps) {
   if (max <= min) return null;
 
   const total = max - min;
@@ -71,4 +71,6 @@ export default function DateRangeSlider({ min, max, value, onChange, data }: Dat
       </div>
     </div>
   );
-}
+});
+
+export default DateRangeSlider;

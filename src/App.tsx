@@ -20,6 +20,7 @@ import appLogo from './assets/golden_data_icon_small.png';
 import DataTableView from './components/DataTableView';
 import DashboardView from './components/DashboardView';
 import BuffettView from './components/BuffettView';
+import ErrorBoundary from './components/ErrorBoundary';
 import { BUILD_NOTES, BUILD_NOTES_TITLE, BUILD_VERSION, BUILD_VERSION_LABEL, BUILD_VERSION_SUMMARY } from './buildNotes';
 import type {
   BuffettLabelPoint,
@@ -657,8 +658,6 @@ export default function App() {
   const [clockNow, setClockNow] = useState(() => new Date());
   // Set default selected metrics to S&P 500 and Job Openings
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>(['S&P 500', 'Job Openings']);
-  const [metricSearch, setMetricSearch] = useState('');
-  const [filtersOpen, setFiltersOpen] = useState(false);
   
   // Date Range State (Indices) - Initialized to a safe empty array state
   const [dateRange, setDateRange] = useState<[number, number]>([0, 0]);
@@ -1167,26 +1166,6 @@ export default function App() {
   const leftAxisColor = leftAxisMetrics[0]?.color ?? 'var(--color-chart-axis)';
   const rightAxisColor = rightAxisMetrics[0]?.color ?? 'var(--color-chart-axis)';
 
-  // Group metrics by category for sidebar
-  const metricsByCategory = useMemo(() => {
-    const groups: Record<string, MetricConfig[]> = {};
-    METRICS.forEach(m => {
-      if (!groups[m.category]) groups[m.category] = [];
-      groups[m.category].push(m);
-    });
-    return groups;
-  }, []);
-
-  const filteredMetricsByCategory = useMemo(() => {
-    const q = metricSearch.trim().toLowerCase();
-    if (!q) return metricsByCategory;
-    const out: Record<string, MetricConfig[]> = {};
-    for (const [category, list] of Object.entries(metricsByCategory)) {
-      const matches = list.filter((m) => m.label.toLowerCase().includes(q) || m.id.toLowerCase().includes(q));
-      if (matches.length) out[category] = matches;
-    }
-    return out;
-  }, [metricsByCategory, metricSearch]);
 
   const lastUpdatedText = useMemo(() => {
     if (data.length === 0) return 'N/A';
@@ -1421,62 +1400,63 @@ export default function App() {
       <div className="grid grid-cols-1 gap-6">
         <div className="flex flex-col gap-6">
           {activeTab === 'Dashboard' && (
-            <DashboardView
-              shareMode={shareMode}
-              filtersOpen={filtersOpen}
-              setFiltersOpen={setFiltersOpen}
-              viewMode={viewMode}
-              setViewMode={setViewMode}
-              chartMetricTitle={chartMetricTitle}
-              selectedMetrics={selectedMetrics}
-              rangeLabel={rangeLabel}
-              latestDataPointText={latestDataPointText}
-              dataWarning={dataWarning}
-              metrics={METRICS}
-              setSelectedMetrics={setSelectedMetrics}
-              metricSearch={metricSearch}
-              setMetricSearch={setMetricSearch}
-              filteredMetricsByCategory={filteredMetricsByCategory}
-              toggleMetric={toggleMetric}
-              data={data}
-              dateRange={dateRange}
-              handleDateRangeChange={handleDateRangeChange}
-              datePreset={datePreset}
-              applyDatePreset={applyDatePreset}
-              activeMetrics={activeMetrics}
-              rSquared={rSquared}
-              chartData={chartData}
-              leftAxisColor={leftAxisColor}
-              rightAxisColor={rightAxisColor}
-              leftAxisTitle={leftAxisTitle}
-              rightAxisTitle={rightAxisTitle}
-              useRightAxis={chartConfig.useRightAxis}
-              getAxisId={getAxisId}
-              renderExtremaDot={renderExtremaDot}
-              referenceZones={REFERENCE_ZONES}
-              renderReferenceLabel={(props, label, labelPos) => (
-                <RenderLabel {...props} label={label} labelPos={labelPos} />
-              )}
-              dashboardTooltip={<CustomTooltip isRelative={viewMode === 'relative'} />}
-              activeMetricConfidence={activeMetricConfidence}
-              pipelineStatus={pipelineStatus}
-            />
+            <ErrorBoundary section="Dashboard">
+              <DashboardView
+                shareMode={shareMode}
+                viewMode={viewMode}
+                setViewMode={setViewMode}
+                chartMetricTitle={chartMetricTitle}
+                selectedMetrics={selectedMetrics}
+                rangeLabel={rangeLabel}
+                latestDataPointText={latestDataPointText}
+                dataWarning={dataWarning}
+                metrics={METRICS}
+                setSelectedMetrics={setSelectedMetrics}
+                toggleMetric={toggleMetric}
+                data={data}
+                dateRange={dateRange}
+                handleDateRangeChange={handleDateRangeChange}
+                datePreset={datePreset}
+                applyDatePreset={applyDatePreset}
+                activeMetrics={activeMetrics}
+                rSquared={rSquared}
+                chartData={chartData}
+                leftAxisColor={leftAxisColor}
+                rightAxisColor={rightAxisColor}
+                leftAxisTitle={leftAxisTitle}
+                rightAxisTitle={rightAxisTitle}
+                useRightAxis={chartConfig.useRightAxis}
+                getAxisId={getAxisId}
+                renderExtremaDot={renderExtremaDot}
+                referenceZones={REFERENCE_ZONES}
+                renderReferenceLabel={(props, label, labelPos) => (
+                  <RenderLabel {...props} label={label} labelPos={labelPos} />
+                )}
+                dashboardTooltip={<CustomTooltip isRelative={viewMode === 'relative'} />}
+                activeMetricConfidence={activeMetricConfidence}
+                pipelineStatus={pipelineStatus}
+              />
+            </ErrorBoundary>
           )}
 
           {activeTab === 'Data Table' && (
-            <DataTableView data={data} metrics={METRICS} metricSources={METRIC_SOURCES} now={clockNow} pipelineStatus={pipelineStatus} />
+            <ErrorBoundary section="Data Table">
+              <DataTableView data={data} metrics={METRICS} metricSources={METRIC_SOURCES} now={clockNow} pipelineStatus={pipelineStatus} />
+            </ErrorBoundary>
           )}
 
           {activeTab === 'Buffett' && (
-            <BuffettView
-              buffettData={buffettData}
-              buffettDomainMax={buffettDomainMax}
-              buffettZones={BUFFETT_ZONES}
-              buffettZoneFillOpacity={BUFFETT_ZONE_FILL_OPACITY}
-              buffettQuote={BUFFETT_QUOTE}
-              buffettLabelPoints={buffettLabelPoints}
-              buffettTooltip={<CustomTooltip isRelative={false} mode="Buffett" />}
-            />
+            <ErrorBoundary section="Buffett Indicator">
+              <BuffettView
+                buffettData={buffettData}
+                buffettDomainMax={buffettDomainMax}
+                buffettZones={BUFFETT_ZONES}
+                buffettZoneFillOpacity={BUFFETT_ZONE_FILL_OPACITY}
+                buffettQuote={BUFFETT_QUOTE}
+                buffettLabelPoints={buffettLabelPoints}
+                buffettTooltip={<CustomTooltip isRelative={false} mode="Buffett" />}
+              />
+            </ErrorBoundary>
           )}
 
         </div>

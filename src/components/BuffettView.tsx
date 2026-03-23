@@ -30,7 +30,7 @@ interface BuffettViewProps {
   buffettTooltip: React.ReactElement;
 }
 
-export default function BuffettView({
+const BuffettView = React.memo(function BuffettView({
   buffettData,
   buffettDomainMax,
   buffettZones,
@@ -146,4 +146,6 @@ export default function BuffettView({
       </div>
     </Card>
   );
-}
+});
+
+export default BuffettView;
