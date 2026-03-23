@@ -66,8 +66,8 @@ function compareMonthKeys(a, b) {
   return a.localeCompare(b);
 }
 
-function lastCompleteMonthKey(now = new Date()) {
-  return addMonths(`${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`, -1);
+function currentMonthKey(now = new Date()) {
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
 function getMonthRange(startMonth, endMonth) {
@@ -366,7 +366,7 @@ async function main() {
   }
 
   const startMonth = startMonthOverride;
-  const endMonth = [lastCompleteMonthKey(), latestAvailableMonth].sort(compareMonthKeys)[0];
+  const endMonth = [currentMonthKey(), latestAvailableMonth].sort(compareMonthKeys)[0];
 
   if (compareMonthKeys(startMonth, endMonth) > 0) {
     throw new Error(`Computed range is invalid: ${startMonth} > ${endMonth}`);
