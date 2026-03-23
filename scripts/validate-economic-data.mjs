@@ -23,6 +23,14 @@ const SERIES_CONFIG = [
   { column: 'GDP', seriesId: 'GDP', cadence: 'quarterly', scale: 1, threshold: 10, maxLagMonths: 3, maxForwardFillMonths: 2, minValue: 1000, maxValue: 100000, maxMoMPct: 20, releaseLagMinMonths: 2, releaseLagMaxMonths: 4 },
   { column: STOCK_MARKET_COLUMN, seriesId: 'NCBCEL', cadence: 'quarterly', scale: 0.001, threshold: 2500, maxLagMonths: 3, maxForwardFillMonths: 2, minValue: 2000, maxValue: 250000, maxMoMPct: 60, releaseLagMinMonths: 1, releaseLagMaxMonths: 3, releaseWindowSeverity: 'warn' },
   { column: 'National Debt (b)', seriesId: 'GFDEBTN', cadence: 'quarterly', scale: 0.001, threshold: 400, maxLagMonths: 3, maxForwardFillMonths: 2, minValue: 1000, maxValue: 100000, maxMoMPct: 10, releaseLagMinMonths: 3, releaseLagMaxMonths: 5 },
+  { column: '10Y Treasury', seriesId: 'DGS10', cadence: 'daily', scale: 1, threshold: 0.15, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 0, maxValue: 20, maxMoMPct: 40, releaseLagMinMonths: 0, releaseLagMaxMonths: 1 },
+  { column: '2Y Treasury', seriesId: 'DGS2', cadence: 'daily', scale: 1, threshold: 0.15, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 0, maxValue: 20, maxMoMPct: 50, releaseLagMinMonths: 0, releaseLagMaxMonths: 1 },
+  { column: 'Consumer Sentiment', seriesId: 'UMCSENT', cadence: 'monthly', scale: 1, threshold: 5, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 20, maxValue: 120, maxMoMPct: 25, releaseLagMinMonths: 0, releaseLagMaxMonths: 1 },
+  { column: 'Retail Sales', seriesId: 'RSAFS', cadence: 'monthly', scale: 1, threshold: 15000, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 100000, maxValue: 1000000, maxMoMPct: 15, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
+  { column: 'Personal Savings Rate', seriesId: 'PSAVERT', cadence: 'monthly', scale: 1, threshold: 2, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: -5, maxValue: 40, maxMoMPct: 80, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
+  { column: 'PCE Price Index', seriesId: 'PCEPI', cadence: 'monthly', scale: 1, threshold: 1.0, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 50, maxValue: 500, maxMoMPct: 5, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
+  { column: 'Avg Hourly Earnings', seriesId: 'CES0500000003', cadence: 'monthly', scale: 1, threshold: 0.3, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 5, maxValue: 60, maxMoMPct: 8, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
+  { column: 'Initial Claims', seriesId: 'ICSA', cadence: 'weekly', scale: 1, threshold: 30, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 100, maxValue: 10000, maxMoMPct: 80, releaseLagMinMonths: 0, releaseLagMaxMonths: 1 },
 ];
 
 function monthKeyFromDate(dateStr) {

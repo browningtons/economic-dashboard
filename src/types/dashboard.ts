@@ -19,7 +19,7 @@ export interface MetricConfig {
   isMacro: boolean;
   format: (val: number) => string;
   isPercentage: boolean;
-  category: 'Labor Market' | 'Monetary Policy' | 'Housing' | 'Macro & Markets';
+  category: 'Labor Market' | 'Monetary Policy' | 'Housing' | 'Macro & Markets' | 'Consumer' | 'Inflation & Wages';
 }
 
 export type ReferenceLabelPosition = 'insideTopLeft' | 'insideTop' | 'insideBottom';

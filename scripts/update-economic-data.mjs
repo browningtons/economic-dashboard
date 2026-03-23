@@ -23,6 +23,14 @@ const SERIES_CONFIG = [
   { column: 'GDP', seriesId: 'GDP', cadence: 'quarterly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 2 },
   { column: STOCK_MARKET_COLUMN, seriesId: 'NCBCEL', cadence: 'quarterly', aggregation: 'last', scale: 0.001, maxCarryForwardMonths: 2 },
   { column: 'National Debt (b)', seriesId: 'GFDEBTN', cadence: 'quarterly', aggregation: 'last', scale: 0.001, maxCarryForwardMonths: 2 },
+  { column: '10Y Treasury', seriesId: 'DGS10', cadence: 'daily', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: '2Y Treasury', seriesId: 'DGS2', cadence: 'daily', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: 'Consumer Sentiment', seriesId: 'UMCSENT', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: 'Retail Sales', seriesId: 'RSAFS', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: 'Personal Savings Rate', seriesId: 'PSAVERT', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: 'PCE Price Index', seriesId: 'PCEPI', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: 'Avg Hourly Earnings', seriesId: 'CES0500000003', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: 'Initial Claims', seriesId: 'ICSA', cadence: 'weekly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
 ];
 
 function getArg(name, fallback = undefined) {

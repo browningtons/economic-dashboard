@@ -1,19 +1,25 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { 
-  Activity, 
-  TrendingUp, 
-  DollarSign, 
-  Home, 
-  Percent, 
-  BarChart3, 
-  Clock, 
-  Briefcase, 
-  TrendingDown, 
-  Building, 
+import {
+  Activity,
+  TrendingUp,
+  DollarSign,
+  Home,
+  Percent,
+  BarChart3,
+  Clock,
+  Briefcase,
+  TrendingDown,
+  Building,
   Users,
   AlertCircle,
   Globe,
-  Coins
+  Coins,
+  Landmark,
+  ShoppingCart,
+  PiggyBank,
+  Wallet,
+  ArrowDownUp,
+  FileWarning,
 } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import appLogo from './assets/golden_data_icon_small.png';
@@ -210,6 +216,15 @@ const METRIC_SOURCES: Record<string, DataSourceInfo> = {
     note: 'Uses monthly market-cap feed when configured; falls back to NCBCEL.',
   },
   'National Debt (b)': { provider: 'FRED', seriesId: 'GFDEBTN', url: 'https://fred.stlouisfed.org/series/GFDEBTN', cadence: 'quarterly' },
+  '10Y Treasury': { provider: 'FRED', seriesId: 'DGS10', url: 'https://fred.stlouisfed.org/series/DGS10', cadence: 'daily' },
+  '2Y Treasury': { provider: 'FRED', seriesId: 'DGS2', url: 'https://fred.stlouisfed.org/series/DGS2', cadence: 'daily' },
+  'Yield Spread': { provider: 'Derived', seriesId: 'DGS10 − DGS2', url: 'https://fred.stlouisfed.org/series/DGS10', cadence: 'daily', note: '10Y minus 2Y Treasury yield. Inversion signals recession risk.' },
+  'Consumer Sentiment': { provider: 'FRED', seriesId: 'UMCSENT', url: 'https://fred.stlouisfed.org/series/UMCSENT', cadence: 'monthly' },
+  'Retail Sales': { provider: 'FRED', seriesId: 'RSAFS', url: 'https://fred.stlouisfed.org/series/RSAFS', cadence: 'monthly' },
+  'Personal Savings Rate': { provider: 'FRED', seriesId: 'PSAVERT', url: 'https://fred.stlouisfed.org/series/PSAVERT', cadence: 'monthly' },
+  'PCE Price Index': { provider: 'FRED', seriesId: 'PCEPI', url: 'https://fred.stlouisfed.org/series/PCEPI', cadence: 'monthly' },
+  'Avg Hourly Earnings': { provider: 'FRED', seriesId: 'CES0500000003', url: 'https://fred.stlouisfed.org/series/CES0500000003', cadence: 'monthly' },
+  'Initial Claims': { provider: 'FRED', seriesId: 'ICSA', url: 'https://fred.stlouisfed.org/series/ICSA', cadence: 'weekly' },
 };
 
 const METRICS: MetricConfig[] = [
@@ -373,17 +388,122 @@ const METRICS: MetricConfig[] = [
     format: (v) => `$${(v/1000).toFixed(1)}T`,
     category: 'Macro & Markets'
   },
-  { 
-    id: 'Stock Market (b)', 
-    label: 'Stock Market Value', 
-    icon: Coins, 
+  {
+    id: 'Stock Market (b)',
+    label: 'Stock Market Value',
+    icon: Coins,
     color: '#2CB6C0',
     desc: 'Total value of US Stock Market.',
-    isMacro: true, // Large Billions/Trillions
+    isMacro: true,
     isPercentage: false,
     format: (v) => `$${(v/1000).toFixed(1)}T`,
     category: 'Macro & Markets'
-  }
+  },
+
+  // --- MONETARY POLICY (Treasury Yields) ---
+  {
+    id: '10Y Treasury',
+    label: '10Y Treasury',
+    icon: Landmark,
+    color: '#0F3D57',
+    desc: '10-Year Treasury Constant Maturity Rate.',
+    isMacro: false,
+    isPercentage: true,
+    format: (v) => `${v.toFixed(2)}%`,
+    category: 'Monetary Policy'
+  },
+  {
+    id: '2Y Treasury',
+    label: '2Y Treasury',
+    icon: Landmark,
+    color: '#4C6F86',
+    desc: '2-Year Treasury Constant Maturity Rate.',
+    isMacro: false,
+    isPercentage: true,
+    format: (v) => `${v.toFixed(2)}%`,
+    category: 'Monetary Policy'
+  },
+  {
+    id: 'Yield Spread',
+    label: 'Yield Spread (10Y−2Y)',
+    icon: ArrowDownUp,
+    color: '#B53300',
+    desc: '10Y minus 2Y Treasury yield. Inversion signals recession risk.',
+    isMacro: false,
+    isPercentage: false,
+    format: (v) => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`,
+    category: 'Monetary Policy'
+  },
+
+  // --- CONSUMER ---
+  {
+    id: 'Consumer Sentiment',
+    label: 'Consumer Sentiment',
+    icon: Users,
+    color: '#2CB6C0',
+    desc: 'University of Michigan Consumer Sentiment Index.',
+    isMacro: false,
+    isPercentage: false,
+    format: (v) => v.toFixed(1),
+    category: 'Consumer'
+  },
+  {
+    id: 'Retail Sales',
+    label: 'Retail Sales',
+    icon: ShoppingCart,
+    color: '#0E7C86',
+    desc: 'Advance Retail Sales: Retail and Food Services (Millions).',
+    isMacro: true,
+    isPercentage: false,
+    format: (v) => `$${(v/1000).toFixed(0)}B`,
+    category: 'Consumer'
+  },
+  {
+    id: 'Personal Savings Rate',
+    label: 'Personal Savings Rate',
+    icon: PiggyBank,
+    color: '#FF7A33',
+    desc: 'Personal income saved as a percentage.',
+    isMacro: false,
+    isPercentage: true,
+    format: (v) => `${v.toFixed(1)}%`,
+    category: 'Consumer'
+  },
+  {
+    id: 'Initial Claims',
+    label: 'Initial Claims',
+    icon: FileWarning,
+    color: '#F04A00',
+    desc: 'Initial unemployment insurance claims filed weekly.',
+    isMacro: true,
+    isPercentage: false,
+    format: (v) => `${(v/1000).toFixed(0)}K`,
+    category: 'Labor Market'
+  },
+
+  // --- INFLATION & WAGES ---
+  {
+    id: 'PCE Price Index',
+    label: 'PCE Price Index',
+    icon: BarChart3,
+    color: '#B53300',
+    desc: "Personal Consumption Expenditures Price Index — the Fed's preferred inflation measure.",
+    isMacro: true,
+    isPercentage: false,
+    format: (v) => v.toFixed(1),
+    category: 'Inflation & Wages'
+  },
+  {
+    id: 'Avg Hourly Earnings',
+    label: 'Avg Hourly Earnings',
+    icon: Wallet,
+    color: '#0F3D57',
+    desc: 'Average hourly earnings of all private employees.',
+    isMacro: false,
+    isPercentage: false,
+    format: (v) => `$${v.toFixed(2)}`,
+    category: 'Inflation & Wages'
+  },
 ];
 
 // --- Math Helpers ---
@@ -762,6 +882,10 @@ export default function App() {
 
           if (entry['Stock Market (b)'] !== undefined && entry['GDP'] !== undefined) {
             entry.buffettValue = (Number(entry['Stock Market (b)']) / Number(entry['GDP'])) * 100;
+          }
+
+          if (entry['10Y Treasury'] !== undefined && entry['2Y Treasury'] !== undefined) {
+            entry['Yield Spread'] = Number(entry['10Y Treasury']) - Number(entry['2Y Treasury']);
           }
 
           parsedData.push(entry as DataPoint);
