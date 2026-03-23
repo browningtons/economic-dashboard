@@ -21,6 +21,7 @@ import DataTableView from './components/DataTableView';
 import DashboardView from './components/DashboardView';
 import BuffettView from './components/BuffettView';
 import ErrorBoundary from './components/ErrorBoundary';
+import { useToast } from './components/Toast';
 import { BUILD_NOTES, BUILD_NOTES_TITLE, BUILD_VERSION, BUILD_VERSION_LABEL, BUILD_VERSION_SUMMARY } from './buildNotes';
 import type {
   BuffettLabelPoint,
@@ -644,6 +645,7 @@ const RenderLabel = ({ viewBox, label, labelPos }: RenderLabelProps) => {
 };
 
 export default function App() {
+  const notify = useToast();
   const [data, setData] = useState<DataPoint[]>([]);
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -654,7 +656,6 @@ export default function App() {
   const [shareMode, setShareMode] = useState(false);
   const [viewMode, setViewMode] = useState<'raw' | 'relative'>('raw');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [refreshStatus, setRefreshStatus] = useState<string | null>(null);
   const [clockNow, setClockNow] = useState(() => new Date());
   // Set default selected metrics to S&P 500 and Job Openings
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>(['S&P 500', 'Job Openings']);
@@ -785,7 +786,21 @@ export default function App() {
         setDateRange([0, parsedData.length - 1]);
 
         const status = await getStatusData();
-        if (!cancelled) setPipelineStatus(status);
+        if (!cancelled) {
+          setPipelineStatus(status);
+
+          // Notify on load outcomes
+          if (badRowCount > 0) {
+            notify.warning(`Loaded ${parsedData.length} rows — ${badRowCount} malformed row(s) skipped.`);
+          } else {
+            notify.success(`Loaded ${parsedData.length} data points.`);
+          }
+          if (!status) {
+            notify.info('Pipeline status unavailable — freshness labels may be incomplete.');
+          } else if (status.status === 'FAIL') {
+            notify.warning(`Pipeline validation: ${status.failureCount ?? 0} issue(s) detected.`);
+          }
+        }
       } catch (error) {
         setDataError(`Data load failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       } finally {
@@ -1230,15 +1245,9 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => {
-    if (!refreshStatus) return;
-    const timeout = window.setTimeout(() => setRefreshStatus(null), 7000);
-    return () => window.clearTimeout(timeout);
-  }, [refreshStatus]);
-
   const handleRefreshData = useCallback(async () => {
     setIsRefreshing(true);
-    setRefreshStatus('Refreshing data…');
+    notify.info('Refreshing data…');
 
     try {
       if (REFRESH_WEBHOOK_URL) {
@@ -1250,22 +1259,53 @@ export default function App() {
         if (!response.ok) {
           throw new Error(`Refresh request failed (${response.status})`);
         }
-        setRefreshStatus('Update request sent. Pulling latest snapshot…');
       }
 
       setReloadKey((k) => k + 1);
-      setRefreshStatus(REFRESH_WEBHOOK_URL ? 'Refresh requested. Showing latest available data.' : 'Reloaded latest available data.');
+      notify.success(REFRESH_WEBHOOK_URL ? 'Refresh requested. Pulling latest snapshot.' : 'Reloaded latest available data.');
     } catch (error) {
-      setRefreshStatus(error instanceof Error ? error.message : 'Refresh request failed.');
+      notify.error(error instanceof Error ? error.message : 'Refresh request failed.');
     } finally {
       setIsRefreshing(false);
     }
-  }, []);
+  }, [notify]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-primary flex items-center justify-center text-muted">
-        Loading data... Please verify your CSV source is reachable and formatted correctly.
+      <div className="min-h-screen bg-primary text-main font-sans p-4 md:p-8 lg:p-10">
+        <div className="mx-auto max-w-[1600px]">
+          {/* Skeleton header */}
+          <div className="mb-8 flex items-center gap-4 bg-secondary p-7 rounded-2xl border border-theme/70">
+            <div className="skeleton h-14 w-14 shrink-0 rounded-xl" />
+            <div className="flex-1 space-y-2">
+              <div className="skeleton h-7 w-64" />
+              <div className="skeleton h-4 w-96" />
+            </div>
+          </div>
+          {/* Skeleton chart card */}
+          <div className="bg-secondary border border-theme/70 rounded-xl p-7 shadow-sm">
+            <div className="space-y-3 mb-6">
+              <div className="skeleton h-9 w-56" />
+              <div className="skeleton h-4 w-80" />
+              <div className="flex gap-2">
+                <div className="skeleton h-6 w-20 rounded-full" />
+                <div className="skeleton h-6 w-28 rounded-full" />
+                <div className="skeleton h-6 w-36 rounded-full" />
+              </div>
+            </div>
+            <div className="skeleton h-[480px] w-full rounded-lg" />
+          </div>
+          {/* Skeleton metric cards */}
+          <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-secondary border border-theme/70 rounded-xl p-6 shadow-sm space-y-3">
+                <div className="skeleton h-3 w-24" />
+                <div className="skeleton h-7 w-32" />
+                <div className="skeleton h-3 w-16" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -1387,11 +1427,6 @@ export default function App() {
               {isRefreshing ? 'Refreshing…' : 'Refresh data'}
             </button>
             <ThemeToggle />
-          </div>
-          <div className="flex basis-full flex-col gap-1 text-[11px] leading-tight text-muted md:basis-auto md:items-end md:ml-2">
-            {refreshStatus && (
-              <span className="text-link">{refreshStatus}</span>
-            )}
           </div>
         </div>
       </header>

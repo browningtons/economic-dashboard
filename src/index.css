@@ -128,3 +128,27 @@ a:hover {
   pointer-events: auto;
   cursor: ew-resize;
 }
+
+/* Toast slide-in animation */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(1rem); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Skeleton shimmer for loading placeholders */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-muted) 25%,
+    color-mix(in oklab, var(--color-surface-muted) 60%, var(--color-bg-secondary)) 50%,
+    var(--color-surface-muted) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  border-radius: 8px;
+}
