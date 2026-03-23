@@ -166,7 +166,6 @@ const GOOGLE_SHEET_URL = (
   import.meta.env.VITE_ECON_DATA_URL?.trim()
 );
 const USE_GOOGLE_SHEET = import.meta.env.VITE_USE_GOOGLE_SHEET === 'true';
-const REFRESH_WEBHOOK_URL = import.meta.env.VITE_REFRESH_WEBHOOK_URL?.trim();
 const LOCAL_DATA_URL = `${import.meta.env.BASE_URL}data/economic_indicators.csv`;
 const STATUS_DATA_URL = `${import.meta.env.BASE_URL}data/data_status.json`;
 const REQUIRED_COLUMNS = [
@@ -655,7 +654,6 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'Dashboard' | 'Buffett' | 'Data Table'>('Dashboard');
   const [shareMode, setShareMode] = useState(false);
   const [viewMode, setViewMode] = useState<'raw' | 'relative'>('raw');
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [clockNow, setClockNow] = useState(() => new Date());
   // Set default selected metrics to S&P 500 and Job Openings
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>(['S&P 500', 'Job Openings']);
@@ -1245,30 +1243,6 @@ export default function App() {
     }
   }, []);
 
-  const handleRefreshData = useCallback(async () => {
-    setIsRefreshing(true);
-    notify.info('Refreshing data…');
-
-    try {
-      if (REFRESH_WEBHOOK_URL) {
-        const response = await fetch(REFRESH_WEBHOOK_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ requestedAt: new Date().toISOString(), source: 'dashboard-manual-refresh' }),
-        });
-        if (!response.ok) {
-          throw new Error(`Refresh request failed (${response.status})`);
-        }
-      }
-
-      setReloadKey((k) => k + 1);
-      notify.success(REFRESH_WEBHOOK_URL ? 'Refresh requested. Pulling latest snapshot.' : 'Reloaded latest available data.');
-    } catch (error) {
-      notify.error(error instanceof Error ? error.message : 'Refresh request failed.');
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [notify]);
 
   if (isLoading) {
     return (
@@ -1418,16 +1392,7 @@ export default function App() {
               );
             })}
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleRefreshData}
-              disabled={isRefreshing}
-              className="px-3 py-1.5 text-sm font-medium rounded-md border bg-muted-surface text-main border-theme disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {isRefreshing ? 'Refreshing…' : 'Refresh data'}
-            </button>
-            <ThemeToggle />
-          </div>
+          <ThemeToggle />
         </div>
       </header>
 
