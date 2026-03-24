@@ -1,20 +1,57 @@
 {
-  "generatedAt": "2026-03-23T14:20:25.832Z",
+  "generatedAt": "2026-03-24T14:37:14.514Z",
   "evaluatedMonth": "2026-03",
-  "nextScheduledRefreshUtc": "2026-03-24T13:15:00.000Z",
+  "nextScheduledRefreshUtc": "2026-03-25T13:15:00.000Z",
   "status": "FAIL",
-  "failureCount": 2,
+  "failureCount": 3,
   "warningCount": 0,
-  "failedSeriesCount": 2,
-  "totalSeriesCount": 25,
+  "failedSeriesCount": 3,
+  "totalSeriesCount": 29,
   "latestDataMonth": "2026-03",
   "latestBuffettRatio": null,
   "failures": [
     "Consumer Sentiment: latest CSV month 2026-01 is outside expected release window (2026-02 to 2026-03)",
-    "Initial Claims: 6 recent value(s) outside sanity bounds"
+    "Initial Claims: 6 recent value(s) outside sanity bounds",
+    "Existing Home Sales: 6 recent value(s) outside sanity bounds"
   ],
   "warnings": [],
   "topAlerts": [
+    {
+      "type": "Range",
+      "column": "Existing Home Sales",
+      "month": "2025-12",
+      "details": "4270000.0000 (above 10000.0000)"
+    },
+    {
+      "type": "Range",
+      "column": "Existing Home Sales",
+      "month": "2025-10",
+      "details": "4110000.0000 (above 10000.0000)"
+    },
+    {
+      "type": "Range",
+      "column": "Existing Home Sales",
+      "month": "2025-11",
+      "details": "4090000.0000 (above 10000.0000)"
+    },
+    {
+      "type": "Range",
+      "column": "Existing Home Sales",
+      "month": "2026-02",
+      "details": "4090000.0000 (above 10000.0000)"
+    },
+    {
+      "type": "Range",
+      "column": "Existing Home Sales",
+      "month": "2025-09",
+      "details": "4080000.0000 (above 10000.0000)"
+    },
+    {
+      "type": "Range",
+      "column": "Existing Home Sales",
+      "month": "2026-01",
+      "details": "4020000.0000 (above 10000.0000)"
+    },
     {
       "type": "Range",
       "column": "Initial Claims",
@@ -38,24 +75,6 @@
       "column": "Initial Claims",
       "month": "2026-02",
       "details": "214000.0000 (above 10000.0000)"
-    },
-    {
-      "type": "Range",
-      "column": "Initial Claims",
-      "month": "2026-03",
-      "details": "205000.0000 (above 10000.0000)"
-    },
-    {
-      "type": "Range",
-      "column": "Initial Claims",
-      "month": "2025-12",
-      "details": "203000.0000 (above 10000.0000)"
-    },
-    {
-      "type": "Release Calendar",
-      "column": "Consumer Sentiment",
-      "month": "2026-01",
-      "details": "Expected 2026-02..2026-03, got 2026-01"
     }
   ],
   "releaseCalendarBreaches": [
@@ -441,6 +460,66 @@
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
       "expectedReleaseWindow": "2026-02..2026-03",
+      "releaseWindowStatus": "PASS",
+      "releaseWindowGapMonths": 0
+    },
+    {
+      "column": "Housing Starts",
+      "seriesId": "FRED:HOUST",
+      "status": "PASS",
+      "csvLatest": "2026-01",
+      "sourceLatest": "2026-01",
+      "lag": 0,
+      "forwardFill": 0,
+      "threshold": 100,
+      "maxAbsDiff": "0.0000",
+      "mismatchCount": 0,
+      "expectedReleaseWindow": "2026-01..2026-02",
+      "releaseWindowStatus": "PASS",
+      "releaseWindowGapMonths": 0
+    },
+    {
+      "column": "Building Permits",
+      "seriesId": "FRED:PERMIT",
+      "status": "PASS",
+      "csvLatest": "2026-01",
+      "sourceLatest": "2026-01",
+      "lag": 0,
+      "forwardFill": 0,
+      "threshold": 100,
+      "maxAbsDiff": "0.0000",
+      "mismatchCount": 0,
+      "expectedReleaseWindow": "2026-01..2026-02",
+      "releaseWindowStatus": "PASS",
+      "releaseWindowGapMonths": 0
+    },
+    {
+      "column": "Existing Home Sales",
+      "seriesId": "FRED:EXHOSLUSM495S",
+      "status": "FAIL",
+      "csvLatest": "2026-02",
+      "sourceLatest": "2026-02",
+      "lag": 0,
+      "forwardFill": 0,
+      "threshold": 300,
+      "maxAbsDiff": "0.0000",
+      "mismatchCount": 0,
+      "expectedReleaseWindow": "2025-12..2026-02",
+      "releaseWindowStatus": "PASS",
+      "releaseWindowGapMonths": 0
+    },
+    {
+      "column": "Industrial Production",
+      "seriesId": "FRED:INDPRO",
+      "status": "PASS",
+      "csvLatest": "2026-02",
+      "sourceLatest": "2026-02",
+      "lag": 0,
+      "forwardFill": 0,
+      "threshold": 1.5,
+      "maxAbsDiff": "0.0000",
+      "mismatchCount": 0,
+      "expectedReleaseWindow": "2026-01..2026-02",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     }
