@@ -31,6 +31,10 @@ const SERIES_CONFIG = [
   { column: 'PCE Price Index', seriesId: 'PCEPI', cadence: 'monthly', scale: 1, threshold: 1.0, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 50, maxValue: 500, maxMoMPct: 5, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
   { column: 'Avg Hourly Earnings', seriesId: 'CES0500000003', cadence: 'monthly', scale: 1, threshold: 0.3, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 5, maxValue: 60, maxMoMPct: 8, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
   { column: 'Initial Claims', seriesId: 'ICSA', cadence: 'weekly', scale: 1, threshold: 30, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 100, maxValue: 10000, maxMoMPct: 80, releaseLagMinMonths: 0, releaseLagMaxMonths: 1 },
+  { column: 'Housing Starts', seriesId: 'HOUST', cadence: 'monthly', scale: 1, threshold: 100, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 400, maxValue: 3000, maxMoMPct: 30, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
+  { column: 'Building Permits', seriesId: 'PERMIT', cadence: 'monthly', scale: 1, threshold: 100, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 400, maxValue: 3000, maxMoMPct: 30, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
+  { column: 'Existing Home Sales', seriesId: 'EXHOSLUSM495S', cadence: 'monthly', scale: 1, threshold: 300, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 1000, maxValue: 10000, maxMoMPct: 30, releaseLagMinMonths: 1, releaseLagMaxMonths: 3 },
+  { column: 'Industrial Production', seriesId: 'INDPRO', cadence: 'monthly', scale: 1, threshold: 1.5, maxLagMonths: 2, maxForwardFillMonths: 0, minValue: 30, maxValue: 200, maxMoMPct: 15, releaseLagMinMonths: 1, releaseLagMaxMonths: 2 },
 ];
 
 function monthKeyFromDate(dateStr) {

@@ -20,6 +20,8 @@ import {
   Wallet,
   ArrowDownUp,
   FileWarning,
+  Hammer,
+  Factory,
 } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import appLogo from './assets/golden_data_icon_small.png';
@@ -225,6 +227,10 @@ const METRIC_SOURCES: Record<string, DataSourceInfo> = {
   'PCE Price Index': { provider: 'FRED', seriesId: 'PCEPI', url: 'https://fred.stlouisfed.org/series/PCEPI', cadence: 'monthly' },
   'Avg Hourly Earnings': { provider: 'FRED', seriesId: 'CES0500000003', url: 'https://fred.stlouisfed.org/series/CES0500000003', cadence: 'monthly' },
   'Initial Claims': { provider: 'FRED', seriesId: 'ICSA', url: 'https://fred.stlouisfed.org/series/ICSA', cadence: 'weekly' },
+  'Housing Starts': { provider: 'FRED', seriesId: 'HOUST', url: 'https://fred.stlouisfed.org/series/HOUST', cadence: 'monthly' },
+  'Building Permits': { provider: 'FRED', seriesId: 'PERMIT', url: 'https://fred.stlouisfed.org/series/PERMIT', cadence: 'monthly' },
+  'Existing Home Sales': { provider: 'FRED', seriesId: 'EXHOSLUSM495S', url: 'https://fred.stlouisfed.org/series/EXHOSLUSM495S', cadence: 'monthly' },
+  'Industrial Production': { provider: 'FRED', seriesId: 'INDPRO', url: 'https://fred.stlouisfed.org/series/INDPRO', cadence: 'monthly' },
 };
 
 const METRICS: MetricConfig[] = [
@@ -343,6 +349,41 @@ const METRICS: MetricConfig[] = [
     format: (v) => `${v.toLocaleString(undefined, { maximumFractionDigits: 1 })}`,
     category: 'Housing'
   },
+  // --- HOUSING (Activity) ---
+  {
+    id: 'Housing Starts',
+    label: 'Housing Starts',
+    icon: Hammer,
+    color: '#FF7A33',
+    desc: 'New residential construction starts (thousands).',
+    isMacro: true,
+    isPercentage: false,
+    format: (v) => `${v.toFixed(0)}K`,
+    category: 'Housing'
+  },
+  {
+    id: 'Building Permits',
+    label: 'Building Permits',
+    icon: Hammer,
+    color: '#4C6F86',
+    desc: 'New privately-owned housing units authorized (thousands).',
+    isMacro: true,
+    isPercentage: false,
+    format: (v) => `${v.toFixed(0)}K`,
+    category: 'Housing'
+  },
+  {
+    id: 'Existing Home Sales',
+    label: 'Existing Home Sales',
+    icon: Home,
+    color: '#2CB6C0',
+    desc: 'Existing single-family home sales (thousands).',
+    isMacro: true,
+    isPercentage: false,
+    format: (v) => `${v.toFixed(0)}K`,
+    category: 'Housing'
+  },
+
   // --- MACRO & MARKETS ---
   { 
     id: 'S&P 500', 
@@ -397,6 +438,18 @@ const METRICS: MetricConfig[] = [
     isMacro: true,
     isPercentage: false,
     format: (v) => `$${(v/1000).toFixed(1)}T`,
+    category: 'Macro & Markets'
+  },
+
+  {
+    id: 'Industrial Production',
+    label: 'Industrial Production',
+    icon: Factory,
+    color: '#0E7C86',
+    desc: 'Industrial Production Index — factory, mine, and utility output.',
+    isMacro: true,
+    isPercentage: false,
+    format: (v) => v.toFixed(1),
     category: 'Macro & Markets'
   },
 

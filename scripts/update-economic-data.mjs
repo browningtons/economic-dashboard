@@ -31,6 +31,10 @@ const SERIES_CONFIG = [
   { column: 'PCE Price Index', seriesId: 'PCEPI', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
   { column: 'Avg Hourly Earnings', seriesId: 'CES0500000003', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
   { column: 'Initial Claims', seriesId: 'ICSA', cadence: 'weekly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: 'Housing Starts', seriesId: 'HOUST', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: 'Building Permits', seriesId: 'PERMIT', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: 'Existing Home Sales', seriesId: 'EXHOSLUSM495S', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
+  { column: 'Industrial Production', seriesId: 'INDPRO', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
 ];
 
 function getArg(name, fallback = undefined) {
