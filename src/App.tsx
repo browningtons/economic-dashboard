@@ -28,6 +28,8 @@ import appLogo from './assets/golden_data_icon_small.png';
 import DataTableView from './components/DataTableView';
 import DashboardView from './components/DashboardView';
 import BuffettView from './components/BuffettView';
+import { DASHBOARD_PRESETS } from './presets';
+import type { DashboardPreset } from './presets';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useToast } from './components/Toast';
 import { BUILD_NOTES, BUILD_NOTES_TITLE, BUILD_VERSION, BUILD_VERSION_LABEL, BUILD_VERSION_SUMMARY } from './buildNotes';
@@ -834,6 +836,7 @@ export default function App() {
   // Date Range State (Indices) - Initialized to a safe empty array state
   const [dateRange, setDateRange] = useState<[number, number]>([0, 0]);
   const [datePreset, setDatePreset] = useState<'1Y' | '3Y' | '5Y' | '10Y' | 'MAX'>('MAX');
+  const [activePreset, setActivePreset] = useState<string | null>('great-disconnect');
 
   useEffect(() => {
     let cancelled = false;
@@ -1225,12 +1228,14 @@ export default function App() {
   }, [formatExtremaValue, metricExtrema]);
 
   const toggleMetric = (id: string) => {
+    setActivePreset(null);
     if (selectedMetrics.includes(id)) {
       if (selectedMetrics.length > 1) setSelectedMetrics(prev => prev.filter(m => m !== id));
     } else {
       if (selectedMetrics.length < 5) setSelectedMetrics(prev => [...prev, id]);
     }
   };
+
   
   // Calculate R-Squared based on FILTERED Data
   const rSquared = useMemo(() => {
@@ -1381,6 +1386,7 @@ export default function App() {
 
   const handleDateRangeChange = useCallback((nextRange: [number, number]) => {
     setDateRange(nextRange);
+    setActivePreset(null);
     // Slider means custom focus period; reflect that by pinning to MAX preset state.
     if (datePreset !== 'MAX') setDatePreset('MAX');
   }, [datePreset]);
@@ -1402,6 +1408,16 @@ export default function App() {
     setDateRange([startIndex === -1 ? 0 : startIndex, endIndex]);
     setDatePreset(preset);
   }, [data]);
+
+  const applyPreset = useCallback((preset: DashboardPreset) => {
+    setSelectedMetrics(preset.metrics);
+    setActivePreset(preset.id);
+    if (preset.viewMode) setViewMode(preset.viewMode);
+    else setViewMode('raw');
+    requestAnimationFrame(() => {
+      applyDatePreset(preset.datePreset);
+    });
+  }, [applyDatePreset]);
 
   useEffect(() => {
     if (!data.length) return;
@@ -1612,6 +1628,9 @@ export default function App() {
                 dashboardTooltip={<CustomTooltip isRelative={viewMode === 'relative'} />}
                 activeMetricConfidence={activeMetricConfidence}
                 pipelineStatus={pipelineStatus}
+                presets={DASHBOARD_PRESETS}
+                activePreset={activePreset}
+                onApplyPreset={applyPreset}
               />
             </ErrorBoundary>
           )}

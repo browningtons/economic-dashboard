@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import type { DashboardPreset } from '../presets';
 import {
   CartesianGrid,
   Legend,
@@ -64,6 +65,9 @@ interface DashboardViewProps {
   dashboardTooltip: React.ReactElement;
   activeMetricConfidence: DashboardMetricConfidence[];
   pipelineStatus?: PipelineStatus | null;
+  presets: DashboardPreset[];
+  activePreset: string | null;
+  onApplyPreset: (preset: DashboardPreset) => void;
 }
 
 function getConfidenceTone(level: MetricConfidenceLevel) {
@@ -173,6 +177,9 @@ const DashboardView = React.memo(function DashboardView({
   dashboardTooltip,
   activeMetricConfidence,
   pipelineStatus,
+  presets,
+  activePreset,
+  onApplyPreset,
 }: DashboardViewProps) {
   // Local UI state — kept here to avoid re-rendering sibling tabs
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -246,6 +253,26 @@ const DashboardView = React.memo(function DashboardView({
                 ? 'Comparing percentage growth relative to start date (Base = 100)'
                 : 'Historical absolute values over time'}
             </p>
+            {/* Story presets */}
+            <div className="mt-3 -mx-1 flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+              {presets.map((preset) => {
+                const isActive = activePreset === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    onClick={() => onApplyPreset(preset)}
+                    title={preset.tagline}
+                    className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors whitespace-nowrap ${
+                      isActive
+                        ? 'border-[var(--color-brand-accent)] bg-[color-mix(in_oklab,var(--color-brand-accent)_12%,var(--color-bg-secondary))] text-[var(--color-brand-accent)]'
+                        : 'border-theme bg-muted-surface text-muted hover:text-main hover:border-[color-mix(in_oklab,var(--color-brand-accent)_40%,var(--color-border))]'
+                    }`}
+                  >
+                    {preset.name}
+                  </button>
+                );
+              })}
+            </div>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
               <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-muted">{selectedMetrics.length} metrics</span>
               <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-muted">Range: {rangeLabel}</span>
