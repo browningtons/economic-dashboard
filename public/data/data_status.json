@@ -1,18 +1,96 @@
 {
-  "generatedAt": "2026-03-31T14:43:01.912Z",
-  "evaluatedMonth": "2026-03",
-  "nextScheduledRefreshUtc": "2026-04-01T13:15:00.000Z",
-  "status": "PASS",
-  "failureCount": 0,
+  "generatedAt": "2026-04-01T14:44:35.450Z",
+  "evaluatedMonth": "2026-04",
+  "nextScheduledRefreshUtc": "2026-04-02T13:15:00.000Z",
+  "status": "FAIL",
+  "failureCount": 5,
   "warningCount": 0,
-  "failedSeriesCount": 0,
+  "failedSeriesCount": 5,
   "totalSeriesCount": 29,
   "latestDataMonth": "2026-03",
   "latestBuffettRatio": null,
-  "failures": [],
+  "failures": [
+    "Fed Rate: latest CSV month 2026-02 is outside expected release window (2026-03 to 2026-04)",
+    "Personal Savings Rate: latest CSV month 2026-01 is outside expected release window (2026-02 to 2026-03)",
+    "PCE Price Index: latest CSV month 2026-01 is outside expected release window (2026-02 to 2026-03)",
+    "Housing Starts: latest CSV month 2026-01 is outside expected release window (2026-02 to 2026-03)",
+    "Building Permits: latest CSV month 2026-01 is outside expected release window (2026-02 to 2026-03)"
+  ],
   "warnings": [],
-  "topAlerts": [],
-  "releaseCalendarBreaches": [],
+  "topAlerts": [
+    {
+      "type": "Release Calendar",
+      "column": "Fed Rate",
+      "month": "2026-02",
+      "details": "Expected 2026-03..2026-04, got 2026-02"
+    },
+    {
+      "type": "Release Calendar",
+      "column": "Personal Savings Rate",
+      "month": "2026-01",
+      "details": "Expected 2026-02..2026-03, got 2026-01"
+    },
+    {
+      "type": "Release Calendar",
+      "column": "PCE Price Index",
+      "month": "2026-01",
+      "details": "Expected 2026-02..2026-03, got 2026-01"
+    },
+    {
+      "type": "Release Calendar",
+      "column": "Housing Starts",
+      "month": "2026-01",
+      "details": "Expected 2026-02..2026-03, got 2026-01"
+    },
+    {
+      "type": "Release Calendar",
+      "column": "Building Permits",
+      "month": "2026-01",
+      "details": "Expected 2026-02..2026-03, got 2026-01"
+    }
+  ],
+  "releaseCalendarBreaches": [
+    {
+      "column": "Fed Rate",
+      "latestCsvMonth": "2026-02",
+      "expectedEarliest": "2026-03",
+      "expectedLatest": "2026-04",
+      "lagMonthsBeyondWindow": 1,
+      "severity": "FAIL"
+    },
+    {
+      "column": "Personal Savings Rate",
+      "latestCsvMonth": "2026-01",
+      "expectedEarliest": "2026-02",
+      "expectedLatest": "2026-03",
+      "lagMonthsBeyondWindow": 1,
+      "severity": "FAIL"
+    },
+    {
+      "column": "PCE Price Index",
+      "latestCsvMonth": "2026-01",
+      "expectedEarliest": "2026-02",
+      "expectedLatest": "2026-03",
+      "lagMonthsBeyondWindow": 1,
+      "severity": "FAIL"
+    },
+    {
+      "column": "Housing Starts",
+      "latestCsvMonth": "2026-01",
+      "expectedEarliest": "2026-02",
+      "expectedLatest": "2026-03",
+      "lagMonthsBeyondWindow": 1,
+      "severity": "FAIL"
+    },
+    {
+      "column": "Building Permits",
+      "latestCsvMonth": "2026-01",
+      "expectedEarliest": "2026-02",
+      "expectedLatest": "2026-03",
+      "lagMonthsBeyondWindow": 1,
+      "severity": "FAIL"
+    }
+  ],
   "series": [
     {
       "column": "Unemployment Rate",
@@ -25,7 +103,7 @@
       "threshold": 0.15,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-02",
+      "expectedReleaseWindow": "2026-02..2026-03",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -40,7 +118,7 @@
       "threshold": 1.5,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-02",
+      "expectedReleaseWindow": "2026-02..2026-03",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -55,7 +133,7 @@
       "threshold": 1.5,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-02",
+      "expectedReleaseWindow": "2026-02..2026-03",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -70,7 +148,7 @@
       "threshold": 350,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2025-12..2026-01",
+      "expectedReleaseWindow": "2026-01..2026-02",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -85,7 +163,7 @@
       "threshold": 300,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-02",
+      "expectedReleaseWindow": "2026-02..2026-03",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -100,14 +178,14 @@
       "threshold": 400,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-02",
+      "expectedReleaseWindow": "2026-02..2026-03",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
     {
       "column": "Fed Rate",
       "seriesId": "FRED:FEDFUNDS",
-      "status": "PASS",
+      "status": "FAIL",
       "csvLatest": "2026-02",
       "sourceLatest": "2026-02",
       "lag": 0,
@@ -115,9 +193,9 @@
       "threshold": 0.2,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-02..2026-03",
-      "releaseWindowStatus": "PASS",
-      "releaseWindowGapMonths": 0
+      "expectedReleaseWindow": "2026-03..2026-04",
+      "releaseWindowStatus": "FAIL",
+      "releaseWindowGapMonths": 1
     },
     {
       "column": "15 year mortgage",
@@ -130,7 +208,7 @@
       "threshold": 0.15,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-02..2026-03",
+      "expectedReleaseWindow": "2026-03..2026-04",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -145,7 +223,7 @@
       "threshold": 0.15,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-02..2026-03",
+      "expectedReleaseWindow": "2026-03..2026-04",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -160,7 +238,7 @@
       "threshold": 125,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-02..2026-03",
+      "expectedReleaseWindow": "2026-03..2026-04",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -175,7 +253,7 @@
       "threshold": 0.2,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-02",
+      "expectedReleaseWindow": "2026-02..2026-03",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -190,7 +268,7 @@
       "threshold": 0.2,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-02",
+      "expectedReleaseWindow": "2026-02..2026-03",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -205,7 +283,7 @@
       "threshold": 1,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2025-11..2026-01",
+      "expectedReleaseWindow": "2025-12..2026-02",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -220,7 +298,7 @@
       "threshold": 1,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-02",
+      "expectedReleaseWindow": "2026-02..2026-03",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -235,7 +313,7 @@
       "threshold": 10,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2025-11..2026-01",
+      "expectedReleaseWindow": "2025-12..2026-02",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -250,7 +328,7 @@
       "threshold": 2500,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2025-12..2026-02",
+      "expectedReleaseWindow": "2026-01..2026-03",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -265,7 +343,7 @@
       "threshold": 400,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2025-10..2025-12",
+      "expectedReleaseWindow": "2025-11..2026-01",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -280,7 +358,7 @@
       "threshold": 0.15,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-02..2026-03",
+      "expectedReleaseWindow": "2026-03..2026-04",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -295,7 +373,7 @@
       "threshold": 0.15,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-02..2026-03",
+      "expectedReleaseWindow": "2026-03..2026-04",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -310,7 +388,7 @@
       "threshold": 5,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-02",
+      "expectedReleaseWindow": "2026-02..2026-03",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -318,21 +396,21 @@
       "column": "Retail Sales",
       "seriesId": "FRED:RSAFS",
       "status": "PASS",
-      "csvLatest": "2026-01",
-      "sourceLatest": "2026-01",
+      "csvLatest": "2026-02",
+      "sourceLatest": "2026-02",
       "lag": 0,
       "forwardFill": 0,
       "threshold": 15000,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-02",
+      "expectedReleaseWindow": "2026-02..2026-03",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
     {
       "column": "Personal Savings Rate",
       "seriesId": "FRED:PSAVERT",
-      "status": "PASS",
+      "status": "FAIL",
       "csvLatest": "2026-01",
       "sourceLatest": "2026-01",
       "lag": 0,
@@ -340,14 +418,14 @@
       "threshold": 2,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-02",
-      "releaseWindowStatus": "PASS",
-      "releaseWindowGapMonths": 0
+      "expectedReleaseWindow": "2026-02..2026-03",
+      "releaseWindowStatus": "FAIL",
+      "releaseWindowGapMonths": 1
     },
     {
       "column": "PCE Price Index",
       "seriesId": "FRED:PCEPI",
-      "status": "PASS",
+      "status": "FAIL",
       "csvLatest": "2026-01",
       "sourceLatest": "2026-01",
       "lag": 0,
@@ -355,9 +433,9 @@
       "threshold": 1,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-02",
-      "releaseWindowStatus": "PASS",
-      "releaseWindowGapMonths": 0
+      "expectedReleaseWindow": "2026-02..2026-03",
+      "releaseWindowStatus": "FAIL",
+      "releaseWindowGapMonths": 1
     },
     {
       "column": "Avg Hourly Earnings",
@@ -370,7 +448,7 @@
       "threshold": 0.3,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-02",
+      "expectedReleaseWindow": "2026-02..2026-03",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -385,14 +463,14 @@
       "threshold": 30000,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-02..2026-03",
+      "expectedReleaseWindow": "2026-03..2026-04",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
     {
       "column": "Housing Starts",
       "seriesId": "FRED:HOUST",
-      "status": "PASS",
+      "status": "FAIL",
       "csvLatest": "2026-01",
       "sourceLatest": "2026-01",
       "lag": 0,
@@ -400,14 +478,14 @@
       "threshold": 100,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-02",
-      "releaseWindowStatus": "PASS",
-      "releaseWindowGapMonths": 0
+      "expectedReleaseWindow": "2026-02..2026-03",
+      "releaseWindowStatus": "FAIL",
+      "releaseWindowGapMonths": 1
     },
     {
       "column": "Building Permits",
       "seriesId": "FRED:PERMIT",
-      "status": "PASS",
+      "status": "FAIL",
       "csvLatest": "2026-01",
       "sourceLatest": "2026-01",
       "lag": 0,
@@ -415,9 +493,9 @@
       "threshold": 100,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-02",
-      "releaseWindowStatus": "PASS",
-      "releaseWindowGapMonths": 0
+      "expectedReleaseWindow": "2026-02..2026-03",
+      "releaseWindowStatus": "FAIL",
+      "releaseWindowGapMonths": 1
     },
     {
       "column": "Existing Home Sales",
@@ -430,7 +508,7 @@
       "threshold": 200000,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2025-12..2026-02",
+      "expectedReleaseWindow": "2026-01..2026-03",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -445,7 +523,7 @@
       "threshold": 1.5,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-02",
+      "expectedReleaseWindow": "2026-02..2026-03",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     }
