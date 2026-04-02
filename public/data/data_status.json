@@ -1,16 +1,15 @@
 {
-  "generatedAt": "2026-04-01T14:44:35.450Z",
+  "generatedAt": "2026-04-02T14:39:20.372Z",
   "evaluatedMonth": "2026-04",
-  "nextScheduledRefreshUtc": "2026-04-02T13:15:00.000Z",
+  "nextScheduledRefreshUtc": "2026-04-03T13:15:00.000Z",
   "status": "FAIL",
-  "failureCount": 5,
+  "failureCount": 4,
   "warningCount": 0,
-  "failedSeriesCount": 5,
+  "failedSeriesCount": 4,
   "totalSeriesCount": 29,
-  "latestDataMonth": "2026-03",
+  "latestDataMonth": "2026-04",
   "latestBuffettRatio": null,
   "failures": [
-    "Fed Rate: latest CSV month 2026-02 is outside expected release window (2026-03 to 2026-04)",
     "Personal Savings Rate: latest CSV month 2026-01 is outside expected release window (2026-02 to 2026-03)",
     "PCE Price Index: latest CSV month 2026-01 is outside expected release window (2026-02 to 2026-03)",
     "Housing Starts: latest CSV month 2026-01 is outside expected release window (2026-02 to 2026-03)",
@@ -18,12 +17,6 @@
   ],
   "warnings": [],
   "topAlerts": [
-    {
-      "type": "Release Calendar",
-      "column": "Fed Rate",
-      "month": "2026-02",
-      "details": "Expected 2026-03..2026-04, got 2026-02"
-    },
     {
       "type": "Release Calendar",
       "column": "Personal Savings Rate",
@@ -50,14 +43,6 @@
     }
   ],
   "releaseCalendarBreaches": [
-    {
-      "column": "Fed Rate",
-      "latestCsvMonth": "2026-02",
-      "expectedEarliest": "2026-03",
-      "expectedLatest": "2026-04",
-      "lagMonthsBeyondWindow": 1,
-      "severity": "FAIL"
-    },
     {
       "column": "Personal Savings Rate",
       "latestCsvMonth": "2026-01",
@@ -141,10 +126,10 @@
       "column": "Job Openings",
       "seriesId": "FRED:JTSJOL",
       "status": "PASS",
-      "csvLatest": "2026-03",
+      "csvLatest": "2026-04",
       "sourceLatest": "2026-02",
       "lag": 0,
-      "forwardFill": 1,
+      "forwardFill": 2,
       "threshold": 350,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
@@ -185,17 +170,17 @@
     {
       "column": "Fed Rate",
       "seriesId": "FRED:FEDFUNDS",
-      "status": "FAIL",
-      "csvLatest": "2026-02",
-      "sourceLatest": "2026-02",
+      "status": "PASS",
+      "csvLatest": "2026-03",
+      "sourceLatest": "2026-03",
       "lag": 0,
       "forwardFill": 0,
       "threshold": 0.2,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
       "expectedReleaseWindow": "2026-03..2026-04",
-      "releaseWindowStatus": "FAIL",
-      "releaseWindowGapMonths": 1
+      "releaseWindowStatus": "PASS",
+      "releaseWindowGapMonths": 0
     },
     {
       "column": "15 year mortgage",
@@ -231,8 +216,8 @@
       "column": "S&P 500",
       "seriesId": "FRED:SP500",
       "status": "PASS",
-      "csvLatest": "2026-03",
-      "sourceLatest": "2026-03",
+      "csvLatest": "2026-04",
+      "sourceLatest": "2026-04",
       "lag": 0,
       "forwardFill": 0,
       "threshold": 125,
