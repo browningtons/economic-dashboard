@@ -241,7 +241,7 @@ async function loadMonthlyMarketCapMap() {
   return monthly;
 }
 
-async function fetchSeriesObservations(seriesId, observationStart, apiKey) {
+async function fetchSeriesObservations(seriesId, observationStart, apiKey, retries = 3) {
   const query = new URLSearchParams({
     series_id: seriesId,
     file_type: 'json',
@@ -251,17 +251,26 @@ async function fetchSeriesObservations(seriesId, observationStart, apiKey) {
   if (apiKey) query.set('api_key', apiKey);
 
   const url = `https://api.stlouisfed.org/fred/series/observations?${query.toString()}`;
-  const response = await fetch(url);
-  if (!response.ok) {
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    const response = await fetch(url);
+    if (response.ok) {
+      const payload = await response.json();
+      if (!Array.isArray(payload?.observations)) {
+        throw new Error(`Unexpected FRED response for ${seriesId}`);
+      }
+      return payload.observations;
+    }
+
+    if (response.status >= 500 && attempt < retries) {
+      const delay = attempt * 2000;
+      console.warn(`FRED ${seriesId}: ${response.status} (attempt ${attempt}/${retries}), retrying in ${delay}ms...`);
+      await new Promise(r => setTimeout(r, delay));
+      continue;
+    }
+
     throw new Error(`FRED request failed for ${seriesId}: ${response.status} ${response.statusText}`);
   }
-
-  const payload = await response.json();
-  if (!Array.isArray(payload?.observations)) {
-    throw new Error(`Unexpected FRED response for ${seriesId}`);
-  }
-
-  return payload.observations;
 }
 
 function aggregateToMonthly(observations, aggregation) {
@@ -315,6 +324,34 @@ function formatObservedDate(monthKey) {
   return `${month}/1/${String(year).slice(-2)}`;
 }
 
+async function loadExistingCsv(filePath) {
+  const existing = new Map();
+  let fileContent;
+  try {
+    fileContent = await readFile(filePath, 'utf8');
+  } catch {
+    return existing;
+  }
+  const lines = fileContent.split('\n').filter(Boolean);
+  if (lines.length < 2) return existing;
+  const headers = parseCsvRow(lines[0]);
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseCsvRow(lines[i]);
+    const dateStr = values[0]?.trim();
+    const monthKey = parseFlexibleMonthKey(dateStr);
+    if (!monthKey) continue;
+    const row = {};
+    for (let j = 1; j < headers.length; j++) {
+      const val = values[j]?.trim();
+      if (val && val !== '' && !isNaN(Number(val))) {
+        row[headers[j]] = val;
+      }
+    }
+    existing.set(monthKey, row);
+  }
+  return existing;
+}
+
 async function main() {
   const outputPathArg = getArg('--output', 'public/data/economic_indicators.csv');
   const outputPath = path.resolve(process.cwd(), outputPathArg);
@@ -336,6 +373,7 @@ async function main() {
   }
 
   const seriesRows = [];
+  const failedSeries = [];
   for (const config of SERIES_CONFIG) {
     if (config.column === STOCK_MARKET_COLUMN && monthlyMarketCapMap?.size) {
       const bounds = boundsFromMap(monthlyMarketCapMap);
@@ -348,27 +386,39 @@ async function main() {
       continue;
     }
 
-    const observations = await fetchSeriesObservations(config.seriesId, observationStart, fredApiKey);
-    let monthlyValues = aggregateToMonthly(observations, config.aggregation);
+    try {
+      const observations = await fetchSeriesObservations(config.seriesId, observationStart, fredApiKey);
+      let monthlyValues = aggregateToMonthly(observations, config.aggregation);
 
-    if (config.cadence === 'quarterly') {
-      monthlyValues = expandQuarterlyMonths(monthlyValues);
+      if (config.cadence === 'quarterly') {
+        monthlyValues = expandQuarterlyMonths(monthlyValues);
+      }
+
+      const bounds = boundsFromMap(monthlyValues);
+      if (!bounds) {
+        throw new Error(`No valid observations for ${config.seriesId}`);
+      }
+
+      seriesRows.push({ config, monthlyValues, bounds });
+      console.log(`Fetched ${config.seriesId} -> ${bounds.first} to ${bounds.last}`);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.warn(`WARNING: Skipping ${config.seriesId} (${config.column}): ${msg}. Existing CSV values will be preserved.`);
+      failedSeries.push(config.column);
+      // Push an empty series so the column still appears in the CSV
+      seriesRows.push({ config, monthlyValues: new Map(), bounds: null });
     }
-
-    const bounds = boundsFromMap(monthlyValues);
-    if (!bounds) {
-      throw new Error(`No valid observations for ${config.seriesId}`);
-    }
-
-    seriesRows.push({ config, monthlyValues, bounds });
-    console.log(`Fetched ${config.seriesId} -> ${bounds.first} to ${bounds.last}`);
   }
 
-  const commonStart = seriesRows
+  const successfulSeries = seriesRows.filter(s => s.bounds !== null);
+  if (successfulSeries.length === 0) {
+    throw new Error('All FRED series failed. Cannot produce CSV.');
+  }
+  const commonStart = successfulSeries
     .map((s) => s.bounds.first)
     .sort(compareMonthKeys)
     .at(-1);
-  const latestAvailableMonth = seriesRows
+  const latestAvailableMonth = successfulSeries
     .map((s) => s.bounds.last)
     .sort(compareMonthKeys)
     .at(-1);
@@ -385,6 +435,12 @@ async function main() {
   }
 
   const months = getMonthRange(startMonth, endMonth);
+
+  // Load existing CSV so we preserve backfilled/manual data that FRED doesn't cover
+  const existingCsv = await loadExistingCsv(outputPath);
+  if (existingCsv.size > 0) {
+    console.log(`Loaded ${existingCsv.size} existing rows to preserve non-FRED data.`);
+  }
 
   const filledSeries = seriesRows.map((series) => {
     const filled = new Map();
@@ -423,7 +479,10 @@ async function main() {
         row[series.config.column] = sanitizeNumeric(value * (series.config.scale ?? 1));
         continue;
       }
-      row[series.config.column] = '';
+      // Preserve existing CSV value (e.g. backfilled data) when FRED has no data
+      const existingRow = existingCsv.get(monthKey);
+      const existingVal = existingRow?.[series.config.column];
+      row[series.config.column] = existingVal ?? '';
     }
 
     const csvLine = headers.map((header) => csvEscape(row[header] ?? '')).join(',');
@@ -440,6 +499,10 @@ async function main() {
   await writeFile(outputPath, csvContent, 'utf8');
   console.log(`Wrote ${lines.length - 1} rows to ${outputPath}`);
   console.log(`Coverage: ${startMonth} -> ${endMonth}`);
+
+  if (failedSeries.length > 0) {
+    console.warn(`\nWARNING: ${failedSeries.length} series failed to fetch and used existing CSV values: ${failedSeries.join(', ')}`);
+  }
 }
 
 main().catch((error) => {
