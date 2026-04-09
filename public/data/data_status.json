@@ -1,34 +1,20 @@
 {
-  "generatedAt": "2026-04-08T14:49:34.335Z",
+  "generatedAt": "2026-04-09T14:59:29.636Z",
   "evaluatedMonth": "2026-04",
-  "nextScheduledRefreshUtc": "2026-04-09T13:15:00.000Z",
+  "nextScheduledRefreshUtc": "2026-04-10T13:15:00.000Z",
   "status": "FAIL",
-  "failureCount": 4,
+  "failureCount": 2,
   "warningCount": 0,
-  "failedSeriesCount": 4,
+  "failedSeriesCount": 2,
   "totalSeriesCount": 29,
   "latestDataMonth": "2026-04",
   "latestBuffettRatio": null,
   "failures": [
-    "Personal Savings Rate: latest CSV month 2026-01 is outside expected release window (2026-02 to 2026-03)",
-    "PCE Price Index: latest CSV month 2026-01 is outside expected release window (2026-02 to 2026-03)",
     "Housing Starts: latest CSV month 2026-01 is outside expected release window (2026-02 to 2026-03)",
     "Building Permits: latest CSV month 2026-01 is outside expected release window (2026-02 to 2026-03)"
   ],
   "warnings": [],
   "topAlerts": [
-    {
-      "type": "Release Calendar",
-      "column": "Personal Savings Rate",
-      "month": "2026-01",
-      "details": "Expected 2026-02..2026-03, got 2026-01"
-    },
-    {
-      "type": "Release Calendar",
-      "column": "PCE Price Index",
-      "month": "2026-01",
-      "details": "Expected 2026-02..2026-03, got 2026-01"
-    },
     {
       "type": "Release Calendar",
       "column": "Housing Starts",
@@ -43,22 +29,6 @@
     }
   ],
   "releaseCalendarBreaches": [
-    {
-      "column": "Personal Savings Rate",
-      "latestCsvMonth": "2026-01",
-      "expectedEarliest": "2026-02",
-      "expectedLatest": "2026-03",
-      "lagMonthsBeyondWindow": 1,
-      "severity": "FAIL"
-    },
-    {
-      "column": "PCE Price Index",
-      "latestCsvMonth": "2026-01",
-      "expectedEarliest": "2026-02",
-      "expectedLatest": "2026-03",
-      "lagMonthsBeyondWindow": 1,
-      "severity": "FAIL"
-    },
     {
       "column": "Housing Starts",
       "latestCsvMonth": "2026-01",
@@ -395,32 +365,32 @@
     {
       "column": "Personal Savings Rate",
       "seriesId": "FRED:PSAVERT",
-      "status": "FAIL",
-      "csvLatest": "2026-01",
-      "sourceLatest": "2026-01",
+      "status": "PASS",
+      "csvLatest": "2026-02",
+      "sourceLatest": "2026-02",
       "lag": 0,
       "forwardFill": 0,
       "threshold": 2,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
       "expectedReleaseWindow": "2026-02..2026-03",
-      "releaseWindowStatus": "FAIL",
-      "releaseWindowGapMonths": 1
+      "releaseWindowStatus": "PASS",
+      "releaseWindowGapMonths": 0
     },
     {
       "column": "PCE Price Index",
       "seriesId": "FRED:PCEPI",
-      "status": "FAIL",
-      "csvLatest": "2026-01",
-      "sourceLatest": "2026-01",
+      "status": "PASS",
+      "csvLatest": "2026-02",
+      "sourceLatest": "2026-02",
       "lag": 0,
       "forwardFill": 0,
       "threshold": 1,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
       "expectedReleaseWindow": "2026-02..2026-03",
-      "releaseWindowStatus": "FAIL",
-      "releaseWindowGapMonths": 1
+      "releaseWindowStatus": "PASS",
+      "releaseWindowGapMonths": 0
     },
     {
       "column": "Avg Hourly Earnings",
@@ -441,8 +411,8 @@
       "column": "Initial Claims",
       "seriesId": "FRED:ICSA",
       "status": "PASS",
-      "csvLatest": "2026-03",
-      "sourceLatest": "2026-03",
+      "csvLatest": "2026-04",
+      "sourceLatest": "2026-04",
       "lag": 0,
       "forwardFill": 0,
       "threshold": 30000,
