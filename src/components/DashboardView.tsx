@@ -512,8 +512,8 @@ const DashboardView = React.memo(function DashboardView({
               <p className="mt-1 text-sm font-semibold text-main">{validationSummary}</p>
               <p className="mt-1 text-xs text-muted">
                 {pipelineStatus?.generatedAt
-                  ? `Last validated ${new Date(pipelineStatus.generatedAt).toLocaleString()}`
-                  : 'Validation timestamp unavailable.'}
+                  ? `Last checked ${new Date(pipelineStatus.generatedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+                  : 'No recent validation data'}
               </p>
             </div>
             <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">

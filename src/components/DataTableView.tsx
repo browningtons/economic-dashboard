@@ -183,11 +183,31 @@ const DataTableView = React.memo(function DataTableView({ data, metrics, metricS
     [metricHealthRows]
   );
 
+  const freshnessScore = useMemo(() => {
+    if (metricHealthRows.length === 0) return 0;
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const freshCount = metricHealthRows.filter((row) => {
+      if (!row.lastValueDate) return false;
+      const rowMonth = `${row.lastValueDate.getFullYear()}-${String(row.lastValueDate.getMonth() + 1).padStart(2, '0')}`;
+      return rowMonth >= currentMonth;
+    }).length;
+    return Math.round((freshCount / metricHealthRows.length) * 100);
+  }, [metricHealthRows, now]);
+
+  const lowestCompleteness = useMemo(() => {
+    if (metricHealthRows.length === 0) return null;
+    return metricHealthRows.reduce((min, row) => parseFloat(row.completenessPct) < parseFloat(min.completenessPct) ? row : min);
+  }, [metricHealthRows]);
+
+  const currentMonthStr = useMemo(() => {
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  }, [now]);
+
   const pipelineHealthText = pipelineStatus?.status === 'FAIL'
-    ? 'Validation issues detected in the last pipeline run.'
+    ? `${pipelineStatus.failedSeriesCount ?? 0} of ${pipelineStatus.totalSeriesCount ?? metrics.length} data sources have issues`
     : pipelineStatus?.status === 'PASS'
-      ? 'Latest validation passed.'
-      : 'Pipeline status unavailable.';
+      ? 'All data sources are up to date'
+      : 'Pipeline status unavailable';
 
   const years = useMemo(() => {
     const uniques = new Set<number>();
@@ -335,22 +355,34 @@ const DataTableView = React.memo(function DataTableView({ data, metrics, metricS
             </p>
             <p className="mt-1 text-xs text-muted">
               {pipelineStatus?.generatedAt
-                ? `Last validation: ${new Date(pipelineStatus.generatedAt).toLocaleString()}`
-                : 'Validation timestamp not available.'}
+                ? `Last checked ${new Date(pipelineStatus.generatedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+                : 'No recent validation data'}
             </p>
           </div>
-          <div className="text-xs text-muted">
-            <p>Failed checks: {pipelineStatus?.failureCount ?? 0}</p>
-            <p>Series failing: {pipelineStatus?.failedSeriesCount ?? 0} / {pipelineStatus?.totalSeriesCount ?? metrics.length}</p>
-          </div>
+          {pipelineStatus?.status === 'FAIL' && (
+            <span className="rounded-full bg-[color:var(--color-brand-primary)]/10 px-3 py-1 text-xs font-medium text-[color:var(--color-brand-primary)]">
+              Needs attention
+            </span>
+          )}
+          {pipelineStatus?.status === 'PASS' && (
+            <span className="rounded-full bg-green-500/10 px-3 py-1 text-xs font-medium text-green-600 dark:text-green-400">
+              Healthy
+            </span>
+          )}
         </div>
         {pipelineStatus?.topAlerts && pipelineStatus.topAlerts.length > 0 && (
           <div className="mt-3 rounded-lg border border-theme bg-muted-surface p-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted">Top Alerts</p>
-            <ul className="mt-2 space-y-1 text-xs text-main">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted">What needs attention</p>
+            <ul className="mt-2 space-y-1.5 text-xs text-main">
               {pipelineStatus.topAlerts.slice(0, 4).map((alert, index) => (
-                <li key={`alert-${alert.type}-${alert.column}-${alert.month}-${index}`}>
-                  <span className="font-medium">{alert.type}</span> · {alert.column} · {alert.month}: {alert.details}
+                <li key={`alert-${alert.type}-${alert.column}-${alert.month}-${index}`} className="flex items-start gap-1.5">
+                  <span className="mt-0.5 shrink-0 text-[color:var(--color-brand-primary)]">&#9679;</span>
+                  <span>
+                    <span className="font-medium">{alert.column}</span>
+                    {alert.type === 'Release Calendar'
+                      ? ` data is delayed — latest available is ${new Date(alert.month + '-01').toLocaleString(undefined, { month: 'long', year: 'numeric' })}, expected by now`
+                      : ` — ${alert.details}`}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -395,10 +427,27 @@ const DataTableView = React.memo(function DataTableView({ data, metrics, metricS
       </Card>
 
       <Card className="p-4">
-        <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-base font-semibold text-main">Metric Freshness and Completeness</h3>
             <p className="text-xs text-muted">Metric names link directly to source series.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 rounded-full border border-theme bg-muted-surface px-3 py-1.5">
+              <span className="text-[11px] font-medium text-muted uppercase tracking-wide">Freshness</span>
+              <span className={`text-sm font-bold ${freshnessScore >= 80 ? 'text-green-600 dark:text-green-400' : freshnessScore >= 50 ? 'text-amber-500' : 'text-[color:var(--color-brand-primary)]'}`}>
+                {freshnessScore}%
+              </span>
+              <div className="h-2 w-16 rounded-full bg-theme/20 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${freshnessScore >= 80 ? 'bg-green-500' : freshnessScore >= 50 ? 'bg-amber-400' : 'bg-[color:var(--color-brand-primary)]'}`}
+                  style={{ width: `${freshnessScore}%` }}
+                />
+              </div>
+            </div>
+            <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
+              {metricHealthRows.length} metrics
+            </span>
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -417,16 +466,30 @@ const DataTableView = React.memo(function DataTableView({ data, metrics, metricS
               </tr>
             </thead>
             <tbody>
-              {metricHealthRows.map((row) => (
-                <tr key={`health-${row.id}`} className="border-b border-theme/40">
+              {metricHealthRows.map((row) => {
+                const isCurrentMonth = row.lastValueDate
+                  ? `${row.lastValueDate.getFullYear()}-${String(row.lastValueDate.getMonth() + 1).padStart(2, '0')}` >= currentMonthStr
+                  : false;
+                const isLowest = lowestCompleteness?.id === row.id && parseFloat(row.completenessPct) < 100;
+                const pct = parseFloat(row.completenessPct);
+
+                return (
+                <tr key={`health-${row.id}`} className={`border-b border-theme/40 ${isLowest ? 'bg-[color:var(--color-brand-primary)]/[0.04]' : ''}`}>
                   <td className="px-3 py-2 font-medium text-main">
-                    {row.source ? (
-                      <a href={row.source.url} target="_blank" rel="noreferrer" className="text-link underline text-link-hover">
-                        {row.label}
-                      </a>
-                    ) : (
-                      row.label
-                    )}
+                    <span className="flex items-center gap-1.5">
+                      {row.source ? (
+                        <a href={row.source.url} target="_blank" rel="noreferrer" className="text-link underline text-link-hover">
+                          {row.label}
+                        </a>
+                      ) : (
+                        row.label
+                      )}
+                      {isCurrentMonth && (
+                        <span className="inline-flex items-center rounded-full bg-green-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-green-600 dark:text-green-400">
+                          Current
+                        </span>
+                      )}
+                    </span>
                   </td>
                   <td className="px-3 py-2 text-muted capitalize">{row.cadence}</td>
                   <td className="px-3 py-2 text-muted">
@@ -443,9 +506,22 @@ const DataTableView = React.memo(function DataTableView({ data, metrics, metricS
                   <td className={`px-3 py-2 ${row.missingRecentCount > 0 ? 'text-[color:var(--color-brand-primary)]' : 'text-muted'}`}>
                     {row.missingRecentCount}
                   </td>
-                  <td className="px-3 py-2 text-main">{row.completenessPct}%</td>
+                  <td className="px-3 py-2">
+                    <span className="flex items-center gap-2">
+                      <div className="h-1.5 w-12 rounded-full bg-theme/20 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${pct >= 99 ? 'bg-green-500' : pct >= 90 ? 'bg-amber-400' : 'bg-[color:var(--color-brand-primary)]'}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <span className={`tabular-nums ${isLowest ? 'font-bold text-[color:var(--color-brand-primary)]' : 'text-main'}`}>
+                        {row.completenessPct}%
+                      </span>
+                    </span>
+                  </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

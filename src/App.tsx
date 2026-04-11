@@ -1363,10 +1363,16 @@ export default function App() {
 
 
   const lastUpdatedText = useMemo(() => {
+    if (pipelineStatus?.generatedAt) {
+      const d = new Date(pipelineStatus.generatedAt);
+      if (!Number.isNaN(d.getTime())) {
+        return d.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+      }
+    }
     if (data.length === 0) return 'N/A';
     const lastPoint = data[data.length - 1];
     return new Date(lastPoint.timestamp).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-  }, [data]);
+  }, [data, pipelineStatus]);
 
   const rangeLabel = useMemo(() => {
     if (!data.length) return 'N/A';
