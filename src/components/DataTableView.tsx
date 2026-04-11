@@ -8,12 +8,15 @@ interface MetricHealthRow {
   label: string;
   source?: DataSourceInfo;
   cadence: Cadence;
+  firstValueDate: Date | null;
   lastValueDate: Date | null;
   expectedNextDate: Date | null;
   countdownText: string;
   isOverdue: boolean;
+  isFresh: boolean;
   missingCount: number;
   missingRecentCount: number;
+  expectedCells: number;
   completenessPct: string;
 }
 
@@ -118,42 +121,69 @@ const DataTableView = React.memo(function DataTableView({ data, metrics, metricS
       const cadence = source?.cadence ?? 'monthly';
       let missingCount = 0;
       let missingRecentCount = 0;
+      let firstTimestamp: number | null = null;
       let lastTimestamp: number | null = null;
+      let firstIndex = -1;
 
       data.forEach((point, index) => {
         const value = Number(point[metric.id]);
         const hasValue = Number.isFinite(value);
 
         if (hasValue) {
+          if (firstTimestamp === null) {
+            firstTimestamp = Number(point.timestamp);
+            firstIndex = index;
+          }
           lastTimestamp = Number(point.timestamp);
           return;
         }
 
-        missingCount += 1;
-        if (index >= recentWindowStart) missingRecentCount += 1;
+        // Only count as missing if after the series started
+        if (firstTimestamp !== null) {
+          missingCount += 1;
+        }
+        if (index >= recentWindowStart && firstTimestamp !== null) missingRecentCount += 1;
       });
 
+      const firstValueDate = firstTimestamp ? new Date(firstTimestamp) : null;
       const lastValueDate = lastTimestamp ? new Date(lastTimestamp) : null;
       const expectedNextDate = lastValueDate ? addCadenceWindow(lastValueDate, cadence) : null;
       const isOverdue = expectedNextDate ? expectedNextDate.getTime() < now.getTime() : false;
+
+      // Expected cells = rows from first observation to end of data
+      const expectedCells = firstIndex >= 0 ? data.length - firstIndex : 0;
+      const actualCells = expectedCells - missingCount;
+
+      // Fresh = not overdue based on its cadence (next expected update is still in the future)
+      const isFresh = !isOverdue && lastValueDate !== null;
 
       return {
         id: metric.id,
         label: metric.label,
         source,
         cadence,
+        firstValueDate,
         lastValueDate,
         expectedNextDate,
         countdownText: expectedNextDate ? formatCountdownStatus(expectedNextDate, now) : 'No observations',
         isOverdue,
+        isFresh,
         missingCount,
         missingRecentCount,
-        completenessPct: data.length ? (((data.length - missingCount) / data.length) * 100).toFixed(1) : '0.0',
+        expectedCells,
+        completenessPct: expectedCells > 0 ? ((actualCells / expectedCells) * 100).toFixed(1) : '0.0',
       };
     });
 
+    // Sort: fresh first (by most recent), then overdue, then alphabetical
     return rows.sort((a, b) => {
-      if (a.isOverdue !== b.isOverdue) return a.isOverdue ? -1 : 1;
+      // Fresh metrics first, sorted by most recent data
+      if (a.isFresh !== b.isFresh) return a.isFresh ? -1 : 1;
+      // Within same freshness group, sort by last value date (newest first)
+      if (a.lastValueDate && b.lastValueDate) {
+        const timeDiff = b.lastValueDate.getTime() - a.lastValueDate.getTime();
+        if (timeDiff !== 0) return timeDiff;
+      }
       return a.label.localeCompare(b.label);
     });
   }, [data, metricSources, now, tableMetrics]);
@@ -178,6 +208,11 @@ const DataTableView = React.memo(function DataTableView({ data, metrics, metricS
     [metricHealthRows]
   );
 
+  const totalExpectedCells = useMemo(
+    () => metricHealthRows.reduce((sum, row) => sum + row.expectedCells, 0),
+    [metricHealthRows]
+  );
+
   const overdueMetricCount = useMemo(
     () => metricHealthRows.filter((row) => row.isOverdue).length,
     [metricHealthRows]
@@ -185,14 +220,9 @@ const DataTableView = React.memo(function DataTableView({ data, metrics, metricS
 
   const freshnessScore = useMemo(() => {
     if (metricHealthRows.length === 0) return 0;
-    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const freshCount = metricHealthRows.filter((row) => {
-      if (!row.lastValueDate) return false;
-      const rowMonth = `${row.lastValueDate.getFullYear()}-${String(row.lastValueDate.getMonth() + 1).padStart(2, '0')}`;
-      return rowMonth >= currentMonth;
-    }).length;
+    const freshCount = metricHealthRows.filter((row) => row.isFresh).length;
     return Math.round((freshCount / metricHealthRows.length) * 100);
-  }, [metricHealthRows, now]);
+  }, [metricHealthRows]);
 
   const lowestCompleteness = useMemo(() => {
     if (metricHealthRows.length === 0) return null;
@@ -340,6 +370,9 @@ const DataTableView = React.memo(function DataTableView({ data, metrics, metricS
         <Card className="p-4">
           <p className="text-xs uppercase tracking-wider text-muted">Data Quality</p>
           <p className="mt-1 text-xl font-semibold text-main">{datasetMissingCells.toLocaleString()} missing cells</p>
+          <p className="mt-1 text-xs text-muted">
+            of {totalExpectedCells.toLocaleString()} expected ({totalExpectedCells > 0 ? ((1 - datasetMissingCells / totalExpectedCells) * 100).toFixed(1) : '100'}% complete)
+          </p>
           <p className={`mt-1 text-xs ${overdueMetricCount > 0 ? 'text-[color:var(--color-brand-primary)]' : 'text-link'}`}>
             {overdueMetricCount} metrics past expected cadence
           </p>
@@ -485,7 +518,7 @@ const DataTableView = React.memo(function DataTableView({ data, metrics, metricS
                         row.label
                       )}
                       {isCurrentMonth && (
-                        <span className="inline-flex items-center rounded-full bg-green-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-green-600">
+                        <span className="inline-flex items-center rounded-full bg-green-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
                           Current
                         </span>
                       )}
