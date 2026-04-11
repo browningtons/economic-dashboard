@@ -295,7 +295,11 @@ const DashboardView = React.memo(function DashboardView({
                   onChange={(e) => setSelectedMetrics((prev) => [e.target.value, prev[1] ?? prev[0] ?? e.target.value])}
                   className="rounded-md border border-theme bg-secondary px-3 py-2 text-sm"
                 >
-                  {metrics.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+                  {Object.entries(metricsByCategory).map(([category, catMetrics]) => (
+                    <optgroup key={category} label={category}>
+                      {catMetrics.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+                    </optgroup>
+                  ))}
                 </select>
                 <span className="text-sm text-muted">vs</span>
                 <select
@@ -303,7 +307,11 @@ const DashboardView = React.memo(function DashboardView({
                   onChange={(e) => setSelectedMetrics((prev) => [prev[0] ?? metrics[0].id, e.target.value])}
                   className="rounded-md border border-theme bg-secondary px-3 py-2 text-sm"
                 >
-                  {metrics.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+                  {Object.entries(metricsByCategory).map(([category, catMetrics]) => (
+                    <optgroup key={category} label={category}>
+                      {catMetrics.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+                    </optgroup>
+                  ))}
                 </select>
                 <div className="ml-auto flex items-center gap-2">
                   <button onClick={() => setViewMode('raw')} className={`rounded-md border px-3 py-2 text-sm ${viewMode === 'raw' ? 'bg-muted-surface border-theme' : 'border-theme'}`}>Raw</button>

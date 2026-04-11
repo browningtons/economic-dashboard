@@ -16,13 +16,6 @@ export const DASHBOARD_PRESETS: DashboardPreset[] = [
     datePreset: 'MAX',
   },
   {
-    id: 'recession-radar',
-    name: 'Recession Radar',
-    tagline: 'Three classic signals that flash before downturns',
-    metrics: ['Yield Spread', 'Unemployment Rate', 'Initial Claims'],
-    datePreset: '10Y',
-  },
-  {
     id: 'rate-cascade',
     name: 'The Rate Cascade',
     tagline: 'How Fed policy flows through the yield curve to your mortgage',
