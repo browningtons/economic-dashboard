@@ -262,10 +262,10 @@ const DashboardView = React.memo(function DashboardView({
                     key={preset.id}
                     onClick={() => onApplyPreset(preset)}
                     title={preset.tagline}
-                    className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors whitespace-nowrap ${
+                    className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors whitespace-nowrap ${
                       isActive
-                        ? 'border-[var(--color-brand-accent)] bg-[color-mix(in_oklab,var(--color-brand-accent)_12%,var(--color-bg-secondary))] text-[var(--color-brand-accent)]'
-                        : 'border-theme bg-muted-surface text-muted hover:text-main hover:border-[color-mix(in_oklab,var(--color-brand-accent)_40%,var(--color-border))]'
+                        ? 'border-[var(--color-brand-accent)] bg-[var(--color-brand-accent)] text-white shadow-sm'
+                        : 'border-theme bg-secondary text-muted hover:text-main hover:border-[var(--color-brand-accent)] hover:bg-muted-surface'
                     }`}
                   >
                     {preset.name}

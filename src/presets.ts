@@ -23,14 +23,6 @@ export const DASHBOARD_PRESETS: DashboardPreset[] = [
     datePreset: '5Y',
   },
   {
-    id: 'inflation-vs-wages',
-    name: 'Inflation vs Wages',
-    tagline: 'Are workers keeping up with rising prices?',
-    metrics: ['CPI', 'Avg Hourly Earnings', 'Fed Rate'],
-    datePreset: '5Y',
-    viewMode: 'relative',
-  },
-  {
     id: 'consumer-health',
     name: 'Consumer Health',
     tagline: 'How consumers feel, spend, and save',
