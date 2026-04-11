@@ -40,15 +40,15 @@ export const DASHBOARD_PRESETS: DashboardPreset[] = [
   {
     id: 'housing-pulse',
     name: 'Housing Pulse',
-    tagline: 'Rates, permits, starts, and prices — the full housing cycle',
-    metrics: ['Housing Starts', 'Building Permits', '30 year mortgage'],
+    tagline: 'How rates shape new construction activity',
+    metrics: ['Housing Starts', '30 year mortgage'],
     datePreset: '10Y',
   },
   {
     id: 'labor-deep-dive',
     name: 'Labor Market',
     tagline: 'Employment across cycles — openings, claims, and participation',
-    metrics: ['Unemployment Rate', 'Job Openings', 'Initial Claims', 'Labor Participation Rate'],
+    metrics: ['Job Openings', 'Avg Weeks Unemployeed'],
     datePreset: 'MAX',
   },
   {

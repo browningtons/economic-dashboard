@@ -259,10 +259,10 @@ const METRICS: MetricConfig[] = [
     category: 'Labor Market'
   },
   { 
-    id: 'Avg Weeks Unemployeed', 
-    label: 'Avg Weeks Unemployed', 
-    icon: Clock, 
-    color: '#0E7C86',
+    id: 'Avg Weeks Unemployeed',
+    label: 'Avg Weeks Unemployed',
+    icon: Clock,
+    color: '#F04A00',
     desc: 'Average duration of unemployment.',
     isMacro: false, // Small count (Weeks)
     isPercentage: false,
