@@ -34,14 +34,14 @@ export const DASHBOARD_PRESETS: DashboardPreset[] = [
     id: 'consumer-health',
     name: 'Consumer Health',
     tagline: 'How consumers feel, spend, and save',
-    metrics: ['Consumer Sentiment', 'Retail Sales', 'Personal Savings Rate'],
+    metrics: ['Consumer Sentiment', 'Retail Sales'],
     datePreset: '5Y',
   },
   {
     id: 'housing-pulse',
     name: 'Housing Pulse',
     tagline: 'Rates, permits, starts, and prices — the full housing cycle',
-    metrics: ['Housing Starts', 'Building Permits', 'Housing Price Index', '30 year mortgage'],
+    metrics: ['Housing Starts', 'Building Permits', '30 year mortgage'],
     datePreset: '10Y',
   },
   {
