@@ -1180,6 +1180,22 @@ export default function App() {
     return metric.format(value);
   }, [viewMode]);
 
+  // Find the latest data point timestamp for each metric
+  const metricLatestPoint = useMemo(() => {
+    const latest: Record<string, { timestamp: number; value: number }> = {};
+    activeMetrics.forEach((metric) => {
+      for (let i = chartData.length - 1; i >= 0; i--) {
+        const value = Number(chartData[i][metric.id]);
+        const ts = Number(chartData[i].timestamp);
+        if (Number.isFinite(value) && Number.isFinite(ts)) {
+          latest[metric.id] = { timestamp: ts, value };
+          break;
+        }
+      }
+    });
+    return latest;
+  }, [activeMetrics, chartData]);
+
   const renderExtremaDot = useCallback((metric: MetricConfig, dotProps: ExtremaDotProps) => {
     const extrema = metricExtrema[metric.id];
     if (!extrema) return null;
@@ -1190,41 +1206,49 @@ export default function App() {
 
     const isMin = timestamp === extrema.minTimestamp && value === extrema.minValue;
     const isMax = timestamp === extrema.maxTimestamp && value === extrema.maxValue;
-    if (!isMin && !isMax) return null;
+    const latestPoint = metricLatestPoint[metric.id];
+    const isLatest = latestPoint && timestamp === latestPoint.timestamp && value === latestPoint.value;
+    // Don't double-label if latest is also min or max
+    const isLatestOnly = isLatest && !isMin && !isMax;
+
+    if (!isMin && !isMax && !isLatestOnly) return null;
 
     const cx = Number(dotProps.cx);
     const cy = Number(dotProps.cy);
     if (!Number.isFinite(cx) || !Number.isFinite(cy)) return null;
 
     let label = '';
-    let labelDy = -12;
-    if (isMin && isMax) {
+    let labelDy = -14;
+    if (isLatestOnly) {
       label = formatExtremaValue(metric, value);
-      labelDy = -12;
+      labelDy = -14;
+    } else if (isMin && isMax) {
+      label = formatExtremaValue(metric, value);
+      labelDy = -14;
     } else if (isMax) {
       label = formatExtremaValue(metric, extrema.maxValue);
-      labelDy = -12;
+      labelDy = -14;
     } else {
       label = formatExtremaValue(metric, extrema.minValue);
-      labelDy = 16;
+      labelDy = 20;
     }
 
     return (
       <g>
-        <circle cx={cx} cy={cy} r={3.5} fill={metric.color} stroke="var(--color-chart-bg)" strokeWidth={1.5} />
+        <circle cx={cx} cy={cy} r={4.5} fill={metric.color} stroke="var(--color-chart-bg)" strokeWidth={2} />
         <text
           x={cx}
           y={cy + labelDy}
           textAnchor="middle"
           className="fill-main"
-          fontSize={10}
-          fontWeight={600}
+          fontSize={12}
+          fontWeight={700}
         >
           {label}
         </text>
       </g>
     );
-  }, [formatExtremaValue, metricExtrema]);
+  }, [formatExtremaValue, metricExtrema, metricLatestPoint]);
 
   const toggleMetric = (id: string) => {
     setActivePreset(null);

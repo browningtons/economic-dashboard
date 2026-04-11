@@ -410,7 +410,7 @@ const DashboardView = React.memo(function DashboardView({
                   type="number"
                   domain={['dataMin', 'dataMax']}
                   stroke="var(--color-chart-axis)"
-                  fontSize={11}
+                  fontSize={12}
                   tickFormatter={(val) => {
                     const d = new Date(val);
                     return `${d.getMonth() + 1}/${d.getFullYear().toString().slice(2)}`;
@@ -424,14 +424,14 @@ const DashboardView = React.memo(function DashboardView({
                 <YAxis
                   yAxisId="left"
                   stroke={leftAxisColor}
-                  fontSize={11}
+                  fontSize={13}
                   orientation="left"
-                  label={{ value: leftAxisTitle, angle: -90, position: 'insideLeft', offset: 2, style: { fill: leftAxisColor, fontSize: 12, fontWeight: 600 } }}
+                  label={{ value: leftAxisTitle, angle: -90, position: 'insideLeft', offset: 2, style: { fill: leftAxisColor, fontSize: 13, fontWeight: 700 } }}
                   tickFormatter={(val) => viewMode === 'relative' ? `${val}%` : Number(val).toLocaleString()}
                   axisLine={false}
                   tickLine={false}
                   domain={['auto', 'auto']}
-                  width={64}
+                  width={68}
                 />
 
                 {useRightAxis && viewMode === 'raw' && (
@@ -439,13 +439,13 @@ const DashboardView = React.memo(function DashboardView({
                     yAxisId="right"
                     orientation="right"
                     stroke={rightAxisColor}
-                    fontSize={11}
-                    label={{ value: rightAxisTitle, angle: 90, position: 'insideRight', offset: 2, style: { fill: rightAxisColor, fontSize: 12, fontWeight: 600 } }}
+                    fontSize={13}
+                    label={{ value: rightAxisTitle, angle: 90, position: 'insideRight', offset: 2, style: { fill: rightAxisColor, fontSize: 13, fontWeight: 700 } }}
                     tickFormatter={(val) => Number(val).toLocaleString()}
                     axisLine={false}
                     tickLine={false}
                     domain={['auto', 'auto']}
-                    width={64}
+                    width={68}
                   />
                 )}
 
