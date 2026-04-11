@@ -23,7 +23,6 @@ import {
   Hammer,
   Factory,
 } from 'lucide-react';
-import ThemeToggle from './ThemeToggle';
 import appLogo from './assets/golden_data_icon_small.png';
 import DataTableView from './components/DataTableView';
 import DashboardView from './components/DashboardView';
@@ -1591,7 +1590,6 @@ export default function App() {
               );
             })}
           </div>
-          <ThemeToggle />
         </div>
       </header>
 
@@ -1657,6 +1655,11 @@ export default function App() {
                 buffettQuote={BUFFETT_QUOTE}
                 buffettLabelPoints={buffettLabelPoints}
                 buffettTooltip={<CustomTooltip isRelative={false} mode="Buffett" />}
+                data={data}
+                dateRange={dateRange}
+                handleDateRangeChange={handleDateRangeChange}
+                datePreset={datePreset}
+                applyDatePreset={applyDatePreset}
               />
             </ErrorBoundary>
           )}

@@ -11,6 +11,7 @@ import {
   YAxis,
 } from 'recharts';
 import Card from './Card';
+import DateRangeSlider from './DateRangeSlider';
 import type { BuffettLabelPoint, BuffettZone, DataPoint } from '../types/dashboard';
 
 interface BuffettQuote {
@@ -28,6 +29,19 @@ interface BuffettViewProps {
   buffettQuote: BuffettQuote;
   buffettLabelPoints: BuffettLabelPoint[];
   buffettTooltip: React.ReactElement;
+  data: DataPoint[];
+  dateRange: [number, number];
+  handleDateRangeChange: (range: [number, number]) => void;
+  datePreset: '1Y' | '3Y' | '5Y' | '10Y' | 'MAX';
+  applyDatePreset: (preset: '1Y' | '3Y' | '5Y' | '10Y' | 'MAX') => void;
+}
+
+function getZoneForValue(value: number, zones: BuffettZone[]): BuffettZone | null {
+  for (const zone of zones) {
+    if (value >= zone.min && value < zone.max) return zone;
+  }
+  // If above all zones, return the last one
+  return zones[zones.length - 1] ?? null;
 }
 
 const BuffettView = React.memo(function BuffettView({
@@ -38,32 +52,54 @@ const BuffettView = React.memo(function BuffettView({
   buffettQuote,
   buffettLabelPoints,
   buffettTooltip,
+  data,
+  dateRange,
+  handleDateRangeChange,
+  datePreset,
+  applyDatePreset,
 }: BuffettViewProps) {
+  const currentValue = buffettData.length > 0 ? Number(buffettData[buffettData.length - 1].buffettValue) : null;
+  const currentZone = currentValue !== null ? getZoneForValue(currentValue, buffettZones) : null;
+
   return (
     <Card className="min-h-[760px] flex flex-col">
-      <div className="mb-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+      <div className="mb-4">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
           <div>
             <h2 className="text-xl font-semibold text-main">The Buffett Indicator</h2>
             <p className="text-sm text-muted mt-1">Ratio of total US stock market value to GDP.</p>
           </div>
-          <div className="flex items-center gap-2 bg-muted-surface border border-theme px-3 py-1 rounded">
-            <span className="text-main text-sm font-mono">
-              Current: {buffettData.length > 0 ? `${Number(buffettData[buffettData.length - 1].buffettValue).toFixed(1)}%` : 'N/A'}
-            </span>
-          </div>
+          {currentValue !== null && currentZone && (
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex items-center gap-2 bg-muted-surface border border-theme px-3 py-1.5 rounded-lg">
+                <span className="text-main text-lg font-bold font-mono tabular-nums">
+                  {currentValue.toFixed(1)}%
+                </span>
+              </div>
+              <span className="flex items-center gap-1.5 text-xs font-medium" style={{ color: currentZone.color }}>
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: currentZone.color }} />
+                {currentZone.label}
+              </span>
+            </div>
+          )}
         </div>
+
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {buffettZones.map((zone) => (
-            <div key={zone.label} className="inline-flex items-center gap-2 text-xs px-2.5 py-1 rounded-full border border-theme bg-secondary">
+            <div
+              key={zone.label}
+              className={`inline-flex items-center gap-2 text-xs px-2.5 py-1 rounded-full border ${currentZone?.label === zone.label ? 'border-current shadow-sm' : 'border-theme bg-secondary'}`}
+              style={currentZone?.label === zone.label ? { borderColor: zone.color, backgroundColor: `color-mix(in oklab, ${zone.color} 8%, var(--color-bg-secondary))` } : undefined}
+            >
               <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: zone.color }} />
               <span className="text-main font-medium">{zone.label}</span>
               <span className="text-muted">{zone.legendRange}</span>
             </div>
           ))}
         </div>
+
         <div className="mt-3 rounded-xl border border-theme px-4 py-3 shadow-sm" style={{ backgroundColor: 'color-mix(in oklab, var(--color-brand-accent) 10%, var(--color-bg-secondary))' }}>
-          <p className="text-lg md:text-xl text-main italic font-semibold leading-snug">"{buffettQuote.text}"</p>
+          <p className="text-lg md:text-xl text-main italic font-semibold leading-snug">&ldquo;{buffettQuote.text}&rdquo;</p>
           <p className="text-sm text-muted mt-2">{buffettQuote.reason}</p>
           <a
             href={buffettQuote.sourceUrl}
@@ -75,6 +111,39 @@ const BuffettView = React.memo(function BuffettView({
           </a>
         </div>
       </div>
+
+      {/* Date range controls */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-1 rounded-lg border border-theme bg-muted-surface p-1">
+          {(['1Y', '3Y', '5Y', '10Y', 'MAX'] as const).map((preset) => (
+            <button
+              key={preset}
+              onClick={() => applyDatePreset(preset)}
+              className={`rounded-md px-2.5 py-1.5 text-xs font-medium ${datePreset === preset ? 'bg-secondary text-main shadow-sm border border-theme' : 'text-muted hover:text-main'}`}
+            >
+              {preset}
+            </button>
+          ))}
+        </div>
+        {buffettData.length > 0 && (
+          <span className="text-xs text-muted">
+            {new Date(buffettData[0].timestamp).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+            {' — '}
+            {new Date(buffettData[buffettData.length - 1].timestamp).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+          </span>
+        )}
+      </div>
+      {data.length > 1 && (
+        <div className="mb-4">
+          <DateRangeSlider
+            min={0}
+            max={data.length - 1}
+            value={dateRange}
+            onChange={handleDateRangeChange}
+            data={data}
+          />
+        </div>
+      )}
 
       <div className="flex-1 w-full min-h-[620px] -ml-2">
         <ResponsiveContainer width="100%" height="100%">

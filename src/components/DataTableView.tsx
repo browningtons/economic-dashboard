@@ -365,7 +365,7 @@ const DataTableView = React.memo(function DataTableView({ data, metrics, metricS
             </span>
           )}
           {pipelineStatus?.status === 'PASS' && (
-            <span className="rounded-full bg-green-500/10 px-3 py-1 text-xs font-medium text-green-600 dark:text-green-400">
+            <span className="rounded-full bg-green-500/10 px-3 py-1 text-xs font-medium text-green-600">
               Healthy
             </span>
           )}
@@ -435,7 +435,7 @@ const DataTableView = React.memo(function DataTableView({ data, metrics, metricS
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 rounded-full border border-theme bg-muted-surface px-3 py-1.5">
               <span className="text-[11px] font-medium text-muted uppercase tracking-wide">Freshness</span>
-              <span className={`text-sm font-bold ${freshnessScore >= 80 ? 'text-green-600 dark:text-green-400' : freshnessScore >= 50 ? 'text-amber-500' : 'text-[color:var(--color-brand-primary)]'}`}>
+              <span className={`text-sm font-bold ${freshnessScore >= 80 ? 'text-green-600' : freshnessScore >= 50 ? 'text-amber-500' : 'text-[color:var(--color-brand-primary)]'}`}>
                 {freshnessScore}%
               </span>
               <div className="h-2 w-16 rounded-full bg-theme/20 overflow-hidden">
@@ -485,7 +485,7 @@ const DataTableView = React.memo(function DataTableView({ data, metrics, metricS
                         row.label
                       )}
                       {isCurrentMonth && (
-                        <span className="inline-flex items-center rounded-full bg-green-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-green-600 dark:text-green-400">
+                        <span className="inline-flex items-center rounded-full bg-green-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-green-600">
                           Current
                         </span>
                       )}

@@ -30,30 +30,6 @@
     --color-zone-fit: #0F3D57;
   }
 
-  .dark {
-    --color-bg-primary: #0B1020;
-    --color-bg-secondary: #111827;
-    --color-text-main: #F3F4F6;
-    --color-text-muted: #A8B0C0;
-
-    --color-brand-primary: #F04A00;
-    --color-brand-secondary: #0F3D57;
-    --color-brand-accent: #2CB6C0;
-    --color-link: #2CB6C0;
-    --color-link-hover: #0F3D57;
-    --color-border: #2B3446;
-    --color-border-subtle: #39445B;
-    --color-surface-muted: #1B2436;
-    --color-text-inverse: #F8FAFC;
-    --color-text-inverse-muted: #CBD5E1;
-    --color-chart-grid: #2A3348;
-    --color-chart-axis: #B8C2D8;
-    --color-chart-baseline: #64748B;
-
-    --color-zone-weak: #F04A00;
-    --color-zone-average: #F59E0B;
-    --color-zone-fit: #60A5FA;
-  }
 }
 
 /* --------------------------------------------- */

@@ -65,25 +65,7 @@
   --color-zone-fit: var(--blue-700);
 }
 
-[data-theme="dark"] {
-  --bg: #0B1220;
-  --surface: #0F172A;
-  --surface-2: #111C2E;
-  --border: rgba(226, 232, 240, 0.10);
-
-  --text: #E5E7EB;
-  --text-muted: rgba(229, 231, 235, 0.70);
-
-  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-
-  --color-text-inverse: #F8FAFC;
-  --color-text-inverse-muted: #CBD5E1;
-  --color-chart-grid: color-mix(in srgb, #94A3B8 28%, transparent);
-  --color-chart-axis: #B8C2D8;
-  --color-chart-baseline: #64748B;
-}
-
-/* Minimal base styles (optional) */
+/* Minimal base styles */
 html, body {
   background: var(--bg);
   color: var(--text);
