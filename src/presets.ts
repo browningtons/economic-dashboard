@@ -43,11 +43,4 @@ export const DASHBOARD_PRESETS: DashboardPreset[] = [
     metrics: ['Job Openings', 'Avg Weeks Unemployeed'],
     datePreset: 'MAX',
   },
-  {
-    id: 'market-vs-economy',
-    name: 'Market vs Economy',
-    tagline: 'Does the stock market reflect real economic output?',
-    metrics: ['S&P 500', 'GDP', 'Industrial Production'],
-    datePreset: 'MAX',
-  },
 ];
