@@ -19,7 +19,6 @@ import type {
   DataPoint,
   MetricConfidenceLevel,
   MetricConfig,
-  PipelineStatus,
   ReferenceLabelPosition,
   ReferenceZone,
 } from '../types/dashboard';
@@ -41,6 +40,7 @@ interface DashboardViewProps {
   selectedMetrics: string[];
   rangeLabel: string;
   latestDataPointText: string;
+  lastUpdatedText: string;
   dataWarning: string | null;
   metrics: MetricConfig[];
   setSelectedMetrics: React.Dispatch<React.SetStateAction<string[]>>;
@@ -64,7 +64,6 @@ interface DashboardViewProps {
   renderReferenceLabel: (props: { viewBox: { x: number; y: number; width: number; height: number } }, label: string, labelPos: ReferenceLabelPosition) => React.ReactNode;
   dashboardTooltip: React.ReactElement;
   activeMetricConfidence: DashboardMetricConfidence[];
-  pipelineStatus?: PipelineStatus | null;
   presets: DashboardPreset[];
   activePreset: string | null;
   onApplyPreset: (preset: DashboardPreset) => void;
@@ -145,6 +144,18 @@ function getConfidenceTone(level: MetricConfidenceLevel) {
   };
 }
 
+function formatMetricMonth(value?: string | number) {
+  if (value === undefined || value === null || value === '') return 'N/A';
+  if (typeof value === 'string' && /^\d{4}-\d{2}$/.test(value)) {
+    const [year, month] = value.split('-').map(Number);
+    return new Date(year, month - 1, 1).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+}
+
 const DashboardView = React.memo(function DashboardView({
   shareMode,
   viewMode,
@@ -153,6 +164,7 @@ const DashboardView = React.memo(function DashboardView({
   selectedMetrics,
   rangeLabel,
   latestDataPointText,
+  lastUpdatedText,
   dataWarning,
   metrics,
   setSelectedMetrics,
@@ -176,7 +188,6 @@ const DashboardView = React.memo(function DashboardView({
   renderReferenceLabel,
   dashboardTooltip,
   activeMetricConfidence,
-  pipelineStatus,
   presets,
   activePreset,
   onApplyPreset,
@@ -208,22 +219,6 @@ const DashboardView = React.memo(function DashboardView({
   const confidenceByMetricId = new Map(
     activeMetricConfidence.map((entry) => [entry.metric.id, entry] as const)
   );
-  const confidenceCounts = activeMetricConfidence.reduce<Record<MetricConfidenceLevel, number>>((counts, entry) => {
-    counts[entry.level] += 1;
-    return counts;
-  }, {
-    fresh: 0,
-    'carry-forward': 0,
-    lagging: 0,
-    warning: 0,
-    unknown: 0,
-  });
-  const visibleIssueCount = confidenceCounts.lagging + confidenceCounts.warning;
-  const validationSummary = pipelineStatus?.status === 'PASS'
-    ? 'Latest validation passed.'
-    : pipelineStatus?.status === 'FAIL'
-      ? `${pipelineStatus.failureCount ?? 0} validation issue${(pipelineStatus.failureCount ?? 0) === 1 ? '' : 's'} detected.`
-      : 'Validation status unavailable.';
 
   return (
     <>
@@ -510,49 +505,10 @@ const DashboardView = React.memo(function DashboardView({
             </div>
           ))}
         </div>
+        <p className={`${shareMode ? 'mt-3 text-sm' : 'mt-2 text-xs'} text-center text-muted`}>
+          Data last updated: {lastUpdatedText}
+        </p>
       </Card>
-
-      {!shareMode && activeMetricConfidence.length > 0 && (
-        <Card className="p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Data Health</p>
-              <p className="mt-1 text-sm font-semibold text-main">{validationSummary}</p>
-              <p className="mt-1 text-xs text-muted">
-                {pipelineStatus?.generatedAt
-                  ? `Last checked ${new Date(pipelineStatus.generatedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}`
-                  : 'No recent validation data'}
-              </p>
-            </div>
-            <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
-              {activeMetricConfidence.length} tracked
-            </span>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-2 xl:grid-cols-4">
-            <div className="rounded-xl border border-theme bg-muted-surface p-3">
-              <p className="text-[11px] uppercase tracking-[0.08em] text-muted">Fresh</p>
-              <p className="mt-1 text-xl font-semibold text-main">{confidenceCounts.fresh}</p>
-            </div>
-            <div className="rounded-xl border border-theme bg-muted-surface p-3">
-              <p className="text-[11px] uppercase tracking-[0.08em] text-muted">Carry-forward</p>
-              <p className="mt-1 text-xl font-semibold text-main">{confidenceCounts['carry-forward']}</p>
-            </div>
-            <div className="rounded-xl border border-theme bg-muted-surface p-3">
-              <p className="text-[11px] uppercase tracking-[0.08em] text-muted">Needs attention</p>
-              <p className="mt-1 text-xl font-semibold text-main">{visibleIssueCount}</p>
-            </div>
-            <div className="rounded-xl border border-theme bg-muted-surface p-3">
-              <p className="text-[11px] uppercase tracking-[0.08em] text-muted">Latest month</p>
-              <p className="mt-1 text-xl font-semibold text-main">{pipelineStatus?.latestDataMonth ?? 'N/A'}</p>
-            </div>
-          </div>
-          {(pipelineStatus?.warnings?.length || 0) > 0 && (
-            <p className="mt-3 text-xs text-muted">
-              Active warning: {pipelineStatus?.warnings?.[0]}
-            </p>
-          )}
-        </Card>
-      )}
 
       {!shareMode && (
         <>
@@ -566,6 +522,7 @@ const DashboardView = React.memo(function DashboardView({
               const lastValue = lastPoint ? Number(lastPoint[m.id]) : 0;
               const prevValue = prevPoint ? Number(prevPoint[m.id]) : 0;
               const delta = prevValue ? ((lastValue - prevValue) / prevValue) * 100 : 0;
+              const latestMetricMonth = confidence?.pipeline?.csvLatest ?? lastPoint?.timestamp;
               return (
                 <Card key={`headline-${m.id}`} className="p-4">
                   <p className="text-xs uppercase tracking-wider text-muted">{m.label}</p>
@@ -580,10 +537,17 @@ const DashboardView = React.memo(function DashboardView({
                       </span>
                     </div>
                   )}
+                  <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Latest value</p>
                   <p className="mt-1 text-2xl font-semibold text-main">{m.format(lastValue)}</p>
                   <p className={`mt-1 text-xs ${delta >= 0 ? 'text-link' : 'text-[color:var(--color-brand-primary)]'}`}>
                     {delta >= 0 ? '+' : ''}
                     {delta.toFixed(1)}%
+                  </p>
+                  <p className="mt-2 text-xs text-muted">
+                    Current through {formatMetricMonth(latestMetricMonth)}
+                  </p>
+                  <p className="mt-1 text-xs text-muted">
+                    Refresh checked {lastUpdatedText}
                   </p>
                   {confidence && (
                     <p className="mt-2 text-xs text-muted">{confidence.detail}</p>

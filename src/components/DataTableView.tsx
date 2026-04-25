@@ -233,11 +233,55 @@ const DataTableView = React.memo(function DataTableView({ data, metrics, metricS
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   }, [now]);
 
+  const dataHealthCounts = useMemo(() => {
+    const counts = {
+      fresh: 0,
+      carryForward: 0,
+      needsAttention: 0,
+      unknown: 0,
+    };
+
+    if (!pipelineStatus?.series?.length) {
+      counts.unknown = metrics.length;
+      return counts;
+    }
+
+    pipelineStatus.series.forEach((series) => {
+      const seriesStatus = String(series.status ?? '').toUpperCase();
+      const releaseStatus = String(series.releaseWindowStatus ?? '').toUpperCase();
+      const hasReleaseGap = (series.releaseWindowGapMonths ?? 0) > 0;
+
+      if (seriesStatus === 'FAIL' || releaseStatus === 'FAIL' || hasReleaseGap) {
+        counts.needsAttention += 1;
+      } else if ((series.forwardFill ?? 0) > 0) {
+        counts.carryForward += 1;
+      } else if (seriesStatus === 'PASS' && releaseStatus === 'PASS') {
+        counts.fresh += 1;
+      } else {
+        counts.unknown += 1;
+      }
+    });
+
+    return counts;
+  }, [metrics.length, pipelineStatus]);
+
   const pipelineHealthText = pipelineStatus?.status === 'FAIL'
     ? `${pipelineStatus.failedSeriesCount ?? 0} of ${pipelineStatus.totalSeriesCount ?? metrics.length} data sources have issues`
     : pipelineStatus?.status === 'PASS'
       ? 'All data sources are up to date'
       : 'Pipeline status unavailable';
+
+  const validationSummary = pipelineStatus?.status === 'PASS'
+    ? 'Latest validation passed.'
+    : pipelineStatus?.status === 'FAIL'
+      ? `${pipelineStatus.failureCount ?? 0} validation issue${(pipelineStatus.failureCount ?? 0) === 1 ? '' : 's'} detected.`
+      : 'Validation status unavailable.';
+
+  const lastCheckedText = pipelineStatus?.generatedAt
+    ? new Date(pipelineStatus.generatedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+    : null;
+
+  const trackedSeriesCount = pipelineStatus?.totalSeriesCount ?? pipelineStatus?.series?.length ?? metrics.length;
 
   const years = useMemo(() => {
     const uniques = new Set<number>();
@@ -382,16 +426,38 @@ const DataTableView = React.memo(function DataTableView({ data, metrics, metricS
       <Card className="p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="text-xs uppercase tracking-wider text-muted">Pipeline Health</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Data Health</p>
             <p className={`mt-1 text-sm font-semibold ${pipelineStatus?.status === 'FAIL' ? 'text-[color:var(--color-brand-primary)]' : 'text-main'}`}>
-              {pipelineHealthText}
+              {validationSummary}
             </p>
             <p className="mt-1 text-xs text-muted">
-              {pipelineStatus?.generatedAt
-                ? `Last checked ${new Date(pipelineStatus.generatedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}`
-                : 'No recent validation data'}
+              {lastCheckedText ? `Last checked ${lastCheckedText}` : 'No recent validation data'}
             </p>
+            <p className="mt-1 text-xs text-muted">{pipelineHealthText}</p>
           </div>
+          <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
+            {trackedSeriesCount} tracked
+          </span>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2 xl:grid-cols-4">
+          <div className="rounded-xl border border-theme bg-muted-surface p-3">
+            <p className="text-[11px] uppercase tracking-[0.08em] text-muted">Fresh</p>
+            <p className="mt-1 text-xl font-semibold text-main">{dataHealthCounts.fresh}</p>
+          </div>
+          <div className="rounded-xl border border-theme bg-muted-surface p-3">
+            <p className="text-[11px] uppercase tracking-[0.08em] text-muted">Carry-forward</p>
+            <p className="mt-1 text-xl font-semibold text-main">{dataHealthCounts.carryForward}</p>
+          </div>
+          <div className="rounded-xl border border-theme bg-muted-surface p-3">
+            <p className="text-[11px] uppercase tracking-[0.08em] text-muted">Needs attention</p>
+            <p className="mt-1 text-xl font-semibold text-main">{dataHealthCounts.needsAttention}</p>
+          </div>
+          <div className="rounded-xl border border-theme bg-muted-surface p-3">
+            <p className="text-[11px] uppercase tracking-[0.08em] text-muted">Latest month</p>
+            <p className="mt-1 text-xl font-semibold text-main">{pipelineStatus?.latestDataMonth ?? 'N/A'}</p>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           {pipelineStatus?.status === 'FAIL' && (
             <span className="rounded-full bg-[color:var(--color-brand-primary)]/10 px-3 py-1 text-xs font-medium text-[color:var(--color-brand-primary)]">
               Needs attention
@@ -400,6 +466,11 @@ const DataTableView = React.memo(function DataTableView({ data, metrics, metricS
           {pipelineStatus?.status === 'PASS' && (
             <span className="rounded-full bg-green-500/10 px-3 py-1 text-xs font-medium text-green-600">
               Healthy
+            </span>
+          )}
+          {dataHealthCounts.unknown > 0 && (
+            <span className="rounded-full border border-theme bg-muted-surface px-3 py-1 text-xs font-medium text-muted">
+              {dataHealthCounts.unknown} unknown
             </span>
           )}
         </div>

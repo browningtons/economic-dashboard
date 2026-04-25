@@ -8,7 +8,6 @@ const STOCK_MARKET_COLUMN = 'Stock Market (b)';
 const SERIES_CONFIG = [
   { column: 'Unemployment Rate', seriesId: 'UNRATE', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
   { column: 'Avg Weeks Unemployeed', seriesId: 'UEMPMEAN', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
-  { column: 'Median Weeks Unemployeed', seriesId: 'UEMPMED', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
   { column: 'Job Openings', seriesId: 'JTSJOL', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 2 },
   { column: 'Unemployed 27 weeks', seriesId: 'UEMP27OV', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
   { column: 'Unemployeed Count', seriesId: 'UNEMPLOY', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
@@ -17,7 +16,6 @@ const SERIES_CONFIG = [
   { column: '30 year mortgage', seriesId: 'MORTGAGE30US', cadence: 'weekly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
   { column: 'S&P 500', seriesId: 'SP500', cadence: 'daily', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
   { column: 'Labor Participation Rate', seriesId: 'CIVPART', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
-  { column: 'Labor Participation Core', seriesId: 'LNS11300060', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
   { column: 'Housing Price Index', seriesId: 'CSUSHPINSA', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 2 },
   { column: 'CPI', seriesId: 'CPIAUCSL', cadence: 'monthly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 0 },
   { column: 'GDP', seriesId: 'GDP', cadence: 'quarterly', aggregation: 'last', scale: 1, maxCarryForwardMonths: 2 },

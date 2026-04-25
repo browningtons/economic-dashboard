@@ -6,7 +6,6 @@ This document maps dashboard fields to source series and basic transform notes.
 |---|---|---|---|---|---|---|
 | Unemployment Rate | FRED | `UNRATE` | https://fred.stlouisfed.org/series/UNRATE | Monthly | Percent | Use as-is |
 | Avg Weeks Unemployeed | FRED | `UEMPMEAN` | https://fred.stlouisfed.org/series/UEMPMEAN | Monthly | Weeks | Use as-is |
-| Median Weeks Unemployeed | FRED | `UEMPMED` | https://fred.stlouisfed.org/series/UEMPMED | Monthly | Weeks | Use as-is |
 | Job Openings | FRED | `JTSJOL` | https://fred.stlouisfed.org/series/JTSJOL | Monthly | Thousands | Use as-is (dashboard displays in millions) |
 | Unemployed 27 weeks | FRED | `UEMP27OV` | https://fred.stlouisfed.org/series/UEMP27OV | Monthly | Thousands | Use as-is (dashboard displays in millions) |
 | Unemployeed Count | FRED | `UNEMPLOY` | https://fred.stlouisfed.org/series/UNEMPLOY | Monthly | Thousands | Use as-is (dashboard displays in millions) |
@@ -15,7 +14,6 @@ This document maps dashboard fields to source series and basic transform notes.
 | 30 year mortgage | FRED | `MORTGAGE30US` | https://fred.stlouisfed.org/series/MORTGAGE30US | Weekly | Percent | Convert to monthly (period average or end-of-month) |
 | S&P 500 | FRED | `SP500` | https://fred.stlouisfed.org/series/SP500 | Daily | Index | Convert to monthly (period average or end-of-month close) |
 | Labor Participation Rate | FRED | `CIVPART` | https://fred.stlouisfed.org/series/CIVPART | Monthly | Percent | Use as-is |
-| Labor Participation Core | FRED | `LNS11300060` | https://fred.stlouisfed.org/series/LNS11300060 | Monthly | Percent | Use as-is |
 | Housing Price Index | FRED | `CSUSHPINSA` | https://fred.stlouisfed.org/series/CSUSHPINSA | Monthly | Index | Use as-is |
 | CPI | FRED | `CPIAUCSL` | https://fred.stlouisfed.org/series/CPIAUCSL | Monthly | Index | Use as-is |
 | GDP | FRED | `GDP` | https://fred.stlouisfed.org/series/GDP | Quarterly | Billions USD | Forward-fill or interpolate to monthly for chart alignment |

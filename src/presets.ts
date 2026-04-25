@@ -20,7 +20,7 @@ export const DASHBOARD_PRESETS: DashboardPreset[] = [
     name: 'The Rate Cascade',
     tagline: 'How Fed policy flows through the yield curve to your mortgage',
     metrics: ['Fed Rate', '2Y Treasury', '10Y Treasury', '30 year mortgage'],
-    datePreset: '5Y',
+    datePreset: 'MAX',
   },
   {
     id: 'consumer-health',

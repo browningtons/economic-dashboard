@@ -198,7 +198,6 @@ const REQUIRED_COLUMNS = [
 const METRIC_SOURCES: Record<string, DataSourceInfo> = {
   'Unemployment Rate': { provider: 'FRED', seriesId: 'UNRATE', url: 'https://fred.stlouisfed.org/series/UNRATE', cadence: 'monthly' },
   'Avg Weeks Unemployeed': { provider: 'FRED', seriesId: 'UEMPMEAN', url: 'https://fred.stlouisfed.org/series/UEMPMEAN', cadence: 'monthly' },
-  'Median Weeks Unemployeed': { provider: 'FRED', seriesId: 'UEMPMED', url: 'https://fred.stlouisfed.org/series/UEMPMED', cadence: 'monthly' },
   'Job Openings': { provider: 'FRED', seriesId: 'JTSJOL', url: 'https://fred.stlouisfed.org/series/JTSJOL', cadence: 'monthly' },
   'Unemployed 27 weeks': { provider: 'FRED', seriesId: 'UEMP27OV', url: 'https://fred.stlouisfed.org/series/UEMP27OV', cadence: 'monthly' },
   'Unemployeed Count': { provider: 'FRED', seriesId: 'UNEMPLOY', url: 'https://fred.stlouisfed.org/series/UNEMPLOY', cadence: 'monthly' },
@@ -207,7 +206,6 @@ const METRIC_SOURCES: Record<string, DataSourceInfo> = {
   '30 year mortgage': { provider: 'FRED', seriesId: 'MORTGAGE30US', url: 'https://fred.stlouisfed.org/series/MORTGAGE30US', cadence: 'weekly' },
   'S&P 500': { provider: 'FRED', seriesId: 'SP500', url: 'https://fred.stlouisfed.org/series/SP500', cadence: 'daily' },
   'Labor Participation Rate': { provider: 'FRED', seriesId: 'CIVPART', url: 'https://fred.stlouisfed.org/series/CIVPART', cadence: 'monthly' },
-  'Labor Participation Core': { provider: 'FRED', seriesId: 'LNS11300060', url: 'https://fred.stlouisfed.org/series/LNS11300060', cadence: 'monthly' },
   'Housing Price Index': { provider: 'FRED', seriesId: 'CSUSHPINSA', url: 'https://fred.stlouisfed.org/series/CSUSHPINSA', cadence: 'monthly' },
   'CPI': { provider: 'FRED', seriesId: 'CPIAUCSL', url: 'https://fred.stlouisfed.org/series/CPIAUCSL', cadence: 'monthly' },
   'GDP': { provider: 'FRED', seriesId: 'GDP', url: 'https://fred.stlouisfed.org/series/GDP', cadence: 'quarterly' },
@@ -1630,6 +1628,7 @@ export default function App() {
                 selectedMetrics={selectedMetrics}
                 rangeLabel={rangeLabel}
                 latestDataPointText={latestDataPointText}
+                lastUpdatedText={lastUpdatedText}
                 dataWarning={dataWarning}
                 metrics={METRICS}
                 setSelectedMetrics={setSelectedMetrics}
@@ -1655,7 +1654,6 @@ export default function App() {
                 )}
                 dashboardTooltip={<CustomTooltip isRelative={viewMode === 'relative'} />}
                 activeMetricConfidence={activeMetricConfidence}
-                pipelineStatus={pipelineStatus}
                 presets={DASHBOARD_PRESETS}
                 activePreset={activePreset}
                 onApplyPreset={applyPreset}
