@@ -1,18 +1,36 @@
 {
-  "generatedAt": "2026-04-30T15:22:09.765Z",
-  "evaluatedMonth": "2026-04",
-  "nextScheduledRefreshUtc": "2026-05-01T13:15:00.000Z",
-  "status": "PASS",
-  "failureCount": 0,
+  "generatedAt": "2026-05-01T14:21:31.412Z",
+  "evaluatedMonth": "2026-05",
+  "nextScheduledRefreshUtc": "2026-05-04T13:15:00.000Z",
+  "status": "FAIL",
+  "failureCount": 1,
   "warningCount": 0,
-  "failedSeriesCount": 0,
+  "failedSeriesCount": 1,
   "totalSeriesCount": 27,
   "latestDataMonth": "2026-04",
   "latestBuffettRatio": 0,
-  "failures": [],
+  "failures": [
+    "Fed Rate: latest CSV month 2026-03 is outside expected release window (2026-04 to 2026-05)"
+  ],
   "warnings": [],
-  "topAlerts": [],
-  "releaseCalendarBreaches": [],
+  "topAlerts": [
+    {
+      "type": "Release Calendar",
+      "column": "Fed Rate",
+      "month": "2026-03",
+      "details": "Expected 2026-04..2026-05, got 2026-03"
+    }
+  ],
+  "releaseCalendarBreaches": [
+    {
+      "column": "Fed Rate",
+      "latestCsvMonth": "2026-03",
+      "expectedEarliest": "2026-04",
+      "expectedLatest": "2026-05",
+      "lagMonthsBeyondWindow": 1,
+      "severity": "FAIL"
+    }
+  ],
   "series": [
     {
       "column": "Unemployment Rate",
@@ -25,7 +43,7 @@
       "threshold": 0.15,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-02..2026-03",
+      "expectedReleaseWindow": "2026-03..2026-04",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -40,7 +58,7 @@
       "threshold": 1.5,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-02..2026-03",
+      "expectedReleaseWindow": "2026-03..2026-04",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -55,7 +73,7 @@
       "threshold": 350,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-02",
+      "expectedReleaseWindow": "2026-02..2026-03",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -70,7 +88,7 @@
       "threshold": 300,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-02..2026-03",
+      "expectedReleaseWindow": "2026-03..2026-04",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -85,14 +103,14 @@
       "threshold": 400,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-02..2026-03",
+      "expectedReleaseWindow": "2026-03..2026-04",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
     {
       "column": "Fed Rate",
       "seriesId": "FRED:FEDFUNDS",
-      "status": "PASS",
+      "status": "FAIL",
       "csvLatest": "2026-03",
       "sourceLatest": "2026-03",
       "lag": 0,
@@ -100,9 +118,9 @@
       "threshold": 0.2,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-03..2026-04",
-      "releaseWindowStatus": "PASS",
-      "releaseWindowGapMonths": 0
+      "expectedReleaseWindow": "2026-04..2026-05",
+      "releaseWindowStatus": "FAIL",
+      "releaseWindowGapMonths": 1
     },
     {
       "column": "15 year mortgage",
@@ -115,7 +133,7 @@
       "threshold": 0.15,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-03..2026-04",
+      "expectedReleaseWindow": "2026-04..2026-05",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -130,7 +148,7 @@
       "threshold": 0.15,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-03..2026-04",
+      "expectedReleaseWindow": "2026-04..2026-05",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -145,7 +163,7 @@
       "threshold": 125,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-03..2026-04",
+      "expectedReleaseWindow": "2026-04..2026-05",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -160,7 +178,7 @@
       "threshold": 0.2,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-02..2026-03",
+      "expectedReleaseWindow": "2026-03..2026-04",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -175,7 +193,7 @@
       "threshold": 1,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2025-12..2026-02",
+      "expectedReleaseWindow": "2026-01..2026-03",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -190,7 +208,7 @@
       "threshold": 1,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-02..2026-03",
+      "expectedReleaseWindow": "2026-03..2026-04",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -205,7 +223,7 @@
       "threshold": 10,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2025-12..2026-02",
+      "expectedReleaseWindow": "2026-01..2026-03",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -220,7 +238,7 @@
       "threshold": 2500,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-03",
+      "expectedReleaseWindow": "2026-02..2026-04",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -235,7 +253,7 @@
       "threshold": 400,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2025-11..2026-01",
+      "expectedReleaseWindow": "2025-12..2026-02",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -250,7 +268,7 @@
       "threshold": 0.15,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-03..2026-04",
+      "expectedReleaseWindow": "2026-04..2026-05",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -265,7 +283,7 @@
       "threshold": 0.15,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-03..2026-04",
+      "expectedReleaseWindow": "2026-04..2026-05",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -280,7 +298,7 @@
       "threshold": 5,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-02..2026-03",
+      "expectedReleaseWindow": "2026-03..2026-04",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -295,7 +313,7 @@
       "threshold": 15000,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-02..2026-03",
+      "expectedReleaseWindow": "2026-03..2026-04",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -310,7 +328,7 @@
       "threshold": 2,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-03",
+      "expectedReleaseWindow": "2026-02..2026-04",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -325,7 +343,7 @@
       "threshold": 1,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-03",
+      "expectedReleaseWindow": "2026-02..2026-04",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -340,7 +358,7 @@
       "threshold": 0.3,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-02..2026-03",
+      "expectedReleaseWindow": "2026-03..2026-04",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -355,7 +373,7 @@
       "threshold": 30000,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-03..2026-04",
+      "expectedReleaseWindow": "2026-04..2026-05",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -370,7 +388,7 @@
       "threshold": 100,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-03",
+      "expectedReleaseWindow": "2026-02..2026-04",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -385,7 +403,7 @@
       "threshold": 100,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-03",
+      "expectedReleaseWindow": "2026-02..2026-04",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -400,7 +418,7 @@
       "threshold": 200000,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-01..2026-03",
+      "expectedReleaseWindow": "2026-02..2026-04",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -415,7 +433,7 @@
       "threshold": 1.5,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-02..2026-03",
+      "expectedReleaseWindow": "2026-03..2026-04",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     }
