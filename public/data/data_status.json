@@ -1,36 +1,18 @@
 {
-  "generatedAt": "2026-05-01T14:21:31.412Z",
+  "generatedAt": "2026-05-04T04:59:55.071Z",
   "evaluatedMonth": "2026-05",
   "nextScheduledRefreshUtc": "2026-05-04T13:15:00.000Z",
-  "status": "FAIL",
-  "failureCount": 1,
+  "status": "PASS",
+  "failureCount": 0,
   "warningCount": 0,
-  "failedSeriesCount": 1,
+  "failedSeriesCount": 0,
   "totalSeriesCount": 27,
-  "latestDataMonth": "2026-04",
+  "latestDataMonth": "2026-05",
   "latestBuffettRatio": 0,
-  "failures": [
-    "Fed Rate: latest CSV month 2026-03 is outside expected release window (2026-04 to 2026-05)"
-  ],
+  "failures": [],
   "warnings": [],
-  "topAlerts": [
-    {
-      "type": "Release Calendar",
-      "column": "Fed Rate",
-      "month": "2026-03",
-      "details": "Expected 2026-04..2026-05, got 2026-03"
-    }
-  ],
-  "releaseCalendarBreaches": [
-    {
-      "column": "Fed Rate",
-      "latestCsvMonth": "2026-03",
-      "expectedEarliest": "2026-04",
-      "expectedLatest": "2026-05",
-      "lagMonthsBeyondWindow": 1,
-      "severity": "FAIL"
-    }
-  ],
+  "topAlerts": [],
+  "releaseCalendarBreaches": [],
   "series": [
     {
       "column": "Unemployment Rate",
@@ -110,17 +92,17 @@
     {
       "column": "Fed Rate",
       "seriesId": "FRED:FEDFUNDS",
-      "status": "FAIL",
-      "csvLatest": "2026-03",
-      "sourceLatest": "2026-03",
+      "status": "PASS",
+      "csvLatest": "2026-04",
+      "sourceLatest": "2026-04",
       "lag": 0,
       "forwardFill": 0,
       "threshold": 0.2,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-04..2026-05",
-      "releaseWindowStatus": "FAIL",
-      "releaseWindowGapMonths": 1
+      "expectedReleaseWindow": "2026-03..2026-05",
+      "releaseWindowStatus": "PASS",
+      "releaseWindowGapMonths": 0
     },
     {
       "column": "15 year mortgage",
@@ -156,8 +138,8 @@
       "column": "S&P 500",
       "seriesId": "FRED:SP500",
       "status": "PASS",
-      "csvLatest": "2026-04",
-      "sourceLatest": "2026-04",
+      "csvLatest": "2026-05",
+      "sourceLatest": "2026-05",
       "lag": 0,
       "forwardFill": 0,
       "threshold": 125,
@@ -216,10 +198,10 @@
       "column": "GDP",
       "seriesId": "FRED:GDP",
       "status": "PASS",
-      "csvLatest": "2026-04",
+      "csvLatest": "2026-05",
       "sourceLatest": "2026-03",
       "lag": 0,
-      "forwardFill": 1,
+      "forwardFill": 2,
       "threshold": 10,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
