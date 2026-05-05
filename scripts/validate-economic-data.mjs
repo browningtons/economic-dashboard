@@ -279,7 +279,18 @@ function expandQuarterlyMonths(monthlyValues) {
   return expanded;
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getPositiveIntegerEnv(name, fallback) {
+  const value = Number(process.env[name]);
+  return Number.isInteger(value) && value > 0 ? value : fallback;
+}
+
 async function fetchSeries(seriesId, apiKey, observationStart) {
+  const retries = getPositiveIntegerEnv('FRED_FETCH_RETRIES', 4);
+  const retryDelayMs = getPositiveIntegerEnv('FRED_FETCH_RETRY_DELAY_MS', 2000);
   const query = new URLSearchParams({
     series_id: seriesId,
     file_type: 'json',
@@ -288,13 +299,45 @@ async function fetchSeries(seriesId, apiKey, observationStart) {
   });
   query.set('api_key', apiKey);
   const url = `https://api.stlouisfed.org/fred/series/observations?${query.toString()}`;
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`${seriesId}: HTTP ${response.status}`);
-  const payload = await response.json();
-  if (!Array.isArray(payload?.observations)) {
-    throw new Error(`${seriesId}: unexpected API response`);
+
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        const payload = await response.json();
+        if (!Array.isArray(payload?.observations)) {
+          throw new Error(`${seriesId}: unexpected API response`);
+        }
+        return payload.observations;
+      }
+
+      const retryable = response.status === 429 || response.status >= 500;
+      if (retryable && attempt < retries) {
+        const delay = attempt * retryDelayMs;
+        console.warn(`FRED ${seriesId}: HTTP ${response.status} (attempt ${attempt}/${retries}), retrying in ${delay}ms...`);
+        await sleep(delay);
+        continue;
+      }
+
+      const error = new Error(`${seriesId}: HTTP ${response.status} ${response.statusText}`.trim());
+      error.retryable = false;
+      throw error;
+    } catch (error) {
+      if (error?.retryable === false) throw error;
+
+      if (attempt < retries) {
+        const delay = attempt * retryDelayMs;
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn(`FRED ${seriesId}: ${message} (attempt ${attempt}/${retries}), retrying in ${delay}ms...`);
+        await sleep(delay);
+        continue;
+      }
+
+      throw error;
+    }
   }
-  return payload.observations;
+
+  throw new Error(`${seriesId}: request failed after ${retries} attempts`);
 }
 
 async function main() {
@@ -343,26 +386,47 @@ async function main() {
       continue;
     }
 
-    let sourceMonthly = null;
-    let sourceLabel = `FRED:${config.seriesId}`;
-
-    if (config.column === STOCK_MARKET_COLUMN && monthlyMarketCapMap?.size) {
-      sourceMonthly = monthlyMarketCapMap;
-      sourceLabel = 'MONTHLY_CSV:MARKET_CAP';
-    } else {
-      const observations = await fetchSeries(config.seriesId, apiKey, observationStart);
-      sourceMonthly = aggregateToMonthly(observations);
-      if (config.cadence === 'quarterly') sourceMonthly = expandQuarterlyMonths(sourceMonthly);
-    }
-
-    const sourceMonths = [...sourceMonthly.keys()].sort(compareMonthKeys);
-    const sourceLatest = sourceMonths.at(-1);
-
     let csvLatest = null;
     for (const [month, row] of [...rowByMonth.entries()].sort((a, b) => compareMonthKeys(a[0], b[0]))) {
       const value = parseCsvNumber(row[colIndex]);
       if (value !== null) csvLatest = month;
     }
+
+    let sourceMonthly = null;
+    let sourceLabel = `FRED:${config.seriesId}`;
+
+    try {
+      if (config.column === STOCK_MARKET_COLUMN && monthlyMarketCapMap?.size) {
+        sourceMonthly = monthlyMarketCapMap;
+        sourceLabel = 'MONTHLY_CSV:MARKET_CAP';
+      } else {
+        const observations = await fetchSeries(config.seriesId, apiKey, observationStart);
+        sourceMonthly = aggregateToMonthly(observations);
+        if (config.cadence === 'quarterly') sourceMonthly = expandQuarterlyMonths(sourceMonthly);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      failures.push(`${config.column}: unable to fetch validation source (${message})`);
+      summaries.push({
+        column: config.column,
+        seriesId: sourceLabel,
+        status: 'FAIL',
+        csvLatest: csvLatest ?? 'n/a',
+        sourceLatest: 'unavailable',
+        lag: 'n/a',
+        forwardFill: 'n/a',
+        threshold: config.threshold,
+        maxAbsDiff: 'n/a',
+        mismatchCount: 'n/a',
+        expectedReleaseWindow: 'n/a',
+        releaseWindowStatus: 'SOURCE_UNAVAILABLE',
+        releaseWindowGapMonths: 'n/a',
+      });
+      continue;
+    }
+
+    const sourceMonths = [...sourceMonthly.keys()].sort(compareMonthKeys);
+    const sourceLatest = sourceMonths.at(-1);
 
     let lag = null;
     let forwardFill = 0;
