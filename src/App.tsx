@@ -75,6 +75,14 @@ interface ExtremaDotProps {
   };
 }
 
+interface YieldCurveStatus {
+  spread: number;
+  observedDate: string;
+  invertedMonths: number;
+  label: string;
+  toneClassName: string;
+}
+
 // --- Data ---
 const RAW_CSV_DATA = `Observed Date,Unemployment Rate,Avg Weeks Unemployeed,Median Weeks Unemployeed,Job Openings,Unemployed 27 weeks,Unemployeed Count,Fed Rate,15 year mortgage,30 year mortgage,S&P 500,Labor Participation Rate,Labor Participation Core,Housing Price Index,CPI,GDP,Stock Market (b),National Debt (b)
 1/1/2020,3.60,21.9,10,7124,1176,5869,1.55,3.072,3.624,3278.2,63.3,83.1,212.4,337.8,21751,32838.19,24535.1
@@ -620,6 +628,51 @@ const formatTimeRemaining = (targetDate: Date, now: Date) => {
   if (days > 0) return `${days}d ${hours}h`;
   if (hours > 0) return `${hours}h ${minutes}m`;
   return `${minutes}m`;
+};
+
+const getYieldCurveStatus = (data: DataPoint[]): YieldCurveStatus | null => {
+  let latestIndex = -1;
+  let latestSpread: number | null = null;
+
+  for (let i = data.length - 1; i >= 0; i--) {
+    const spread = Number(data[i]['Yield Spread']);
+    if (Number.isFinite(spread)) {
+      latestIndex = i;
+      latestSpread = spread;
+      break;
+    }
+  }
+
+  if (latestIndex === -1 || latestSpread === null) return null;
+
+  let invertedMonths = 0;
+  if (latestSpread < 0) {
+    for (let i = latestIndex; i >= 0; i--) {
+      const spread = Number(data[i]['Yield Spread']);
+      if (!Number.isFinite(spread) || spread >= 0) break;
+      invertedMonths++;
+    }
+  }
+
+  const isPositive = latestSpread > 0;
+  const toneClassName = isPositive
+    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+    : latestSpread >= -0.25
+      ? 'border-amber-200 bg-amber-50 text-amber-800'
+      : 'border-red-200 bg-red-50 text-red-800';
+
+  const spreadText = `${latestSpread > 0 ? '+' : ''}${latestSpread.toFixed(2)}`;
+  const label = isPositive
+    ? `Yield curve: ${spreadText}, normal`
+    : `Yield curve: ${spreadText}, inverted ${invertedMonths} mo`;
+
+  return {
+    spread: latestSpread,
+    observedDate: String(data[latestIndex].date ?? ''),
+    invertedMonths,
+    label,
+    toneClassName,
+  };
 };
 
 // --- Parsing Helper ---
@@ -1411,6 +1464,8 @@ export default function App() {
     return `${formatTimeRemaining(nextRun, clockNow)} (${nextRun.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })})`;
   }, [clockNow]);
 
+  const yieldCurveStatus = useMemo(() => getYieldCurveStatus(data), [data]);
+
   const handleDateRangeChange = useCallback((nextRange: [number, number]) => {
     setDateRange(nextRange);
     setActivePreset(null);
@@ -1529,6 +1584,15 @@ export default function App() {
             <h1 className="text-2xl md:text-3xl font-semibold text-main tracking-tight">Economic Indicators</h1>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
               <span>Last updated: {lastUpdatedText}</span>
+              {yieldCurveStatus && (
+                <span
+                  className={`rounded-full border px-2 py-1 text-[11px] font-semibold leading-tight ${yieldCurveStatus.toneClassName}`}
+                  title={`Latest 10Y minus 2Y Treasury spread from ${yieldCurveStatus.observedDate}`}
+                  aria-label={`Yield curve status: ${yieldCurveStatus.label}`}
+                >
+                  {yieldCurveStatus.label}
+                </span>
+              )}
               <span>GitHub CSV auto-updates from API calls on a scheduled cadence.</span>
               <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-[11px] leading-tight">
                 Next auto-refresh: {nextAutoRefreshText}
