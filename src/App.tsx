@@ -1582,6 +1582,17 @@ export default function App() {
           <img src={appLogo} alt="Economic Dashboard logo" className="w-14 h-14 object-contain shrink-0" />
           <div>
             <h1 className="text-2xl md:text-3xl font-semibold text-main tracking-tight">Economic Indicators</h1>
+            <p className="mt-0.5 text-xs text-muted">
+              Built by{' '}
+              <a
+                href="https://browningtons.github.io/golden-data/"
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-link hover:underline"
+              >
+                Golden Data
+              </a>
+            </p>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
               <span>Last updated: {lastUpdatedText}</span>
               {yieldCurveStatus && (
