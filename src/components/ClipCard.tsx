@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { ExternalLink, Eye, Calendar, Globe, Twitter, Instagram, Download, Loader2, Check, AlertCircle, Link as LinkIcon } from 'lucide-react';
+import { ExternalLink, Eye, Calendar, Globe, Twitter, Instagram, Download, Loader2, Check, AlertCircle, Link as LinkIcon, Linkedin, Mail, Share2, Cloud } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import Card from './Card';
 import ClipChart from './ClipChart';
@@ -344,6 +344,35 @@ const ClipCard = React.memo(function ClipCard({ clip, defaultViewMode = 'web', h
     window.setTimeout(() => setLinkState('idle'), 1800);
   }, [clip.id]);
 
+  const handleShareNative = useCallback(async () => {
+    const url = buildPermalink(clip.id);
+    const shareData = { title: clip.title, text: clip.subtitle || clip.title, url };
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch {
+        // user cancelled — fall through silently
+      }
+    }
+    // Fallback: just copy the link
+    void handleCopyLink();
+  }, [clip.id, clip.title, clip.subtitle, handleCopyLink]);
+
+  const shareLinks = (() => {
+    const url = buildPermalink(clip.id);
+    const text = clip.title;
+    const textWithUrl = `${clip.title} ${url}`;
+    const enc = encodeURIComponent;
+    return {
+      x: `https://twitter.com/intent/tweet?text=${enc(text)}&url=${enc(url)}`,
+      bluesky: `https://bsky.app/intent/compose?text=${enc(textWithUrl)}`,
+      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${enc(url)}`,
+      threads: `https://www.threads.net/intent/post?text=${enc(textWithUrl)}`,
+      email: `mailto:?subject=${enc(clip.title)}&body=${enc(`${clip.title}\n\n${clip.subtitle ?? ''}\n\n${url}`)}`,
+    };
+  })();
+
   const handleDownload = useCallback(async () => {
     if (!frameRef.current || !frameSpec) return;
     setExportState('exporting');
@@ -532,7 +561,56 @@ const ClipCard = React.memo(function ClipCard({ clip, defaultViewMode = 'web', h
             <span className="font-semibold text-main">{clip.source.label}</span>
             {clip.source.handle && <span className="font-mono">{clip.source.handle}</span>}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1">
+            <span className="mr-1 text-[10px] uppercase tracking-wider text-muted">Share</span>
+            <a
+              href={shareLinks.x}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-theme bg-muted-surface text-muted hover:bg-secondary hover:text-main"
+              title="Share on X / Twitter"
+              aria-label="Share on X"
+            >
+              <Twitter size={13} aria-hidden />
+            </a>
+            <a
+              href={shareLinks.bluesky}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-theme bg-muted-surface text-muted hover:bg-secondary hover:text-main"
+              title="Share on Bluesky"
+              aria-label="Share on Bluesky"
+            >
+              <Cloud size={13} aria-hidden />
+            </a>
+            <a
+              href={shareLinks.threads}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-theme bg-muted-surface text-muted hover:bg-secondary hover:text-main"
+              title="Share on Threads"
+              aria-label="Share on Threads"
+            >
+              <Instagram size={13} aria-hidden />
+            </a>
+            <a
+              href={shareLinks.linkedin}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-theme bg-muted-surface text-muted hover:bg-secondary hover:text-main"
+              title="Share on LinkedIn"
+              aria-label="Share on LinkedIn"
+            >
+              <Linkedin size={13} aria-hidden />
+            </a>
+            <a
+              href={shareLinks.email}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-theme bg-muted-surface text-muted hover:bg-secondary hover:text-main"
+              title="Share by email"
+              aria-label="Share by email"
+            >
+              <Mail size={13} aria-hidden />
+            </a>
             <button
               type="button"
               onClick={handleCopyLink}
@@ -556,12 +634,21 @@ const ClipCard = React.memo(function ClipCard({ clip, defaultViewMode = 'web', h
                 </>
               )}
             </button>
+            <button
+              type="button"
+              onClick={handleShareNative}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-theme bg-muted-surface text-muted hover:bg-secondary hover:text-main"
+              title="More share options (uses native share sheet on mobile)"
+              aria-label="More share options"
+            >
+              <Share2 size={13} aria-hidden />
+            </button>
             {clip.source.url && (
               <a
                 href={clip.source.url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1 rounded-md border border-theme bg-muted-surface px-2 py-1 text-xs font-medium text-link hover:underline"
+                className="ml-1 inline-flex items-center gap-1 rounded-md border border-theme bg-muted-surface px-2 py-1 text-xs font-medium text-link hover:underline"
               >
                 View source
                 <ExternalLink size={12} aria-hidden />

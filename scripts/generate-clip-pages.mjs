@@ -557,6 +557,119 @@ async function main() {
     console.log(`  ✓ ${BASE_PATH}/clips/${clip.id}/  (og.png ${png.length}B)`);
   }
   console.log(`✓ Pre-render complete (dist/clips/).`);
+
+  // ---- Atom feed for syndication ----
+  const feedXml = generateAtomFeed(clips);
+  await writeFile(path.join(DIST, 'clips.xml'), feedXml);
+  console.log(`✓ Atom feed written (dist/clips.xml, ${clips.length} entries).`);
+
+  // ---- Sitemap for search engines ----
+  const sitemap = generateSitemap(clips);
+  await writeFile(path.join(DIST, 'sitemap.xml'), sitemap);
+  console.log(`✓ Sitemap written (dist/sitemap.xml, ${clips.length + 1} URLs).`);
+
+  // ---- robots.txt pointer to sitemap ----
+  const robots = `User-agent: *\nAllow: /\nSitemap: ${SITE_BASE}/sitemap.xml\n`;
+  await writeFile(path.join(DIST, 'robots.txt'), robots);
+  console.log('✓ robots.txt written.');
+}
+
+function toIsoOrNow(date) {
+  if (!date) return new Date().toISOString();
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return new Date().toISOString();
+  return d.toISOString();
+}
+
+function generateAtomFeed(clips) {
+  const sorted = [...clips].sort((a, b) => {
+    const aT = new Date(a.addedAt || a.observedDate).getTime() || 0;
+    const bT = new Date(b.addedAt || b.observedDate).getTime() || 0;
+    return bT - aT;
+  });
+  const latest = sorted[0]
+    ? toIsoOrNow(sorted[0].addedAt || sorted[0].observedDate)
+    : new Date().toISOString();
+
+  const entries = sorted
+    .map((clip) => {
+      const url = `${SITE_BASE}/clips/${clip.id}/`;
+      const ogImage = `${SITE_BASE}/clips/${clip.id}/og.png`;
+      const updated = toIsoOrNow(clip.addedAt || clip.observedDate);
+      const published = toIsoOrNow(clip.observedDate || clip.addedAt);
+      const summary = clip.subtitle?.trim() || clip.notes?.trim() || clip.title;
+      const sourceLine = clip.source?.label
+        ? `${clip.source.label}${clip.source.handle ? ` (${clip.source.handle})` : ''}`
+        : '';
+      const contentHtml = [
+        clip.subtitle ? `<p>${escapeXml(clip.subtitle)}</p>` : '',
+        `<p><img src="${escapeXml(ogImage)}" alt="${escapeXml(clip.title)}" /></p>`,
+        clip.notes ? `<p><em>${escapeXml(clip.notes)}</em></p>` : '',
+        sourceLine ? `<p>Source: ${escapeXml(sourceLine)}</p>` : '',
+      ]
+        .filter(Boolean)
+        .join('');
+      return `  <entry>
+    <id>${escapeXml(url)}</id>
+    <title>${escapeXml(clip.title)}</title>
+    <link rel="alternate" type="text/html" href="${escapeXml(url)}"/>
+    <link rel="enclosure" type="image/png" href="${escapeXml(ogImage)}"/>
+    <updated>${updated}</updated>
+    <published>${published}</published>
+    <summary>${escapeXml(summary)}</summary>
+    <content type="html"><![CDATA[${contentHtml}]]></content>
+    <author><name>${escapeXml(clip.source?.label ?? 'Golden Data')}</name></author>
+  </entry>`;
+    })
+    .join('\n');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Economic Dashboard — Clips</title>
+  <subtitle>A running list of interesting data clips, by Golden Data.</subtitle>
+  <link rel="self" type="application/atom+xml" href="${SITE_BASE}/clips.xml"/>
+  <link rel="alternate" type="text/html" href="${SITE_BASE}/"/>
+  <id>${SITE_BASE}/clips.xml</id>
+  <updated>${latest}</updated>
+  <generator uri="${SITE_BASE}/">Golden Data Clips Generator</generator>
+${entries}
+</feed>
+`;
+}
+
+function generateSitemap(clips) {
+  const urls = [
+    {
+      loc: `${SITE_BASE}/`,
+      lastmod: clips.reduce((max, c) => {
+        const t = new Date(c.addedAt || c.observedDate).getTime();
+        return Number.isFinite(t) && t > max ? t : max;
+      }, 0),
+      priority: '1.0',
+    },
+    ...clips.map((c) => ({
+      loc: `${SITE_BASE}/clips/${c.id}/`,
+      lastmod: new Date(c.addedAt || c.observedDate).getTime() || Date.now(),
+      priority: '0.8',
+    })),
+  ];
+
+  const entries = urls
+    .map((u) => {
+      const lastmod = new Date(u.lastmod || Date.now()).toISOString().slice(0, 10);
+      return `  <url>
+    <loc>${escapeXml(u.loc)}</loc>
+    <lastmod>${lastmod}</lastmod>
+    <priority>${u.priority}</priority>
+  </url>`;
+    })
+    .join('\n');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap-0.9">
+${entries}
+</urlset>
+`;
 }
 
 main().catch((err) => {
