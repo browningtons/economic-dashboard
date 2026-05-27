@@ -879,9 +879,10 @@ export default function App() {
   const [reloadKey, setReloadKey] = useState(0);
   const [activeTab, setActiveTab] = useState<'Dashboard' | 'Buffett' | 'Data Table' | 'Clips'>(() => {
     if (typeof window === 'undefined') return 'Dashboard';
-    const hint = document.querySelector('meta[name="clip-id"]')?.getAttribute('content');
-    const fromPath = window.location.pathname.match(/\/clips\/([^/]+)\/?$/)?.[1];
-    return hint || fromPath ? 'Clips' : 'Dashboard';
+    const clipHint = document.querySelector('meta[name="clip-id"]')?.getAttribute('content');
+    const tagHint = document.querySelector('meta[name="active-tag"]')?.getAttribute('content');
+    const isClipsPath = /\/clips(?:\/|$)/.test(window.location.pathname);
+    return clipHint || tagHint || isClipsPath ? 'Clips' : 'Dashboard';
   });
   const [shareMode, setShareMode] = useState(false);
   const [viewMode, setViewMode] = useState<'raw' | 'relative'>('raw');

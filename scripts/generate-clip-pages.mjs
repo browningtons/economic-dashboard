@@ -702,15 +702,85 @@ async function main() {
   await writeFile(path.join(DIST, 'clips.xml'), feedXml);
   console.log(`✓ Atom feed written (dist/clips.xml, ${clips.length} entries).`);
 
+  // ---- Per-tag landing pages, OG images, sub-feeds ----
+  const tagSummaries = await generateTagPages({ clips, template });
+
   // ---- Sitemap for search engines ----
-  const sitemap = generateSitemap(clips);
+  const sitemap = generateSitemap(clips, tagSummaries);
   await writeFile(path.join(DIST, 'sitemap.xml'), sitemap);
-  console.log(`✓ Sitemap written (dist/sitemap.xml, ${clips.length + 1} URLs).`);
+  console.log(
+    `✓ Sitemap written (dist/sitemap.xml, ${clips.length + tagSummaries.length + 1} URLs).`,
+  );
 
   // ---- robots.txt pointer to sitemap ----
   const robots = `User-agent: *\nAllow: /\nSitemap: ${SITE_BASE}/sitemap.xml\n`;
   await writeFile(path.join(DIST, 'robots.txt'), robots);
   console.log('✓ robots.txt written.');
+}
+
+async function generateTagPages({ clips, template }) {
+  const tagMap = new Map();
+  for (const clip of clips) {
+    for (const tag of clip.tags ?? []) {
+      if (!tagMap.has(tag)) tagMap.set(tag, []);
+      tagMap.get(tag).push(clip);
+    }
+  }
+  if (tagMap.size === 0) {
+    console.log('! No tags found across clips; skipping tag pages.');
+    return [];
+  }
+
+  console.log(`→ Pre-rendering ${tagMap.size} tag page${tagMap.size === 1 ? '' : 's'}…`);
+  const summaries = [];
+  for (const [tag, tagClips] of tagMap) {
+    const sortedClips = [...tagClips].sort((a, b) => {
+      const aT = new Date(a.addedAt || a.observedDate).getTime() || 0;
+      const bT = new Date(b.addedAt || b.observedDate).getTime() || 0;
+      return bT - aT;
+    });
+    const tagSlug = encodeURIComponent(tag);
+    const outDir = path.join(DIST, 'clips', 'tag', tag);
+    await mkdir(outDir, { recursive: true });
+
+    const canonicalUrl = `${SITE_BASE}/clips/tag/${tagSlug}/`;
+    const ogImageUrl = `${SITE_BASE}/clips/tag/${tagSlug}/og.png`;
+    const feedUrl = `${SITE_BASE}/clips/tag/${tagSlug}/feed.xml`;
+
+    // OG image
+    const svg = generateTagSvg(tag, sortedClips);
+    const png = await renderPng(svg);
+    await writeFile(path.join(outDir, 'og.png'), png);
+
+    // HTML
+    const html = injectTagMeta(template, tag, sortedClips, {
+      canonicalUrl,
+      ogImageUrl,
+      feedUrl,
+    });
+    await writeFile(path.join(outDir, 'index.html'), html);
+
+    // Per-tag Atom feed
+    const subFeed = generateAtomFeed(sortedClips, {
+      title: `Economic Dashboard — #${tag}`,
+      subtitle: `Clips tagged #${tag}, by Golden Data.`,
+      selfUrl: feedUrl,
+      altUrl: canonicalUrl,
+    });
+    await writeFile(path.join(outDir, 'feed.xml'), subFeed);
+
+    summaries.push({
+      tag,
+      count: sortedClips.length,
+      url: canonicalUrl,
+      lastmod:
+        new Date(sortedClips[0].addedAt || sortedClips[0].observedDate).getTime() || Date.now(),
+    });
+    console.log(
+      `  ✓ ${BASE_PATH}/clips/tag/${tag}/  (${sortedClips.length} clip${sortedClips.length === 1 ? '' : 's'}, og ${png.length}B)`,
+    );
+  }
+  return summaries;
 }
 
 function toIsoOrNow(date) {
@@ -720,7 +790,13 @@ function toIsoOrNow(date) {
   return d.toISOString();
 }
 
-function generateAtomFeed(clips) {
+function generateAtomFeed(clips, opts = {}) {
+  const {
+    title = 'Economic Dashboard — Clips',
+    subtitle = 'A running list of interesting data clips, by Golden Data.',
+    selfUrl = `${SITE_BASE}/clips.xml`,
+    altUrl = `${SITE_BASE}/`,
+  } = opts;
   const sorted = [...clips].sort((a, b) => {
     const aT = new Date(a.addedAt || a.observedDate).getTime() || 0;
     const bT = new Date(b.addedAt || b.observedDate).getTime() || 0;
@@ -768,11 +844,11 @@ ${categories}
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-  <title>Economic Dashboard — Clips</title>
-  <subtitle>A running list of interesting data clips, by Golden Data.</subtitle>
-  <link rel="self" type="application/atom+xml" href="${SITE_BASE}/clips.xml"/>
-  <link rel="alternate" type="text/html" href="${SITE_BASE}/"/>
-  <id>${SITE_BASE}/clips.xml</id>
+  <title>${escapeXml(title)}</title>
+  <subtitle>${escapeXml(subtitle)}</subtitle>
+  <link rel="self" type="application/atom+xml" href="${escapeXml(selfUrl)}"/>
+  <link rel="alternate" type="text/html" href="${escapeXml(altUrl)}"/>
+  <id>${escapeXml(selfUrl)}</id>
   <updated>${latest}</updated>
   <generator uri="${SITE_BASE}/">Golden Data Clips Generator</generator>
 ${entries}
@@ -780,7 +856,7 @@ ${entries}
 `;
 }
 
-function generateSitemap(clips) {
+function generateSitemap(clips, tagSummaries = []) {
   const urls = [
     {
       loc: `${SITE_BASE}/`,
@@ -794,6 +870,11 @@ function generateSitemap(clips) {
       loc: `${SITE_BASE}/clips/${c.id}/`,
       lastmod: new Date(c.addedAt || c.observedDate).getTime() || Date.now(),
       priority: '0.8',
+    })),
+    ...tagSummaries.map((t) => ({
+      loc: t.url,
+      lastmod: t.lastmod,
+      priority: '0.6',
     })),
   ];
 
@@ -813,6 +894,146 @@ function generateSitemap(clips) {
 ${entries}
 </urlset>
 `;
+}
+
+// ---- Per-tag OG image renderer ----
+function generateTagSvg(tag, clips) {
+  const W = 1200;
+  const H = 630;
+  const PAD = 56;
+  const count = clips.length;
+  const latest = clips[0];
+  const latestDateStr = latest ? formatObservedDate(latest.addedAt || latest.observedDate) : '';
+
+  const titleFontSize = 92;
+  const tagText = `#${tag}`;
+  const titleY = PAD + 80;
+  const subtitleY = titleY + 44;
+
+  // Pre-compute the "TAG" pill on the top-left
+  const pill = `
+    <rect x="${PAD}" y="${PAD - 6}" width="56" height="26" rx="13" ry="13"
+          fill="${COLOR.brandAccent}22" stroke="${COLOR.brandAccent}" stroke-width="1"/>
+    <text x="${PAD + 28}" y="${PAD + 12}" text-anchor="middle"
+          font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="700"
+          letter-spacing="2" fill="${COLOR.brandAccent}">TAG</text>
+  `;
+
+  const titleEl = `
+    <text x="${PAD}" y="${titleY}" font-family="Inter, system-ui, sans-serif"
+          font-size="${titleFontSize}" font-weight="800" letter-spacing="-2"
+          fill="${COLOR.brandPrimary}">${escapeXml(tagText)}</text>
+  `;
+
+  const subtitleEl = `
+    <text x="${PAD}" y="${subtitleY}" font-family="Inter, system-ui, sans-serif"
+          font-size="22" font-weight="600" fill="${COLOR.textMuted}">
+      ${count} clip${count === 1 ? '' : 's'}${latestDateStr ? ` · Latest: ${escapeXml(latestDateStr)}` : ''}
+    </text>
+  `;
+
+  // Up to 4 recent clip titles, listed
+  const listTop = subtitleY + 50;
+  const lineH = 56;
+  const visibleClips = clips.slice(0, 4);
+  const listEls = visibleClips
+    .map((clip, i) => {
+      const y = listTop + i * lineH;
+      const titleStr = truncate(clip.title, 56);
+      const dateStr = formatObservedDate(clip.observedDate);
+      return `
+        <line x1="${PAD}" x2="${W - PAD}" y1="${y - 14}" y2="${y - 14}"
+              stroke="${COLOR.borderSubtle}" stroke-width="1"/>
+        <text x="${PAD}" y="${y + 14}" font-family="Inter, system-ui, sans-serif"
+              font-size="22" font-weight="600" fill="${COLOR.textMain}">${escapeXml(titleStr)}</text>
+        <text x="${W - PAD}" y="${y + 14}" text-anchor="end"
+              font-family="Inter, system-ui, sans-serif" font-size="14"
+              fill="${COLOR.textMuted}">${escapeXml(dateStr)}</text>
+      `;
+    })
+    .join('\n');
+
+  const moreText =
+    count > visibleClips.length
+      ? `+ ${count - visibleClips.length} more`
+      : '';
+  const moreEl = moreText
+    ? `<text x="${PAD}" y="${listTop + visibleClips.length * lineH + 14}"
+            font-family="Inter, system-ui, sans-serif" font-size="14"
+            fill="${COLOR.textMuted}">${escapeXml(moreText)}</text>`
+    : '';
+
+  const footerY = H - PAD - 12;
+  const footer = `
+    <line x1="${PAD}" y1="${footerY - 18}" x2="${W - PAD}" y2="${footerY - 18}"
+          stroke="${COLOR.borderSubtle}" stroke-width="1"/>
+    <text x="${PAD}" y="${footerY + 6}" font-family="Inter, system-ui, sans-serif"
+          font-size="16" font-weight="700" fill="${COLOR.textMain}">Economic Dashboard · Clips</text>
+    <text x="${W - PAD}" y="${footerY + 6}" text-anchor="end"
+          font-family="Inter, system-ui, sans-serif" font-size="14"
+          fill="${COLOR.textMuted}">browningtons.github.io/economic-dashboard/clips/tag/${escapeXml(tag)}/</text>
+  `;
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  <rect width="${W}" height="${H}" fill="${COLOR.bg}"/>
+  ${pill}
+  ${titleEl}
+  ${subtitleEl}
+  ${listEls}
+  ${moreEl}
+  ${footer}
+</svg>`;
+}
+
+function injectTagMeta(template, tag, clips, { canonicalUrl, ogImageUrl, feedUrl }) {
+  const count = clips.length;
+  const title = `#${tag} — Economic Dashboard Clips`;
+  const description = `${count} clip${count === 1 ? '' : 's'} tagged #${tag} on the Economic Dashboard, by Golden Data.`;
+
+  const replaceOrInsert = (html, attr, attrValue, contentValue) => {
+    const re = new RegExp(`<meta\\s+${attr}="${attrValue}"[^>]*>`, 'i');
+    const metaTag = `<meta ${attr}="${attrValue}" content="${escapeHtmlAttr(contentValue)}" />`;
+    if (re.test(html)) return html.replace(re, metaTag);
+    return html.replace(/<\/head>/i, `    ${metaTag}\n  </head>`);
+  };
+
+  let out = template;
+  out = out.replace(/<title>[^<]*<\/title>/i, `<title>${escapeXml(title)}</title>`);
+  out = replaceOrInsert(out, 'name', 'description', description);
+  out = replaceOrInsert(out, 'property', 'og:title', title);
+  out = replaceOrInsert(out, 'property', 'og:description', description);
+  out = replaceOrInsert(out, 'property', 'og:url', canonicalUrl);
+  out = replaceOrInsert(out, 'property', 'og:image', ogImageUrl);
+  out = replaceOrInsert(out, 'property', 'og:image:alt', `${title} — collected by Golden Data`);
+  out = replaceOrInsert(out, 'name', 'twitter:title', title);
+  out = replaceOrInsert(out, 'name', 'twitter:description', description);
+  out = replaceOrInsert(out, 'name', 'twitter:image', ogImageUrl);
+  out = replaceOrInsert(out, 'name', 'twitter:image:alt', `${title} — collected by Golden Data`);
+
+  // Canonical link
+  const canonicalRe = /<link\s+rel="canonical"[^>]*>/i;
+  const canonicalTag = `<link rel="canonical" href="${escapeHtmlAttr(canonicalUrl)}" />`;
+  if (canonicalRe.test(out)) out = out.replace(canonicalRe, canonicalTag);
+  else out = out.replace(/<\/head>/i, `    ${canonicalTag}\n  </head>`);
+
+  // SPA hint: which tag should be active on load
+  const tagHint = `<meta name="active-tag" content="${escapeHtmlAttr(tag)}" />`;
+  if (/<meta\s+name="active-tag"/i.test(out)) {
+    out = out.replace(/<meta\s+name="active-tag"[^>]*>/i, tagHint);
+  } else {
+    out = out.replace(/<\/head>/i, `    ${tagHint}\n  </head>`);
+  }
+
+  // Atom sub-feed auto-discovery — replace the main feed's alternate link
+  // with this tag's feed so RSS readers subscribed via the page itself get
+  // only this tag's clips.
+  const altFeedTag = `<link rel="alternate" type="application/atom+xml" title="${escapeHtmlAttr(`#${tag}`)} — Economic Dashboard" href="${escapeHtmlAttr(feedUrl)}" />`;
+  const altFeedRe = /<link\s+rel="alternate"\s+type="application\/atom\+xml"[^>]*>/i;
+  if (altFeedRe.test(out)) out = out.replace(altFeedRe, altFeedTag);
+  else out = out.replace(/<\/head>/i, `    ${altFeedTag}\n  </head>`);
+
+  return out;
 }
 
 main().catch((err) => {
