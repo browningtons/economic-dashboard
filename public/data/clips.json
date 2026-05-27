@@ -31,6 +31,7 @@
         { "label": "2026-04-01", "value": 4.22, "highlight": true }
       ],
       "notes": "Highlighted point is the most recent observation. Hover the chart on the dashboard's Monetary Policy view to see the same series in full detail.",
+      "tags": ["monetary-policy", "rates", "fed"],
       "addedAt": "2026-05-27"
     },
     {
@@ -62,6 +63,7 @@
         { "label": "France", "value": 3.5, "flag": "🇫🇷" }
       ],
       "notes": "Total stock market value, May 2026. Taiwan's surge driven by TSMC and the broader semiconductor rally.",
+      "tags": ["markets", "global", "equities"],
       "addedAt": "2026-05-27"
     },
     {
@@ -86,6 +88,7 @@
         { "label": "Annual Interest Cost", "value": 1.2 }
       ],
       "notes": "All values in trillions of US dollars. Federal debt has roughly doubled in 10 years; annual interest on that debt is now larger than the Pentagon budget.",
+      "tags": ["fiscal", "debt", "us"],
       "addedAt": "2026-05-27"
     },
     {
@@ -111,6 +114,7 @@
         { "label": "Other", "value": 9.7 }
       ],
       "notes": "USD remains dominant but its share has drifted lower over the last decade; the yuan's share has been ticking up.",
+      "tags": ["global", "fx", "monetary-policy"],
       "addedAt": "2026-05-27"
     }
   ]

@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { ExternalLink, Eye, Calendar, Globe, Twitter, Instagram, Download, Loader2, Check, AlertCircle, Link as LinkIcon, Linkedin, Mail, Share2, Cloud } from 'lucide-react';
+import { ExternalLink, Eye, Calendar, Globe, Twitter, Instagram, Download, Loader2, Check, AlertCircle, Link as LinkIcon, Linkedin, Mail, Share2, Cloud, Tag } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import Card from './Card';
 import ClipChart from './ClipChart';
@@ -14,6 +14,8 @@ interface ClipCardProps {
   clip: Clip;
   defaultViewMode?: ClipViewMode;
   highlighted?: boolean;
+  activeTag?: string | null;
+  onTagClick?: (tag: string) => void;
 }
 
 const PLATFORM_LABEL: Record<string, string> = {
@@ -332,7 +334,7 @@ const buildPermalink = (clipId: string): string => {
   return `${window.location.origin}${base}clips/${clipId}/`;
 };
 
-const ClipCard = React.memo(function ClipCard({ clip, defaultViewMode = 'web', highlighted = false }: ClipCardProps) {
+const ClipCard = React.memo(function ClipCard({ clip, defaultViewMode = 'web', highlighted = false, activeTag = null, onTagClick }: ClipCardProps) {
   const [viewMode, setViewMode] = useState<ClipViewMode>(defaultViewMode);
   const [exportState, setExportState] = useState<ExportState>('idle');
   const [linkState, setLinkState] = useState<LinkState>('idle');
@@ -481,6 +483,41 @@ const ClipCard = React.memo(function ClipCard({ clip, defaultViewMode = 'web', h
           <h3 className="text-lg md:text-xl font-semibold text-main tracking-tight">{clip.title}</h3>
           {clip.subtitle && (
             <p className="text-sm leading-relaxed text-muted">{clip.subtitle}</p>
+          )}
+          {clip.tags && clip.tags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5" aria-label="Tags">
+              <Tag size={11} className="text-muted" aria-hidden />
+              {clip.tags.map((tag) => {
+                const isActive = activeTag === tag;
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => onTagClick?.(tag)}
+                    disabled={!onTagClick}
+                    className="rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors hover:bg-secondary"
+                    style={
+                      isActive
+                        ? {
+                            color: 'var(--color-brand-primary)',
+                            borderColor:
+                              'color-mix(in oklab, var(--color-brand-primary) 40%, transparent)',
+                            backgroundColor:
+                              'color-mix(in oklab, var(--color-brand-primary) 12%, var(--color-bg-secondary))',
+                          }
+                        : {
+                            color: 'var(--color-text-muted)',
+                            borderColor: 'var(--color-border)',
+                            backgroundColor: 'var(--color-bg-secondary)',
+                          }
+                    }
+                    title={onTagClick ? `Filter clips by #${tag}` : `#${tag}`}
+                  >
+                    #{tag}
+                  </button>
+                );
+              })}
+            </div>
           )}
         </header>
 

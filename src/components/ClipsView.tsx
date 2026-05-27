@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Bookmark, Filter, ChevronRight } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Bookmark, Filter, ChevronRight, X as XIcon, Tag } from 'lucide-react';
 import Card from './Card';
 import ClipCard from './ClipCard';
 import ClipRemixer from './ClipRemixer';
@@ -16,14 +16,43 @@ const getDeepLinkClipId = (): string | null => {
   return window.location.pathname.match(/\/clips\/([^/]+)\/?$/)?.[1] ?? null;
 };
 
+const getInitialTagFromUrl = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  const tag = params.get('tag');
+  return tag ? tag.toLowerCase() : null;
+};
+
+const updateTagInUrl = (tag: string | null) => {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  if (tag) url.searchParams.set('tag', tag);
+  else url.searchParams.delete('tag');
+  window.history.replaceState({}, '', url.toString());
+};
+
 const ClipsView = React.memo(function ClipsView() {
   const [clips, setClips] = useState<Clip[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [platformFilter, setPlatformFilter] = useState<string>('all');
+  const [activeTag, setActiveTagState] = useState<string | null>(() => getInitialTagFromUrl());
   const [remixerOpen, setRemixerOpen] = useState(false);
   const [deepLinkClipId] = useState<string | null>(() => getDeepLinkClipId());
+
+  const setActiveTag = useCallback((tag: string | null) => {
+    setActiveTagState(tag);
+    updateTagInUrl(tag);
+  }, []);
+
+  const toggleTag = useCallback((tag: string) => {
+    setActiveTagState((current) => {
+      const next = current === tag ? null : tag;
+      updateTagInUrl(next);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (!deepLinkClipId || isLoading) return;
@@ -71,10 +100,25 @@ const ClipsView = React.memo(function ClipsView() {
     return ['all', ...Array.from(set)];
   }, [clips]);
 
+  const tagCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const clip of clips) {
+      for (const tag of clip.tags ?? []) {
+        counts.set(tag, (counts.get(tag) ?? 0) + 1);
+      }
+    }
+    return Array.from(counts.entries()).sort((a, b) =>
+      b[1] !== a[1] ? b[1] - a[1] : a[0].localeCompare(b[0]),
+    );
+  }, [clips]);
+
   const visibleClips = useMemo(() => {
     let result = clips;
     if (platformFilter !== 'all') {
       result = result.filter((c) => c.source.platform === platformFilter);
+    }
+    if (activeTag) {
+      result = result.filter((c) => c.tags?.includes(activeTag));
     }
     const sorted = [...result].sort((a, b) => {
       const aTime = new Date(a.observedDate).getTime();
@@ -82,7 +126,7 @@ const ClipsView = React.memo(function ClipsView() {
       return sortKey === 'newest' ? bTime - aTime : aTime - bTime;
     });
     return sorted;
-  }, [clips, sortKey, platformFilter]);
+  }, [clips, sortKey, platformFilter, activeTag]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -180,6 +224,76 @@ const ClipsView = React.memo(function ClipsView() {
         </div>
       </Card>
 
+      {tagCounts.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5" aria-label="Filter by tag">
+          <Tag size={12} className="text-muted" aria-hidden />
+          <span className="mr-1 text-[11px] uppercase tracking-wider text-muted">
+            Filter by tag
+          </span>
+          <button
+            type="button"
+            onClick={() => setActiveTag(null)}
+            className="rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors hover:bg-secondary"
+            style={
+              activeTag === null
+                ? {
+                    color: 'var(--color-brand-primary)',
+                    borderColor:
+                      'color-mix(in oklab, var(--color-brand-primary) 40%, transparent)',
+                    backgroundColor:
+                      'color-mix(in oklab, var(--color-brand-primary) 12%, var(--color-bg-secondary))',
+                  }
+                : {
+                    color: 'var(--color-text-muted)',
+                    borderColor: 'var(--color-border)',
+                    backgroundColor: 'var(--color-bg-secondary)',
+                  }
+            }
+          >
+            All ({clips.length})
+          </button>
+          {tagCounts.map(([tag, count]) => {
+            const isActive = activeTag === tag;
+            return (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => toggleTag(tag)}
+                className="rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors hover:bg-secondary"
+                style={
+                  isActive
+                    ? {
+                        color: 'var(--color-brand-primary)',
+                        borderColor:
+                          'color-mix(in oklab, var(--color-brand-primary) 40%, transparent)',
+                        backgroundColor:
+                          'color-mix(in oklab, var(--color-brand-primary) 12%, var(--color-bg-secondary))',
+                      }
+                    : {
+                        color: 'var(--color-text-muted)',
+                        borderColor: 'var(--color-border)',
+                        backgroundColor: 'var(--color-bg-secondary)',
+                      }
+                }
+              >
+                #{tag} <span className="text-[10px] opacity-70">({count})</span>
+              </button>
+            );
+          })}
+          {activeTag && (
+            <button
+              type="button"
+              onClick={() => setActiveTag(null)}
+              className="inline-flex items-center gap-1 rounded-full border border-theme bg-muted-surface px-2 py-0.5 text-[11px] font-medium text-muted hover:text-main"
+              title="Clear tag filter"
+            >
+              <XIcon size={10} aria-hidden />
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
       {remixerOpen && <ClipRemixer />}
 
       {/* Clip list */}
@@ -213,7 +327,13 @@ const ClipsView = React.memo(function ClipsView() {
       ) : (
         <div className="flex flex-col gap-6">
           {visibleClips.map((clip) => (
-            <ClipCard key={clip.id} clip={clip} highlighted={clip.id === deepLinkClipId} />
+            <ClipCard
+              key={clip.id}
+              clip={clip}
+              highlighted={clip.id === deepLinkClipId}
+              activeTag={activeTag}
+              onTagClick={toggleTag}
+            />
           ))}
         </div>
       )}
