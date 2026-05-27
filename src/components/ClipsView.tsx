@@ -18,6 +18,15 @@ const getDeepLinkClipId = (): string | null => {
 
 const getInitialTagFromUrl = (): string | null => {
   if (typeof window === 'undefined') return null;
+  // 1) Static-rendered tag page (e.g. /clips/tag/labor/) embeds a hint
+  const hint = document
+    .querySelector('meta[name="active-tag"]')
+    ?.getAttribute('content');
+  if (hint) return hint.toLowerCase();
+  // 2) Tag path: /economic-dashboard/clips/tag/{tag}/
+  const pathMatch = window.location.pathname.match(/\/clips\/tag\/([^/]+)\/?$/);
+  if (pathMatch) return decodeURIComponent(pathMatch[1]).toLowerCase();
+  // 3) Query string ?tag=X
   const params = new URLSearchParams(window.location.search);
   const tag = params.get('tag');
   return tag ? tag.toLowerCase() : null;
