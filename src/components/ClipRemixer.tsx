@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { Plus, Trash2, Copy, Check, Sparkles, RotateCcw, Save, FileDown } from 'lucide-react';
+import { Plus, Trash2, Copy, Check, Sparkles, RotateCcw, Save, FileDown, BarChartHorizontal, PieChart, Hash } from 'lucide-react';
 import Card from './Card';
 import ClipCard from './ClipCard';
-import type { Clip, ClipItem, ClipPlatform } from '../types/clips';
+import type { Clip, ClipItem, ClipChartType, ClipPlatform } from '../types/clips';
 
 const DRAFT_KEY = 'economic-dashboard:clip-remix-draft:v1';
 
@@ -26,12 +26,34 @@ interface DraftState {
   platform: ClipPlatform;
   observedDate: string;
   views: string;
+  chartType: ClipChartType;
   unitPrefix: string;
   unitSuffix: string;
   valuePrecision: string;
   items: ClipItem[];
   notes: string;
 }
+
+const CHART_TYPES: { value: ClipChartType; label: string; description: string; icon: React.ComponentType<{ size?: number; 'aria-hidden'?: boolean }> }[] = [
+  {
+    value: 'horizontalBar',
+    label: 'Horizontal bar',
+    description: 'Ranked list (best for top-10 style clips)',
+    icon: BarChartHorizontal,
+  },
+  {
+    value: 'donut',
+    label: 'Donut',
+    description: 'Share of total / composition breakdown',
+    icon: PieChart,
+  },
+  {
+    value: 'stat',
+    label: 'Stat card',
+    description: 'One headline number with supporting context',
+    icon: Hash,
+  },
+];
 
 const EMPTY_DRAFT: DraftState = {
   title: '',
@@ -42,6 +64,7 @@ const EMPTY_DRAFT: DraftState = {
   platform: 'x',
   observedDate: new Date().toISOString().slice(0, 10),
   views: '',
+  chartType: 'horizontalBar',
   unitPrefix: '$',
   unitSuffix: 'T',
   valuePrecision: '1',
@@ -89,7 +112,7 @@ const buildClipFromDraft = (draft: DraftState): Clip => {
     },
     observedDate: draft.observedDate || today,
     views: Number.isFinite(viewsNum) && viewsNum > 0 ? viewsNum : undefined,
-    chartType: 'horizontalBar',
+    chartType: draft.chartType ?? 'horizontalBar',
     unitPrefix: draft.unitPrefix || undefined,
     unitSuffix: draft.unitSuffix || undefined,
     valuePrecision: precision,
@@ -416,6 +439,45 @@ const ClipRemixer = React.memo(function ClipRemixer() {
                   onChange={(e) => update({ views: e.target.value })}
                   placeholder="62900"
                 />
+              </div>
+            </div>
+
+            <div>
+              <span className={labelClass}>Chart type</span>
+              <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Chart type">
+                {CHART_TYPES.map(({ value, label, description, icon: Icon }) => {
+                  const isActive = draft.chartType === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      role="radio"
+                      aria-checked={isActive}
+                      onClick={() => update({ chartType: value })}
+                      className="flex flex-col items-start gap-1 rounded-md border p-2 text-left transition-colors"
+                      style={
+                        isActive
+                          ? {
+                              borderColor: 'color-mix(in oklab, var(--color-brand-primary) 50%, transparent)',
+                              backgroundColor: 'color-mix(in oklab, var(--color-brand-primary) 10%, var(--color-bg-secondary))',
+                              color: 'var(--color-text-main)',
+                            }
+                          : {
+                              borderColor: 'var(--color-border)',
+                              backgroundColor: 'var(--color-bg-secondary)',
+                              color: 'var(--color-text-muted)',
+                            }
+                      }
+                      title={description}
+                    >
+                      <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold">
+                        <Icon size={12} aria-hidden />
+                        {label}
+                      </span>
+                      <span className="text-[10px] leading-tight text-muted">{description}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

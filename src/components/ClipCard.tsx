@@ -3,6 +3,8 @@ import { ExternalLink, Eye, Calendar, Globe, Twitter, Instagram, Download, Loade
 import { toPng } from 'html-to-image';
 import Card from './Card';
 import ClipChart from './ClipChart';
+import ClipChartDonut from './ClipChartDonut';
+import ClipChartStat from './ClipChartStat';
 import type { Clip } from '../types/clips';
 
 export type ClipViewMode = 'web' | 'twitter' | 'ig-square' | 'ig-portrait' | 'ig-story';
@@ -236,17 +238,38 @@ const FramedClip = React.memo(
           )}
         </header>
 
-        <div className="flex-1 overflow-hidden">
-          <ClipChart
-            items={clip.items}
-            unitPrefix={clip.unitPrefix}
-            unitSuffix={clip.unitSuffix}
-            valuePrecision={clip.valuePrecision}
-            rowHeight={spec.rowHeight}
-            labelWidth={spec.labelWidth}
-            valueWidth={spec.valueWidth}
-            fontScale={spec.fontScale}
-          />
+        <div className="flex flex-1 overflow-hidden items-center justify-center">
+          {clip.chartType === 'donut' ? (
+            <ClipChartDonut
+              items={clip.items}
+              unitPrefix={clip.unitPrefix}
+              unitSuffix={clip.unitSuffix}
+              valuePrecision={clip.valuePrecision}
+              fontScale={spec.fontScale}
+              size={Math.round(spec.previewHeight * 0.42)}
+              compact
+            />
+          ) : clip.chartType === 'stat' ? (
+            <ClipChartStat
+              items={clip.items}
+              unitPrefix={clip.unitPrefix}
+              unitSuffix={clip.unitSuffix}
+              valuePrecision={clip.valuePrecision}
+              fontScale={spec.fontScale}
+              compact
+            />
+          ) : (
+            <ClipChart
+              items={clip.items}
+              unitPrefix={clip.unitPrefix}
+              unitSuffix={clip.unitSuffix}
+              valuePrecision={clip.valuePrecision}
+              rowHeight={spec.rowHeight}
+              labelWidth={spec.labelWidth}
+              valueWidth={spec.valueWidth}
+              fontScale={spec.fontScale}
+            />
+          )}
         </div>
 
         {!spec.hideNotes && clip.notes && (
@@ -471,12 +494,30 @@ const ClipCard = React.memo(function ClipCard({ clip, defaultViewMode = 'web', h
           </div>
         ) : (
           <>
-            <ClipChart
-              items={clip.items}
-              unitPrefix={clip.unitPrefix}
-              unitSuffix={clip.unitSuffix}
-              valuePrecision={clip.valuePrecision}
-            />
+            {clip.chartType === 'donut' ? (
+              <ClipChartDonut
+                items={clip.items}
+                unitPrefix={clip.unitPrefix}
+                unitSuffix={clip.unitSuffix}
+                valuePrecision={clip.valuePrecision}
+              />
+            ) : clip.chartType === 'stat' ? (
+              <div className="py-6">
+                <ClipChartStat
+                  items={clip.items}
+                  unitPrefix={clip.unitPrefix}
+                  unitSuffix={clip.unitSuffix}
+                  valuePrecision={clip.valuePrecision}
+                />
+              </div>
+            ) : (
+              <ClipChart
+                items={clip.items}
+                unitPrefix={clip.unitPrefix}
+                unitSuffix={clip.unitSuffix}
+                valuePrecision={clip.valuePrecision}
+              />
+            )}
 
             {clip.notes && (
               <p className="rounded-md border border-subtle bg-muted-surface/60 px-3 py-2 text-xs leading-relaxed text-muted">

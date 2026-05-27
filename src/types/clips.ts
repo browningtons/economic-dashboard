@@ -1,5 +1,5 @@
 export type ClipPlatform = 'twitter' | 'x' | 'threads' | 'bluesky' | 'mastodon' | 'reddit' | 'article' | 'other';
-export type ClipChartType = 'horizontalBar';
+export type ClipChartType = 'horizontalBar' | 'donut' | 'stat';
 
 export interface ClipSource {
   label: string;

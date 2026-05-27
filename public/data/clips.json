@@ -30,6 +30,55 @@
       ],
       "notes": "Total stock market value, May 2026. Taiwan's surge driven by TSMC and the broader semiconductor rally.",
       "addedAt": "2026-05-27"
+    },
+    {
+      "id": "us-federal-debt-2026-q1",
+      "title": "US Federal Debt Just Crossed $35 Trillion",
+      "subtitle": "The national debt has more than doubled in a decade and is now larger than the entire US economy.",
+      "source": {
+        "label": "US Treasury",
+        "handle": "treasury.gov",
+        "url": "https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/",
+        "platform": "article"
+      },
+      "observedDate": "2026-05-15",
+      "chartType": "stat",
+      "unitPrefix": "$",
+      "unitSuffix": "T",
+      "valuePrecision": 1,
+      "items": [
+        { "label": "US Federal Debt", "value": 35.2, "highlight": true },
+        { "label": "5 Years Ago", "value": 28.4 },
+        { "label": "10 Years Ago", "value": 17.8 },
+        { "label": "Annual Interest Cost", "value": 1.2 }
+      ],
+      "notes": "All values in trillions of US dollars. Federal debt has roughly doubled in 10 years; annual interest on that debt is now larger than the Pentagon budget.",
+      "addedAt": "2026-05-27"
+    },
+    {
+      "id": "global-cb-reserves-2026-q1",
+      "title": "What Central Banks Are Holding",
+      "subtitle": "Composition of global foreign-exchange reserves at the end of Q1 2026, by currency.",
+      "source": {
+        "label": "IMF COFER",
+        "handle": "imf.org",
+        "url": "https://data.imf.org/COFER",
+        "platform": "article"
+      },
+      "observedDate": "2026-04-30",
+      "chartType": "donut",
+      "unitSuffix": "%",
+      "valuePrecision": 1,
+      "items": [
+        { "label": "US Dollar", "value": 57.2, "highlight": true },
+        { "label": "Euro", "value": 19.8 },
+        { "label": "Japanese Yen", "value": 5.6 },
+        { "label": "British Pound", "value": 4.9 },
+        { "label": "Chinese Yuan", "value": 2.8 },
+        { "label": "Other", "value": 9.7 }
+      ],
+      "notes": "USD remains dominant but its share has drifted lower over the last decade; the yuan's share has been ticking up.",
+      "addedAt": "2026-05-27"
     }
   ]
 }

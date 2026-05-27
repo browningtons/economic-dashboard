@@ -111,6 +111,38 @@ const wrapTitle = (title, maxWidth, fontSize, maxLines = 2) => {
 // system fonts are provided; emoji glyphs are NOT rendered. To keep the OG
 // PNG looking clean, we drop the flag emoji and use the row index + label.
 
+const SLICE_PALETTE = [
+  '#0F3D57',
+  '#2CB6C0',
+  '#F04A00',
+  '#4C6F86',
+  '#0E7C86',
+  '#FF7A33',
+  '#B53300',
+  '#082535',
+];
+
+function donutArcPath(cx, cy, rOuter, rInner, startAngle, endAngle) {
+  const sweep = endAngle - startAngle;
+  if (sweep <= 0) return '';
+  const largeArc = sweep > Math.PI ? 1 : 0;
+  const polar = (r, a) => ({
+    x: cx + r * Math.cos(a - Math.PI / 2),
+    y: cy + r * Math.sin(a - Math.PI / 2),
+  });
+  const so = polar(rOuter, startAngle);
+  const eo = polar(rOuter, endAngle);
+  const si = polar(rInner, endAngle);
+  const ei = polar(rInner, startAngle);
+  return [
+    `M ${so.x} ${so.y}`,
+    `A ${rOuter} ${rOuter} 0 ${largeArc} 1 ${eo.x} ${eo.y}`,
+    `L ${si.x} ${si.y}`,
+    `A ${rInner} ${rInner} 0 ${largeArc} 0 ${ei.x} ${ei.y}`,
+    'Z',
+  ].join(' ');
+}
+
 function generateClipSvg(clip) {
   const W = 1200;
   const H = 630;
@@ -138,18 +170,6 @@ function generateClipSvg(clip) {
   const footerHeight = 56;
   const chartBottom = H - PAD - footerHeight - 14;
   const chartHeight = Math.max(220, chartBottom - chartTop);
-
-  // ---- chart layout ----
-  const rowGap = 6;
-  const rowHeight = Math.min(38, Math.floor((chartHeight - rowGap * (items.length - 1)) / items.length));
-  const labelColX = PAD;
-  const labelColW = 250;
-  const valueColW = 130;
-  const valueColX = W - PAD - valueColW;
-  const barX = labelColX + labelColW + 14;
-  const barW = valueColX - barX - 14;
-
-  const maxValue = items.reduce((m, it) => Math.max(m, Number(it.value) || 0), 0) || 1;
 
   // ---- SVG pieces ----
   const headerStrip = `
@@ -199,7 +219,52 @@ function generateClipSvg(clip) {
     </defs>
   `;
 
-  const rows = items
+  const chartBody = renderChartSvg({ clip, items, W, PAD, chartTop, chartHeight });
+
+  const footerY = H - PAD - 12;
+  const footer = `
+    <line x1="${PAD}" y1="${footerY - 18}" x2="${W - PAD}" y2="${footerY - 18}"
+          stroke="${COLOR.borderSubtle}" stroke-width="1"/>
+    <text x="${PAD}" y="${footerY + 6}" font-family="Inter, system-ui, sans-serif"
+          font-size="16" font-weight="700" fill="${COLOR.textMain}">${escapeXml(sourceText)}</text>
+    <text x="${W - PAD}" y="${footerY + 6}" text-anchor="end"
+          font-family="Inter, system-ui, sans-serif" font-size="14"
+          fill="${COLOR.textMuted}">browningtons.github.io/economic-dashboard</text>
+  `;
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  ${gradients}
+  <rect width="${W}" height="${H}" fill="${COLOR.bg}"/>
+  ${headerStrip}
+  ${titleText}
+  ${subtitleText}
+  ${chartBody}
+  ${footer}
+</svg>`;
+}
+
+function renderChartSvg({ clip, items, W, PAD, chartTop, chartHeight }) {
+  if (clip.chartType === 'stat') return renderStatSvg({ clip, items, W, PAD, chartTop, chartHeight });
+  if (clip.chartType === 'donut') return renderDonutSvg({ clip, items, W, PAD, chartTop, chartHeight });
+  return renderHorizontalBarsSvg({ clip, items, W, PAD, chartTop, chartHeight });
+}
+
+function renderHorizontalBarsSvg({ clip, items, W, PAD, chartTop, chartHeight }) {
+  const rowGap = 6;
+  const rowHeight = Math.min(
+    38,
+    Math.floor((chartHeight - rowGap * (Math.max(items.length, 1) - 1)) / Math.max(items.length, 1)),
+  );
+  const labelColX = PAD;
+  const labelColW = 250;
+  const valueColW = 130;
+  const valueColX = W - PAD - valueColW;
+  const barX = labelColX + labelColW + 14;
+  const barW = valueColX - barX - 14;
+  const maxValue = items.reduce((m, it) => Math.max(m, Number(it.value) || 0), 0) || 1;
+
+  return items
     .map((item, i) => {
       const y = chartTop + i * (rowHeight + rowGap);
       const barFillId = item.highlight ? 'g-primary' : 'g-secondary';
@@ -241,28 +306,158 @@ function generateClipSvg(clip) {
       `;
     })
     .join('\n');
+}
 
-  const footerY = H - PAD - 12;
-  const footer = `
-    <line x1="${PAD}" y1="${footerY - 18}" x2="${W - PAD}" y2="${footerY - 18}"
-          stroke="${COLOR.borderSubtle}" stroke-width="1"/>
-    <text x="${PAD}" y="${footerY + 6}" font-family="Inter, system-ui, sans-serif"
-          font-size="16" font-weight="700" fill="${COLOR.textMain}">${escapeXml(sourceText)}</text>
-    <text x="${W - PAD}" y="${footerY + 6}" text-anchor="end"
-          font-family="Inter, system-ui, sans-serif" font-size="14"
-          fill="${COLOR.textMuted}">browningtons.github.io/economic-dashboard</text>
+function renderStatSvg({ clip, items, W, PAD, chartTop, chartHeight }) {
+  if (!items.length) return '';
+  const highlightIdx = items.findIndex((it) => it.highlight);
+  const headlineIdx = highlightIdx >= 0 ? highlightIdx : 0;
+  const headline = items[headlineIdx];
+  const supporting = items.filter((_, i) => i !== headlineIdx).slice(0, 3);
+
+  const cx = W / 2;
+  const innerTop = chartTop + 4;
+  const labelSize = 22;
+  const headlineSize = supporting.length ? 132 : 168;
+  const supportLabelSize = 14;
+  const supportValueSize = 36;
+  const supportingGap = 60;
+
+  const headlineText = formatValue(
+    headline.value,
+    clip.valuePrecision ?? 1,
+    clip.unitPrefix ?? '',
+    clip.unitSuffix ?? '',
+  );
+
+  const labelEl = `
+    <text x="${cx}" y="${innerTop + labelSize}" text-anchor="middle"
+          font-family="Inter, system-ui, sans-serif"
+          font-size="${labelSize}" font-weight="700" letter-spacing="3"
+          fill="${COLOR.textMuted}">${escapeXml(headline.label.toUpperCase())}</text>
   `;
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-  ${gradients}
-  <rect width="${W}" height="${H}" fill="${COLOR.bg}"/>
-  ${headerStrip}
-  ${titleText}
-  ${subtitleText}
-  ${rows}
-  ${footer}
-</svg>`;
+  const headlineY = innerTop + labelSize + 30 + headlineSize - 24;
+  const headlineEl = `
+    <text x="${cx}" y="${headlineY}" text-anchor="middle"
+          font-family="Inter, system-ui, sans-serif"
+          font-size="${headlineSize}" font-weight="800" letter-spacing="-2"
+          fill="${COLOR.brandPrimary}">${escapeXml(headlineText)}</text>
+  `;
+
+  let supportingEls = '';
+  if (supporting.length) {
+    const supportingTop = headlineY + 40;
+    const availableW = W - PAD * 2;
+    const colW = availableW / supporting.length;
+    const ruleY = supportingTop;
+    supportingEls = `
+      <line x1="${PAD + 80}" y1="${ruleY}" x2="${W - PAD - 80}" y2="${ruleY}"
+            stroke="${COLOR.borderSubtle}" stroke-width="1"/>
+    `;
+    supporting.forEach((item, i) => {
+      const colCx = PAD + colW / 2 + i * colW;
+      const labelY = ruleY + supportLabelSize + 18;
+      const valueY = labelY + supportValueSize + 6;
+      const color = item.highlight ? COLOR.brandPrimary : COLOR.brandSecondary;
+      const valueText = formatValue(
+        item.value,
+        clip.valuePrecision ?? 1,
+        clip.unitPrefix ?? '',
+        clip.unitSuffix ?? '',
+      );
+      supportingEls += `
+        <text x="${colCx}" y="${labelY}" text-anchor="middle"
+              font-family="Inter, system-ui, sans-serif"
+              font-size="${supportLabelSize}" font-weight="700" letter-spacing="2"
+              fill="${COLOR.textMuted}">${escapeXml(item.label.toUpperCase())}</text>
+        <text x="${colCx}" y="${valueY}" text-anchor="middle"
+              font-family="ui-monospace, Menlo, monospace"
+              font-size="${supportValueSize}" font-weight="700"
+              fill="${color}">${escapeXml(valueText)}</text>
+      `;
+    });
+  }
+
+  // Suppress unused warning for chartHeight
+  void chartHeight;
+
+  return labelEl + headlineEl + supportingEls;
+}
+
+function renderDonutSvg({ clip, items, W, PAD, chartTop, chartHeight }) {
+  const visible = items.slice(0, 8);
+  const total = visible.reduce((s, it) => s + Math.max(0, Number(it.value) || 0), 0);
+  if (total <= 0) return '';
+
+  const donutSize = Math.min(chartHeight - 8, 360);
+  const cx = PAD + donutSize / 2;
+  const cy = chartTop + donutSize / 2;
+  const rOuter = donutSize / 2 - 4;
+  const rInner = rOuter * 0.62;
+  let cumulative = 0;
+  const TAU = Math.PI * 2;
+
+  const arcs = visible
+    .map((item, i) => {
+      const value = Math.max(0, Number(item.value) || 0);
+      const fraction = value / total;
+      const start = cumulative * TAU;
+      cumulative += fraction;
+      const end = cumulative * TAU;
+      const color = SLICE_PALETTE[i % SLICE_PALETTE.length];
+      return `<path d="${donutArcPath(cx, cy, rOuter, rInner, start, end)}"
+                    fill="${color}" stroke="${COLOR.surface}" stroke-width="2"/>`;
+    })
+    .join('\n');
+
+  const totalText = formatValue(
+    total,
+    clip.valuePrecision ?? 1,
+    clip.unitPrefix ?? '',
+    clip.unitSuffix ?? '',
+  );
+
+  const centerLabel = `
+    <text x="${cx}" y="${cy - 10}" text-anchor="middle"
+          font-family="Inter, system-ui, sans-serif" font-size="14"
+          font-weight="700" letter-spacing="3" fill="${COLOR.textMuted}">TOTAL</text>
+    <text x="${cx}" y="${cy + 24}" text-anchor="middle"
+          font-family="ui-monospace, Menlo, monospace" font-size="34"
+          font-weight="800" fill="${COLOR.textMain}">${escapeXml(totalText)}</text>
+  `;
+
+  // Legend
+  const legendX = cx + rOuter + 56;
+  const legendW = W - PAD - legendX;
+  const rowH = Math.min(46, (chartHeight - 12) / Math.max(visible.length, 1));
+  let legendEls = '';
+  visible.forEach((item, i) => {
+    const value = Math.max(0, Number(item.value) || 0);
+    const fraction = value / total;
+    const pct = `${(fraction * 100).toFixed(fraction < 0.1 ? 1 : 0)}%`;
+    const color = SLICE_PALETTE[i % SLICE_PALETTE.length];
+    const y = chartTop + i * rowH;
+    const swatchY = y + rowH / 2 - 8;
+    const labelY = y + rowH / 2 + 6;
+    const valueColor = item.highlight ? COLOR.brandPrimary : COLOR.brandSecondary;
+    const valueText = formatValue(value, clip.valuePrecision ?? 1, clip.unitPrefix ?? '', clip.unitSuffix ?? '');
+    legendEls += `
+      <rect x="${legendX}" y="${swatchY}" width="16" height="16" rx="3" fill="${color}"
+            stroke="${item.highlight ? COLOR.brandPrimary : 'none'}" stroke-width="${item.highlight ? 2 : 0}"/>
+      <text x="${legendX + 26}" y="${labelY}" font-family="Inter, system-ui, sans-serif"
+            font-size="18" font-weight="${item.highlight ? 700 : 600}"
+            fill="${COLOR.textMain}">${escapeXml(truncate(item.label, 22))}</text>
+      <text x="${legendX + 26 + measure(truncate(item.label, 22), 18) + 12}" y="${labelY}"
+            font-family="Inter, system-ui, sans-serif" font-size="15"
+            fill="${COLOR.textMuted}">${escapeXml(pct)}</text>
+      <text x="${legendX + legendW}" y="${labelY}" text-anchor="end"
+            font-family="ui-monospace, Menlo, monospace" font-size="18" font-weight="700"
+            fill="${valueColor}">${escapeXml(valueText)}</text>
+    `;
+  });
+
+  return arcs + centerLabel + legendEls;
 }
 
 async function renderPng(svg) {
