@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { ExternalLink, Eye, Calendar, Globe, Twitter, Instagram, Download, Loader2, Check, AlertCircle } from 'lucide-react';
+import { ExternalLink, Eye, Calendar, Globe, Twitter, Instagram, Download, Loader2, Check, AlertCircle, Link as LinkIcon } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import Card from './Card';
 import ClipChart from './ClipChart';
@@ -10,6 +10,7 @@ export type ClipViewMode = 'web' | 'twitter' | 'ig-square' | 'ig-portrait' | 'ig
 interface ClipCardProps {
   clip: Clip;
   defaultViewMode?: ClipViewMode;
+  highlighted?: boolean;
 }
 
 const PLATFORM_LABEL: Record<string, string> = {
@@ -284,14 +285,41 @@ const FramedClip = React.memo(
 );
 
 type ExportState = 'idle' | 'exporting' | 'done' | 'error';
+type LinkState = 'idle' | 'copied' | 'error';
 
-const ClipCard = React.memo(function ClipCard({ clip, defaultViewMode = 'web' }: ClipCardProps) {
+const buildPermalink = (clipId: string): string => {
+  if (typeof window === 'undefined') {
+    return `https://browningtons.github.io/economic-dashboard/clips/${clipId}/`;
+  }
+  const base = import.meta.env.BASE_URL.endsWith('/')
+    ? import.meta.env.BASE_URL
+    : `${import.meta.env.BASE_URL}/`;
+  return `${window.location.origin}${base}clips/${clipId}/`;
+};
+
+const ClipCard = React.memo(function ClipCard({ clip, defaultViewMode = 'web', highlighted = false }: ClipCardProps) {
   const [viewMode, setViewMode] = useState<ClipViewMode>(defaultViewMode);
   const [exportState, setExportState] = useState<ExportState>('idle');
+  const [linkState, setLinkState] = useState<LinkState>('idle');
   const frameRef = useRef<HTMLDivElement | null>(null);
   const platformLabel = PLATFORM_LABEL[clip.source.platform] ?? 'Source';
   const isFramed = viewMode !== 'web';
   const frameSpec = isFramed ? FRAME_SPECS[viewMode] : null;
+
+  const handleCopyLink = useCallback(async () => {
+    const url = buildPermalink(clip.id);
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        throw new Error('Clipboard API unavailable');
+      }
+      setLinkState('copied');
+    } catch {
+      setLinkState('error');
+    }
+    window.setTimeout(() => setLinkState('idle'), 1800);
+  }, [clip.id]);
 
   const handleDownload = useCallback(async () => {
     if (!frameRef.current || !frameSpec) return;
@@ -322,6 +350,12 @@ const ClipCard = React.memo(function ClipCard({ clip, defaultViewMode = 'web' }:
   }, [frameSpec, clip.id, viewMode]);
 
   return (
+    <div
+      id={`clip-${clip.id}`}
+      className={`scroll-mt-6 transition-shadow duration-500 ${
+        highlighted ? 'rounded-2xl shadow-[0_0_0_3px_var(--color-brand-primary)]' : ''
+      }`}
+    >
     <Card className="p-7">
       <div className="flex flex-col gap-4">
         <header className="flex flex-col gap-3">
@@ -457,20 +491,46 @@ const ClipCard = React.memo(function ClipCard({ clip, defaultViewMode = 'web' }:
             <span className="font-semibold text-main">{clip.source.label}</span>
             {clip.source.handle && <span className="font-mono">{clip.source.handle}</span>}
           </div>
-          {clip.source.url && (
-            <a
-              href={clip.source.url}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 rounded-md border border-theme bg-muted-surface px-2 py-1 text-xs font-medium text-link hover:underline"
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="inline-flex items-center gap-1 rounded-md border border-theme bg-muted-surface px-2 py-1 text-xs font-medium text-main hover:bg-secondary"
+              title={`Copy permalink: ${buildPermalink(clip.id)}`}
             >
-              View source
-              <ExternalLink size={12} aria-hidden />
-            </a>
-          )}
+              {linkState === 'copied' ? (
+                <>
+                  <Check size={12} aria-hidden />
+                  Link copied
+                </>
+              ) : linkState === 'error' ? (
+                <>
+                  <AlertCircle size={12} aria-hidden />
+                  Copy failed
+                </>
+              ) : (
+                <>
+                  <LinkIcon size={12} aria-hidden />
+                  Copy link
+                </>
+              )}
+            </button>
+            {clip.source.url && (
+              <a
+                href={clip.source.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 rounded-md border border-theme bg-muted-surface px-2 py-1 text-xs font-medium text-link hover:underline"
+              >
+                View source
+                <ExternalLink size={12} aria-hidden />
+              </a>
+            )}
+          </div>
         </footer>
       </div>
     </Card>
+    </div>
   );
 });
 

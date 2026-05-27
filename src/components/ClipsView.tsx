@@ -9,6 +9,13 @@ const CLIPS_DATA_URL = `${import.meta.env.BASE_URL}data/clips.json`;
 
 type SortKey = 'newest' | 'oldest';
 
+const getDeepLinkClipId = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  const hint = document.querySelector('meta[name="clip-id"]')?.getAttribute('content');
+  if (hint) return hint;
+  return window.location.pathname.match(/\/clips\/([^/]+)\/?$/)?.[1] ?? null;
+};
+
 const ClipsView = React.memo(function ClipsView() {
   const [clips, setClips] = useState<Clip[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -16,6 +23,17 @@ const ClipsView = React.memo(function ClipsView() {
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [remixerOpen, setRemixerOpen] = useState(false);
+  const [deepLinkClipId] = useState<string | null>(() => getDeepLinkClipId());
+
+  useEffect(() => {
+    if (!deepLinkClipId || isLoading) return;
+    const node = document.getElementById(`clip-${deepLinkClipId}`);
+    if (!node) return;
+    const id = window.setTimeout(() => {
+      node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+    return () => window.clearTimeout(id);
+  }, [deepLinkClipId, isLoading]);
 
   useEffect(() => {
     let cancelled = false;
@@ -195,7 +213,7 @@ const ClipsView = React.memo(function ClipsView() {
       ) : (
         <div className="flex flex-col gap-6">
           {visibleClips.map((clip) => (
-            <ClipCard key={clip.id} clip={clip} />
+            <ClipCard key={clip.id} clip={clip} highlighted={clip.id === deepLinkClipId} />
           ))}
         </div>
       )}

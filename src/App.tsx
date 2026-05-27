@@ -877,7 +877,12 @@ export default function App() {
   const [dataError, setDataError] = useState<string | null>(null);
   const [dataWarning, setDataWarning] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [activeTab, setActiveTab] = useState<'Dashboard' | 'Buffett' | 'Data Table' | 'Clips'>('Dashboard');
+  const [activeTab, setActiveTab] = useState<'Dashboard' | 'Buffett' | 'Data Table' | 'Clips'>(() => {
+    if (typeof window === 'undefined') return 'Dashboard';
+    const hint = document.querySelector('meta[name="clip-id"]')?.getAttribute('content');
+    const fromPath = window.location.pathname.match(/\/clips\/([^/]+)\/?$/)?.[1];
+    return hint || fromPath ? 'Clips' : 'Dashboard';
+  });
   const [shareMode, setShareMode] = useState(false);
   const [viewMode, setViewMode] = useState<'raw' | 'relative'>('raw');
   const [clockNow, setClockNow] = useState(() => new Date());
