@@ -5,6 +5,7 @@ import Card from './Card';
 import ClipChart from './ClipChart';
 import ClipChartDonut from './ClipChartDonut';
 import ClipChartStat from './ClipChartStat';
+import ClipChartTimeSeries from './ClipChartTimeSeries';
 import type { Clip } from '../types/clips';
 
 export type ClipViewMode = 'web' | 'twitter' | 'ig-square' | 'ig-portrait' | 'ig-story';
@@ -256,6 +257,17 @@ const FramedClip = React.memo(
               unitSuffix={clip.unitSuffix}
               valuePrecision={clip.valuePrecision}
               fontScale={spec.fontScale}
+              compact
+            />
+          ) : clip.chartType === 'timeSeries' ? (
+            <ClipChartTimeSeries
+              items={clip.items}
+              unitPrefix={clip.unitPrefix}
+              unitSuffix={clip.unitSuffix}
+              valuePrecision={clip.valuePrecision}
+              fontScale={spec.fontScale}
+              width={spec.previewWidth - spec.padding * 2}
+              height={Math.round(spec.previewHeight * 0.55)}
               compact
             />
           ) : (
@@ -510,6 +522,13 @@ const ClipCard = React.memo(function ClipCard({ clip, defaultViewMode = 'web', h
                   valuePrecision={clip.valuePrecision}
                 />
               </div>
+            ) : clip.chartType === 'timeSeries' ? (
+              <ClipChartTimeSeries
+                items={clip.items}
+                unitPrefix={clip.unitPrefix}
+                unitSuffix={clip.unitSuffix}
+                valuePrecision={clip.valuePrecision}
+              />
             ) : (
               <ClipChart
                 items={clip.items}
