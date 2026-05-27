@@ -1,6 +1,39 @@
 {
   "clips": [
     {
+      "id": "fed-funds-rate-2020-2026",
+      "title": "Fed Funds Rate: Six Years in One Chart",
+      "subtitle": "From zero to 5.33% in 18 months, then a gentle glide path back down.",
+      "source": {
+        "label": "FRED — Federal Reserve",
+        "handle": "fred.stlouisfed.org",
+        "url": "https://fred.stlouisfed.org/series/FEDFUNDS",
+        "platform": "article"
+      },
+      "observedDate": "2026-05-15",
+      "chartType": "timeSeries",
+      "unitSuffix": "%",
+      "valuePrecision": 2,
+      "items": [
+        { "label": "2020-01-01", "value": 1.55 },
+        { "label": "2020-07-01", "value": 0.09 },
+        { "label": "2021-01-01", "value": 0.09 },
+        { "label": "2021-07-01", "value": 0.10 },
+        { "label": "2022-01-01", "value": 0.08 },
+        { "label": "2022-07-01", "value": 1.68 },
+        { "label": "2023-01-01", "value": 4.33 },
+        { "label": "2023-07-01", "value": 5.12 },
+        { "label": "2024-01-01", "value": 5.33 },
+        { "label": "2024-07-01", "value": 5.33 },
+        { "label": "2025-01-01", "value": 4.33 },
+        { "label": "2025-07-01", "value": 4.33 },
+        { "label": "2026-01-01", "value": 4.33 },
+        { "label": "2026-04-01", "value": 4.22, "highlight": true }
+      ],
+      "notes": "Highlighted point is the most recent observation. Hover the chart on the dashboard's Monetary Policy view to see the same series in full detail.",
+      "addedAt": "2026-05-27"
+    },
+    {
       "id": "taiwan-5th-largest-stock-market-2026-05-26",
       "title": "Taiwan Just Became the World's 5th Largest Stock Market",
       "subtitle": "Taiwan has overtaken India to claim the No. 5 spot among the world's most valuable stock markets.",

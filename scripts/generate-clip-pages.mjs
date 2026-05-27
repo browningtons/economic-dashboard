@@ -147,7 +147,8 @@ function generateClipSvg(clip) {
   const W = 1200;
   const H = 630;
   const PAD = 56;
-  const items = (clip.items ?? []).slice(0, 10);
+  // Most chart types want the full series; horizontalBar trims to 10 itself.
+  const items = clip.items ?? [];
   const platformLabel = PLATFORM_LABEL[clip.source?.platform] ?? 'Source';
   const dateStr = formatObservedDate(clip.observedDate);
   const sourceText = `${clip.source?.label ?? 'Unknown source'}${
@@ -247,10 +248,148 @@ function generateClipSvg(clip) {
 function renderChartSvg({ clip, items, W, PAD, chartTop, chartHeight }) {
   if (clip.chartType === 'stat') return renderStatSvg({ clip, items, W, PAD, chartTop, chartHeight });
   if (clip.chartType === 'donut') return renderDonutSvg({ clip, items, W, PAD, chartTop, chartHeight });
+  if (clip.chartType === 'timeSeries') return renderTimeSeriesSvg({ clip, items, W, PAD, chartTop, chartHeight });
   return renderHorizontalBarsSvg({ clip, items, W, PAD, chartTop, chartHeight });
 }
 
-function renderHorizontalBarsSvg({ clip, items, W, PAD, chartTop, chartHeight }) {
+function formatTickLabelMjs(label) {
+  const d = new Date(label);
+  if (!Number.isNaN(d.getTime())) {
+    return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+  }
+  return String(label ?? '').slice(0, 10);
+}
+
+function renderTimeSeriesSvg({ clip, items, W, PAD, chartTop, chartHeight }) {
+  const points = items
+    .map((it, i) => ({ item: it, index: i, value: Number(it.value) }))
+    .filter((p) => Number.isFinite(p.value));
+  if (points.length < 2) return '';
+
+  const PRECISION = clip.valuePrecision ?? 1;
+  const UNIT_PREFIX = clip.unitPrefix ?? '';
+  const UNIT_SUFFIX = clip.unitSuffix ?? '';
+
+  const headlineH = 78;
+  const innerTop = chartTop + headlineH;
+  const innerH = Math.max(160, chartHeight - headlineH - 4);
+  const padL = PAD + 80;
+  const padR = PAD + 16;
+  const innerL = padL;
+  const innerR = W - padR;
+  const innerW = innerR - innerL;
+
+  const values = points.map((p) => p.value);
+  const rawMin = Math.min(...values);
+  const rawMax = Math.max(...values);
+  const span = rawMax - rawMin || Math.abs(rawMax) || 1;
+  const yMin = rawMin - span * 0.08;
+  const yMax = rawMax + span * 0.08;
+  const yRange = yMax - yMin || 1;
+
+  const xFor = (i) => innerL + (i / (points.length - 1)) * innerW;
+  const yFor = (v) => innerTop + innerH - ((v - yMin) / yRange) * innerH;
+
+  const linePath = points
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${xFor(i).toFixed(2)} ${yFor(p.value).toFixed(2)}`)
+    .join(' ');
+  const areaPath =
+    `${linePath} L ${xFor(points.length - 1).toFixed(2)} ${(innerTop + innerH).toFixed(2)} ` +
+    `L ${xFor(0).toFixed(2)} ${(innerTop + innerH).toFixed(2)} Z`;
+
+  const yTicks = [rawMin, (rawMin + rawMax) / 2, rawMax];
+
+  const highlight = points.find((p) => p.item.highlight) ?? points[points.length - 1];
+  const first = points[0];
+  const last = points[points.length - 1];
+  const delta = last.value - first.value;
+  const deltaPct = first.value !== 0 ? (delta / Math.abs(first.value)) * 100 : 0;
+  const deltaSign = delta >= 0 ? '+' : '';
+  const deltaColor = delta >= 0 ? COLOR.brandPrimary : COLOR.brandAccent;
+
+  const headlineLabelUpper = String(highlight.item.label || '').length
+    ? formatTickLabelMjs(highlight.item.label).toUpperCase()
+    : 'LATEST';
+  const headlineValueText = formatValue(highlight.value, PRECISION, UNIT_PREFIX, UNIT_SUFFIX);
+  const deltaLabelUpper = `Δ VS ${formatTickLabelMjs(first.item.label).toUpperCase()}`;
+  const deltaValueText = `${deltaSign}${formatValue(delta, PRECISION, UNIT_PREFIX, UNIT_SUFFIX)}  (${deltaSign}${deltaPct.toFixed(1)}%)`;
+
+  const headlineEls = `
+    <text x="${PAD}" y="${chartTop + 14}" font-family="Inter, system-ui, sans-serif"
+          font-size="13" font-weight="700" letter-spacing="2"
+          fill="${COLOR.textMuted}">${escapeXml(headlineLabelUpper)}</text>
+    <text x="${PAD}" y="${chartTop + 56}" font-family="ui-monospace, Menlo, monospace"
+          font-size="42" font-weight="800" letter-spacing="-1"
+          fill="${COLOR.brandPrimary}">${escapeXml(headlineValueText)}</text>
+    <text x="${W - PAD}" y="${chartTop + 14}" text-anchor="end"
+          font-family="Inter, system-ui, sans-serif"
+          font-size="13" font-weight="700" letter-spacing="2"
+          fill="${COLOR.textMuted}">${escapeXml(deltaLabelUpper)}</text>
+    <text x="${W - PAD}" y="${chartTop + 48}" text-anchor="end"
+          font-family="ui-monospace, Menlo, monospace"
+          font-size="22" font-weight="700"
+          fill="${deltaColor}">${escapeXml(deltaValueText)}</text>
+  `;
+
+  const gradId = 'g-line-area';
+  const lineGradient = `
+    <linearGradient id="${gradId}" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="${COLOR.brandSecondary}" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="${COLOR.brandSecondary}" stop-opacity="0"/>
+    </linearGradient>
+  `;
+
+  const gridEls = yTicks
+    .map((t, i) => {
+      const y = yFor(t);
+      const dashed = i === 0 || i === yTicks.length - 1 ? '' : 'stroke-dasharray="3 3"';
+      return `
+        <line x1="${innerL}" x2="${innerR}" y1="${y}" y2="${y}"
+              stroke="${COLOR.borderSubtle}" stroke-width="1" ${dashed}/>
+        <text x="${innerL - 8}" y="${y + 4}" text-anchor="end"
+              font-family="ui-monospace, Menlo, monospace" font-size="14"
+              fill="${COLOR.textMuted}">${escapeXml(formatValue(t, PRECISION, UNIT_PREFIX, UNIT_SUFFIX))}</text>
+      `;
+    })
+    .join('\n');
+
+  const dotEls = points
+    .map((p, i) => {
+      const isHL = p === highlight;
+      const cx = xFor(i);
+      const cy = yFor(p.value);
+      return `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${isHL ? 6 : 3}"
+                       fill="${isHL ? COLOR.brandPrimary : COLOR.surface}"
+                       stroke="${isHL ? COLOR.brandPrimary : COLOR.brandSecondary}"
+                       stroke-width="${isHL ? 2.5 : 1.5}"/>`;
+    })
+    .join('\n');
+
+  const xIdxs = Array.from(new Set([0, Math.floor(points.length / 2), points.length - 1]));
+  const xLabelEls = xIdxs
+    .map((idx) => {
+      const anchor = idx === 0 ? 'start' : idx === points.length - 1 ? 'end' : 'middle';
+      return `<text x="${xFor(idx).toFixed(2)}" y="${(innerTop + innerH + 22).toFixed(2)}"
+                     text-anchor="${anchor}"
+                     font-family="Inter, system-ui, sans-serif" font-size="14"
+                     fill="${COLOR.textMuted}">${escapeXml(formatTickLabelMjs(points[idx].item.label))}</text>`;
+    })
+    .join('\n');
+
+  return `
+    <defs>${lineGradient}</defs>
+    ${headlineEls}
+    ${gridEls}
+    <path d="${areaPath}" fill="url(#${gradId})"/>
+    <path d="${linePath}" fill="none" stroke="${COLOR.brandSecondary}" stroke-width="3"
+          stroke-linecap="round" stroke-linejoin="round"/>
+    ${dotEls}
+    ${xLabelEls}
+  `;
+}
+
+function renderHorizontalBarsSvg({ clip, items: rawItems, W, PAD, chartTop, chartHeight }) {
+  const items = rawItems.slice(0, 10);
   const rowGap = 6;
   const rowHeight = Math.min(
     38,

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { Plus, Trash2, Copy, Check, Sparkles, RotateCcw, Save, FileDown, BarChartHorizontal, PieChart, Hash } from 'lucide-react';
+import { Plus, Trash2, Copy, Check, Sparkles, RotateCcw, Save, FileDown, BarChartHorizontal, PieChart, Hash, LineChart } from 'lucide-react';
 import Card from './Card';
 import ClipCard from './ClipCard';
 import type { Clip, ClipItem, ClipChartType, ClipPlatform } from '../types/clips';
@@ -52,6 +52,12 @@ const CHART_TYPES: { value: ClipChartType; label: string; description: string; i
     label: 'Stat card',
     description: 'One headline number with supporting context',
     icon: Hash,
+  },
+  {
+    value: 'timeSeries',
+    label: 'Time series',
+    description: 'Line chart of a metric over time (label = date, value = metric)',
+    icon: LineChart,
   },
 ];
 
@@ -444,7 +450,7 @@ const ClipRemixer = React.memo(function ClipRemixer() {
 
             <div>
               <span className={labelClass}>Chart type</span>
-              <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Chart type">
+              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Chart type">
                 {CHART_TYPES.map(({ value, label, description, icon: Icon }) => {
                   const isActive = draft.chartType === value;
                   return (
