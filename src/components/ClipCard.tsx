@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { ExternalLink, Eye, Calendar, Globe, Twitter, Instagram } from 'lucide-react';
+import React, { useCallback, useRef, useState } from 'react';
+import { ExternalLink, Eye, Calendar, Globe, Twitter, Instagram, Download, Loader2, Check, AlertCircle } from 'lucide-react';
+import { toPng } from 'html-to-image';
 import Card from './Card';
 import ClipChart from './ClipChart';
 import type { Clip } from '../types/clips';
@@ -171,17 +172,22 @@ interface FramedClipProps {
   platformLabel: string;
 }
 
-const FramedClip = React.memo(function FramedClip({ clip, spec, platformLabel }: FramedClipProps) {
-  return (
-    <div
-      data-clip-frame
-      className="relative mx-auto overflow-hidden rounded-2xl border border-theme bg-secondary shadow-lg"
-      style={{
-        width: spec.previewWidth,
-        height: spec.previewHeight,
-        padding: spec.padding,
-      }}
-    >
+const FramedClip = React.memo(
+  React.forwardRef<HTMLDivElement, FramedClipProps>(function FramedClip(
+    { clip, spec, platformLabel },
+    ref,
+  ) {
+    return (
+      <div
+        ref={ref}
+        data-clip-frame
+        className="relative overflow-hidden rounded-2xl border border-theme bg-secondary shadow-lg"
+        style={{
+          width: spec.previewWidth,
+          height: spec.previewHeight,
+          padding: spec.padding,
+        }}
+      >
       <div className="flex h-full flex-col" style={{ gap: spec.gap }}>
         <header className="flex flex-col" style={{ gap: Math.max(4, spec.gap - 4) }}>
           <div
@@ -273,14 +279,47 @@ const FramedClip = React.memo(function FramedClip({ clip, spec, platformLabel }:
         </footer>
       </div>
     </div>
-  );
-});
+    );
+  }),
+);
+
+type ExportState = 'idle' | 'exporting' | 'done' | 'error';
 
 const ClipCard = React.memo(function ClipCard({ clip, defaultViewMode = 'web' }: ClipCardProps) {
   const [viewMode, setViewMode] = useState<ClipViewMode>(defaultViewMode);
+  const [exportState, setExportState] = useState<ExportState>('idle');
+  const frameRef = useRef<HTMLDivElement | null>(null);
   const platformLabel = PLATFORM_LABEL[clip.source.platform] ?? 'Source';
   const isFramed = viewMode !== 'web';
   const frameSpec = isFramed ? FRAME_SPECS[viewMode] : null;
+
+  const handleDownload = useCallback(async () => {
+    if (!frameRef.current || !frameSpec) return;
+    setExportState('exporting');
+    try {
+      const pixelRatio = frameSpec.exportWidth / frameSpec.previewWidth;
+      const dataUrl = await toPng(frameRef.current, {
+        pixelRatio,
+        cacheBust: true,
+        skipFonts: true,
+        backgroundColor: '#FFFFFF',
+        width: frameSpec.previewWidth,
+        height: frameSpec.previewHeight,
+      });
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = `${clip.id}-${viewMode}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setExportState('done');
+      window.setTimeout(() => setExportState('idle'), 1800);
+    } catch (err) {
+      console.error('Clip export failed:', err);
+      setExportState('error');
+      window.setTimeout(() => setExportState('idle'), 2500);
+    }
+  }, [frameSpec, clip.id, viewMode]);
 
   return (
     <Card className="p-7">
@@ -349,13 +388,52 @@ const ClipCard = React.memo(function ClipCard({ clip, defaultViewMode = 'web' }:
 
         {isFramed && frameSpec ? (
           <div className="flex flex-col gap-3">
-            <div className="rounded-xl bg-muted-surface/40 py-6">
-              <FramedClip clip={clip} spec={frameSpec} platformLabel={platformLabel} />
+            <div className="flex justify-center rounded-xl bg-muted-surface/40 py-6">
+              <FramedClip ref={frameRef} clip={clip} spec={frameSpec} platformLabel={platformLabel} />
             </div>
-            <p className="text-center text-[11px] text-muted">
-              <span className="font-semibold text-main">{frameSpec.label}</span> · {frameSpec.hint}
-              {' · Preview shown at ½ scale; screenshot the frame and crop to share.'}
-            </p>
+            <div className="flex flex-col items-center gap-2">
+              <button
+                type="button"
+                onClick={handleDownload}
+                disabled={exportState === 'exporting'}
+                className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-70"
+                style={{
+                  color: 'var(--color-brand-primary)',
+                  borderColor: 'color-mix(in oklab, var(--color-brand-primary) 40%, transparent)',
+                  backgroundColor:
+                    'color-mix(in oklab, var(--color-brand-primary) 12%, var(--color-bg-secondary))',
+                }}
+              >
+                {exportState === 'exporting' && (
+                  <>
+                    <Loader2 size={12} aria-hidden className="animate-spin" />
+                    Rendering…
+                  </>
+                )}
+                {exportState === 'done' && (
+                  <>
+                    <Check size={12} aria-hidden />
+                    Downloaded
+                  </>
+                )}
+                {exportState === 'error' && (
+                  <>
+                    <AlertCircle size={12} aria-hidden />
+                    Export failed — try again
+                  </>
+                )}
+                {exportState === 'idle' && (
+                  <>
+                    <Download size={12} aria-hidden />
+                    Download PNG · {frameSpec.exportWidth}×{frameSpec.exportHeight}
+                  </>
+                )}
+              </button>
+              <p className="text-center text-[11px] text-muted">
+                <span className="font-semibold text-main">{frameSpec.label}</span> · {frameSpec.hint}
+                {' · Preview shown at ½ scale; PNG exports at full target resolution.'}
+              </p>
+            </div>
           </div>
         ) : (
           <>
