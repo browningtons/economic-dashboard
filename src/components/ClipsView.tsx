@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Bookmark, Filter, ChevronRight, X as XIcon, Tag } from 'lucide-react';
+import { Bookmark, Filter, ChevronRight, Calendar, Tag, X as XIcon } from 'lucide-react';
 import Card from './Card';
 import ClipCard from './ClipCard';
 import ClipRemixer from './ClipRemixer';
@@ -9,11 +9,57 @@ const CLIPS_DATA_URL = `${import.meta.env.BASE_URL}data/clips.json`;
 
 type SortKey = 'newest' | 'oldest';
 
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+const formatYearMonth = (ym: string): string => {
+  const [y, m] = ym.split('-');
+  const idx = Number(m) - 1;
+  if (Number.isNaN(idx) || idx < 0 || idx > 11) return ym;
+  return `${MONTH_NAMES[idx]} ${y}`;
+};
+
+const clipYearMonth = (clip: Clip): string | null => {
+  const d = new Date(clip.addedAt || clip.observedDate);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+};
+
+// Avoid matching single-clip permalinks like /clips/some-slug/.
+// Clip-id pages always include <meta name="clip-id">, so if that's present we
+// treat the page as a single-clip page and skip month detection.
 const getDeepLinkClipId = (): string | null => {
   if (typeof window === 'undefined') return null;
   const hint = document.querySelector('meta[name="clip-id"]')?.getAttribute('content');
   if (hint) return hint;
-  return window.location.pathname.match(/\/clips\/([^/]+)\/?$/)?.[1] ?? null;
+  // Path /clips/{id}/ — but only if it's NOT /clips/{year}/{month}/
+  const path = window.location.pathname;
+  if (/\/clips\/\d{4}\/\d{2}\/?$/.test(path)) return null;
+  return path.match(/\/clips\/([^/]+)\/?$/)?.[1] ?? null;
+};
+
+const getInitialMonthFromUrl = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  const hint = document
+    .querySelector('meta[name="active-month"]')
+    ?.getAttribute('content');
+  if (hint && /^\d{4}-\d{2}$/.test(hint)) return hint;
+  const pathMatch = window.location.pathname.match(/\/clips\/(\d{4})\/(\d{2})\/?$/);
+  if (pathMatch) return `${pathMatch[1]}-${pathMatch[2]}`;
+  const params = new URLSearchParams(window.location.search);
+  const m = params.get('month');
+  if (m && /^\d{4}-\d{2}$/.test(m)) return m;
+  return null;
+};
+
+const updateMonthInUrl = (month: string | null) => {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  if (month) url.searchParams.set('month', month);
+  else url.searchParams.delete('month');
+  window.history.replaceState({}, '', url.toString());
 };
 
 const getInitialTagFromUrl = (): string | null => {
@@ -47,6 +93,9 @@ const ClipsView = React.memo(function ClipsView() {
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [activeTag, setActiveTagState] = useState<string | null>(() => getInitialTagFromUrl());
+  const [activeMonth, setActiveMonthState] = useState<string | null>(() =>
+    getInitialMonthFromUrl(),
+  );
   const [remixerOpen, setRemixerOpen] = useState(false);
   const [deepLinkClipId] = useState<string | null>(() => getDeepLinkClipId());
 
@@ -59,6 +108,19 @@ const ClipsView = React.memo(function ClipsView() {
     setActiveTagState((current) => {
       const next = current === tag ? null : tag;
       updateTagInUrl(next);
+      return next;
+    });
+  }, []);
+
+  const setActiveMonth = useCallback((month: string | null) => {
+    setActiveMonthState(month);
+    updateMonthInUrl(month);
+  }, []);
+
+  const toggleMonth = useCallback((month: string) => {
+    setActiveMonthState((current) => {
+      const next = current === month ? null : month;
+      updateMonthInUrl(next);
       return next;
     });
   }, []);
@@ -121,6 +183,16 @@ const ClipsView = React.memo(function ClipsView() {
     );
   }, [clips]);
 
+  const monthBuckets = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const clip of clips) {
+      const ym = clipYearMonth(clip);
+      if (!ym) continue;
+      counts.set(ym, (counts.get(ym) ?? 0) + 1);
+    }
+    return Array.from(counts.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [clips]);
+
   const visibleClips = useMemo(() => {
     let result = clips;
     if (platformFilter !== 'all') {
@@ -129,13 +201,16 @@ const ClipsView = React.memo(function ClipsView() {
     if (activeTag) {
       result = result.filter((c) => c.tags?.includes(activeTag));
     }
+    if (activeMonth) {
+      result = result.filter((c) => clipYearMonth(c) === activeMonth);
+    }
     const sorted = [...result].sort((a, b) => {
       const aTime = new Date(a.observedDate).getTime();
       const bTime = new Date(b.observedDate).getTime();
       return sortKey === 'newest' ? bTime - aTime : aTime - bTime;
     });
     return sorted;
-  }, [clips, sortKey, platformFilter, activeTag]);
+  }, [clips, sortKey, platformFilter, activeTag, activeMonth]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -300,6 +375,96 @@ const ClipsView = React.memo(function ClipsView() {
               Clear
             </button>
           )}
+        </div>
+      )}
+
+      {monthBuckets.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5" aria-label="Archive by month">
+          <Calendar size={12} className="text-muted" aria-hidden />
+          <span className="mr-1 text-[11px] uppercase tracking-wider text-muted">
+            Archive
+          </span>
+          <button
+            type="button"
+            onClick={() => setActiveMonth(null)}
+            className="rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors hover:bg-secondary"
+            style={
+              activeMonth === null
+                ? {
+                    color: 'var(--color-brand-primary)',
+                    borderColor:
+                      'color-mix(in oklab, var(--color-brand-primary) 40%, transparent)',
+                    backgroundColor:
+                      'color-mix(in oklab, var(--color-brand-primary) 12%, var(--color-bg-secondary))',
+                  }
+                : {
+                    color: 'var(--color-text-muted)',
+                    borderColor: 'var(--color-border)',
+                    backgroundColor: 'var(--color-bg-secondary)',
+                  }
+            }
+          >
+            All time ({clips.length})
+          </button>
+          {monthBuckets.map(([ym, count]) => {
+            const isActive = activeMonth === ym;
+            return (
+              <button
+                key={ym}
+                type="button"
+                onClick={() => toggleMonth(ym)}
+                className="rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors hover:bg-secondary"
+                style={
+                  isActive
+                    ? {
+                        color: 'var(--color-brand-primary)',
+                        borderColor:
+                          'color-mix(in oklab, var(--color-brand-primary) 40%, transparent)',
+                        backgroundColor:
+                          'color-mix(in oklab, var(--color-brand-primary) 12%, var(--color-bg-secondary))',
+                      }
+                    : {
+                        color: 'var(--color-text-muted)',
+                        borderColor: 'var(--color-border)',
+                        backgroundColor: 'var(--color-bg-secondary)',
+                      }
+                }
+              >
+                {formatYearMonth(ym)}{' '}
+                <span className="text-[10px] opacity-70">({count})</span>
+              </button>
+            );
+          })}
+          {activeMonth && (
+            <button
+              type="button"
+              onClick={() => setActiveMonth(null)}
+              className="inline-flex items-center gap-1 rounded-full border border-theme bg-muted-surface px-2 py-0.5 text-[11px] font-medium text-muted hover:text-main"
+              title="Clear month filter"
+            >
+              <XIcon size={10} aria-hidden />
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
+      {activeMonth && (
+        <div
+          className="rounded-xl border px-4 py-3 text-sm"
+          style={{
+            borderColor: 'color-mix(in oklab, var(--color-brand-primary) 35%, var(--color-border))',
+            backgroundColor:
+              'color-mix(in oklab, var(--color-brand-primary) 8%, var(--color-bg-secondary))',
+            color: 'var(--color-text-main)',
+          }}
+        >
+          <span className="font-semibold" style={{ color: 'var(--color-brand-primary)' }}>
+            Archive view:
+          </span>{' '}
+          {formatYearMonth(activeMonth)} ·{' '}
+          {visibleClips.length} clip{visibleClips.length === 1 ? '' : 's'}{' '}
+          {visibleClips.length > 0 ? `(of ${clips.length} total)` : ''}
         </div>
       )}
 
