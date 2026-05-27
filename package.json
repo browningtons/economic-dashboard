@@ -6,19 +6,21 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/generate-clip-pages.mjs",
     "predeploy": "npm run build",
     "update:data": "node scripts/update-economic-data.mjs",
     "validate:data": "node scripts/validate-economic-data.mjs",
     "alert:data": "node scripts/send-validation-alert.mjs"
   },
   "dependencies": {
+    "html-to-image": "^1.11.13",
     "lucide-react": "^0.555.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "recharts": "^3.5.0"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",

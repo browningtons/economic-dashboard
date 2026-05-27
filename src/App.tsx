@@ -27,6 +27,7 @@ import appLogo from './assets/golden_data_icon_small.png';
 import DataTableView from './components/DataTableView';
 import DashboardView from './components/DashboardView';
 import BuffettView from './components/BuffettView';
+import ClipsView from './components/ClipsView';
 import { DASHBOARD_PRESETS } from './presets';
 import type { DashboardPreset } from './presets';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -876,7 +877,12 @@ export default function App() {
   const [dataError, setDataError] = useState<string | null>(null);
   const [dataWarning, setDataWarning] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [activeTab, setActiveTab] = useState<'Dashboard' | 'Buffett' | 'Data Table'>('Dashboard');
+  const [activeTab, setActiveTab] = useState<'Dashboard' | 'Buffett' | 'Data Table' | 'Clips'>(() => {
+    if (typeof window === 'undefined') return 'Dashboard';
+    const hint = document.querySelector('meta[name="clip-id"]')?.getAttribute('content');
+    const fromPath = window.location.pathname.match(/\/clips\/([^/]+)\/?$/)?.[1];
+    return hint || fromPath ? 'Clips' : 'Dashboard';
+  });
   const [shareMode, setShareMode] = useState(false);
   const [viewMode, setViewMode] = useState<'raw' | 'relative'>('raw');
   const [clockNow, setClockNow] = useState(() => new Date());
@@ -1661,9 +1667,10 @@ export default function App() {
             </button>
           )}
           <div className="flex bg-muted-surface p-1 rounded-lg border border-theme">
-            {(['Dashboard', 'Buffett', 'Data Table'] as const).map((tab) => {
+            {(['Dashboard', 'Buffett', 'Data Table', 'Clips'] as const).map((tab) => {
               const isActive = activeTab === tab;
               const isBuffettTab = tab === 'Buffett';
+              const isClipsTab = tab === 'Clips';
               return (
                 <button
                   key={tab}
@@ -1671,15 +1678,24 @@ export default function App() {
                   className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
                     isActive
                       ? 'bg-secondary text-main shadow-sm border border-theme'
-                      : isBuffettTab
+                      : isBuffettTab || isClipsTab
                         ? 'text-main border border-theme'
                         : 'text-muted hover:text-main'
                   }`}
-                  style={!isActive && isBuffettTab ? { backgroundColor: 'color-mix(in oklab, var(--color-brand-accent) 14%, var(--color-bg-secondary))' } : undefined}
+                  style={
+                    !isActive && isBuffettTab
+                      ? { backgroundColor: 'color-mix(in oklab, var(--color-brand-accent) 14%, var(--color-bg-secondary))' }
+                      : !isActive && isClipsTab
+                        ? { backgroundColor: 'color-mix(in oklab, var(--color-brand-primary) 10%, var(--color-bg-secondary))' }
+                        : undefined
+                  }
                 >
                   <span className="inline-flex items-center gap-1.5">
                     {tab}
                     {isBuffettTab && !isActive && (
+                      <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--color-brand-primary)' }} />
+                    )}
+                    {isClipsTab && !isActive && (
                       <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--color-brand-primary)' }} />
                     )}
                   </span>
@@ -1758,6 +1774,12 @@ export default function App() {
                 datePreset={datePreset}
                 applyDatePreset={applyDatePreset}
               />
+            </ErrorBoundary>
+          )}
+
+          {activeTab === 'Clips' && (
+            <ErrorBoundary section="Clips">
+              <ClipsView />
             </ErrorBoundary>
           )}
 

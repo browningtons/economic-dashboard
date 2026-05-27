@@ -1,0 +1,84 @@
+{
+  "clips": [
+    {
+      "id": "taiwan-5th-largest-stock-market-2026-05-26",
+      "title": "Taiwan Just Became the World's 5th Largest Stock Market",
+      "subtitle": "Taiwan has overtaken India to claim the No. 5 spot among the world's most valuable stock markets.",
+      "source": {
+        "label": "World of Statistics",
+        "handle": "@stats_feed",
+        "url": "https://x.com/stats_feed",
+        "platform": "x"
+      },
+      "observedDate": "2026-05-26",
+      "views": 62900,
+      "chartType": "horizontalBar",
+      "unitPrefix": "$",
+      "unitSuffix": "T",
+      "valuePrecision": 1,
+      "items": [
+        { "label": "USA", "value": 78.0, "flag": "🇺🇸" },
+        { "label": "Mainland China", "value": 16.6, "flag": "🇨🇳" },
+        { "label": "Japan", "value": 8.7, "flag": "🇯🇵" },
+        { "label": "Hong Kong", "value": 7.3, "flag": "🇭🇰" },
+        { "label": "Taiwan", "value": 5.0, "flag": "🇹🇼", "highlight": true },
+        { "label": "India", "value": 4.9, "flag": "🇮🇳" },
+        { "label": "South Korea", "value": 4.5, "flag": "🇰🇷" },
+        { "label": "Canada", "value": 4.5, "flag": "🇨🇦" },
+        { "label": "UK", "value": 4.0, "flag": "🇬🇧" },
+        { "label": "France", "value": 3.5, "flag": "🇫🇷" }
+      ],
+      "notes": "Total stock market value, May 2026. Taiwan's surge driven by TSMC and the broader semiconductor rally.",
+      "addedAt": "2026-05-27"
+    },
+    {
+      "id": "us-federal-debt-2026-q1",
+      "title": "US Federal Debt Just Crossed $35 Trillion",
+      "subtitle": "The national debt has more than doubled in a decade and is now larger than the entire US economy.",
+      "source": {
+        "label": "US Treasury",
+        "handle": "treasury.gov",
+        "url": "https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/",
+        "platform": "article"
+      },
+      "observedDate": "2026-05-15",
+      "chartType": "stat",
+      "unitPrefix": "$",
+      "unitSuffix": "T",
+      "valuePrecision": 1,
+      "items": [
+        { "label": "US Federal Debt", "value": 35.2, "highlight": true },
+        { "label": "5 Years Ago", "value": 28.4 },
+        { "label": "10 Years Ago", "value": 17.8 },
+        { "label": "Annual Interest Cost", "value": 1.2 }
+      ],
+      "notes": "All values in trillions of US dollars. Federal debt has roughly doubled in 10 years; annual interest on that debt is now larger than the Pentagon budget.",
+      "addedAt": "2026-05-27"
+    },
+    {
+      "id": "global-cb-reserves-2026-q1",
+      "title": "What Central Banks Are Holding",
+      "subtitle": "Composition of global foreign-exchange reserves at the end of Q1 2026, by currency.",
+      "source": {
+        "label": "IMF COFER",
+        "handle": "imf.org",
+        "url": "https://data.imf.org/COFER",
+        "platform": "article"
+      },
+      "observedDate": "2026-04-30",
+      "chartType": "donut",
+      "unitSuffix": "%",
+      "valuePrecision": 1,
+      "items": [
+        { "label": "US Dollar", "value": 57.2, "highlight": true },
+        { "label": "Euro", "value": 19.8 },
+        { "label": "Japanese Yen", "value": 5.6 },
+        { "label": "British Pound", "value": 4.9 },
+        { "label": "Chinese Yuan", "value": 2.8 },
+        { "label": "Other", "value": 9.7 }
+      ],
+      "notes": "USD remains dominant but its share has drifted lower over the last decade; the yuan's share has been ticking up.",
+      "addedAt": "2026-05-27"
+    }
+  ]
+}
