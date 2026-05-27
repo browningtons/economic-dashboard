@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Plus, Trash2, Copy, Check, Sparkles, RotateCcw, Save, FileDown, BarChartHorizontal, PieChart, Hash, LineChart } from 'lucide-react';
 import Card from './Card';
 import ClipCard from './ClipCard';
+import ClipImportPanel from './ClipImportPanel';
+import type { GeneratedClipDraft } from '../clipDataSources';
 import type { Clip, ClipItem, ClipChartType, ClipPlatform } from '../types/clips';
 
 const DRAFT_KEY = 'economic-dashboard:clip-remix-draft:v1';
@@ -239,6 +241,32 @@ const ClipRemixer = React.memo(function ClipRemixer() {
     URL.revokeObjectURL(url);
   }, [jsonOutput, previewClip.id]);
 
+  const handleImportFromDashboard = useCallback((imported: GeneratedClipDraft) => {
+    setDraft((prev) => ({
+      ...prev,
+      title: imported.title,
+      subtitle: imported.subtitle,
+      sourceLabel: imported.sourceLabel,
+      sourceHandle: imported.sourceHandle,
+      sourceUrl: imported.sourceUrl,
+      platform: imported.sourcePlatform,
+      observedDate: imported.observedDate,
+      chartType: imported.chartType,
+      unitPrefix: imported.unitPrefix,
+      unitSuffix: imported.unitSuffix,
+      valuePrecision: imported.valuePrecision,
+      items: imported.items.map((it) => ({
+        label: it.label,
+        value: it.value,
+        flag: it.flag ?? '',
+        highlight: it.highlight,
+      })),
+      notes: imported.notes,
+      // Preserve previous views value if any
+      views: prev.views,
+    }));
+  }, []);
+
   const handlePasteTweet = useCallback(() => {
     if (typeof window === 'undefined') return;
     const text = window.prompt(
@@ -333,6 +361,8 @@ const ClipRemixer = React.memo(function ClipRemixer() {
             </button>
           </div>
         </header>
+
+        <ClipImportPanel onGenerate={handleImportFromDashboard} />
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* LEFT — form */}
