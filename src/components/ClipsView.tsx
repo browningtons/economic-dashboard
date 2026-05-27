@@ -3,6 +3,7 @@ import { Bookmark, Filter, ChevronRight, Calendar, Tag, X as XIcon } from 'lucid
 import Card from './Card';
 import ClipCard from './ClipCard';
 import ClipRemixer from './ClipRemixer';
+import ClipAboutCard from './ClipAboutCard';
 import type { Clip, ClipsFile } from '../types/clips';
 
 const CLIPS_DATA_URL = `${import.meta.env.BASE_URL}data/clips.json`;
@@ -307,6 +308,8 @@ const ClipsView = React.memo(function ClipsView() {
           )}
         </div>
       </Card>
+
+      <ClipAboutCard />
 
       {tagCounts.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5" aria-label="Filter by tag">

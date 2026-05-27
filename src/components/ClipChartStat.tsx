@@ -18,6 +18,20 @@ const formatValue = (value: number, precision = 1, prefix = '', suffix = ''): st
   return `${prefix}${formatted}${suffix}`;
 };
 
+/** Resolve unitPrefix / unitSuffix / valuePrecision with item-level overrides
+ *  taking precedence over the clip-level defaults. */
+const formatItemValue = (
+  item: ClipItem,
+  clipPrefix: string,
+  clipSuffix: string,
+  clipPrecision: number,
+): string => {
+  const prefix = item.unitPrefix ?? clipPrefix;
+  const suffix = item.unitSuffix ?? clipSuffix;
+  const precision = item.valuePrecision ?? clipPrecision;
+  return formatValue(item.value, precision, prefix, suffix);
+};
+
 const ClipChartStat = React.memo(function ClipChartStat({
   items,
   unitPrefix = '',
@@ -69,7 +83,7 @@ const ClipChartStat = React.memo(function ClipChartStat({
           letterSpacing: '-0.02em',
         }}
       >
-        {formatValue(headline.value, valuePrecision, unitPrefix, unitSuffix)}
+        {formatItemValue(headline, unitPrefix, unitSuffix, valuePrecision)}
       </div>
 
       {supporting.length > 0 && (
@@ -95,7 +109,7 @@ const ClipChartStat = React.memo(function ClipChartStat({
                   color: item.highlight ? 'var(--color-brand-primary)' : 'var(--color-brand-secondary)',
                 }}
               >
-                {formatValue(item.value, valuePrecision, unitPrefix, unitSuffix)}
+                {formatItemValue(item, unitPrefix, unitSuffix, valuePrecision)}
               </div>
             </div>
           ))}

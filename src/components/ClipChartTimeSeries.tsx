@@ -129,7 +129,12 @@ const ClipChartTimeSeries = React.memo(function ClipChartTimeSeries({
               fontVariantNumeric: 'tabular-nums',
             }}
           >
-            {formatValue(highlightPoint.value, valuePrecision, unitPrefix, unitSuffix)}
+            {formatValue(
+              highlightPoint.value,
+              highlightPoint.item.valuePrecision ?? valuePrecision,
+              highlightPoint.item.unitPrefix ?? unitPrefix,
+              highlightPoint.item.unitSuffix ?? unitSuffix,
+            )}
           </span>
         </div>
         <div className="flex flex-col items-end" style={{ gap: 2 }}>

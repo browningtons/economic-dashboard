@@ -13,6 +13,15 @@ export interface ClipItem {
   value: number;
   flag?: string;
   highlight?: boolean;
+  /**
+   * Optional per-item unit overrides. When present, these win over the
+   * clip-level unitPrefix / unitSuffix / valuePrecision when rendering this
+   * item's value. Useful for stat cards or donuts that mix units (e.g. a
+   * "$35T" headline with a "+97%" supporting stat).
+   */
+  unitPrefix?: string;
+  unitSuffix?: string;
+  valuePrecision?: number;
 }
 
 export interface Clip {

@@ -69,6 +69,17 @@ const formatValue = (value, precision = 1, prefix = '', suffix = '') =>
     maximumFractionDigits: precision,
   })}${suffix}`;
 
+// Resolve clip-level units, but let per-item overrides on item.unitPrefix /
+// item.unitSuffix / item.valuePrecision take precedence. Used by every chart
+// type so a stat card can mix e.g. "$T" headline + "%" supporting stat.
+const formatItemValue = (item, clipPrefix = '', clipSuffix = '', clipPrecision = 1) =>
+  formatValue(
+    item.value,
+    item.valuePrecision ?? clipPrecision,
+    item.unitPrefix ?? clipPrefix,
+    item.unitSuffix ?? clipSuffix,
+  );
+
 const formatObservedDate = (iso) => {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
@@ -310,7 +321,12 @@ function renderTimeSeriesSvg({ clip, items, W, PAD, chartTop, chartHeight }) {
   const headlineLabelUpper = String(highlight.item.label || '').length
     ? formatTickLabelMjs(highlight.item.label).toUpperCase()
     : 'LATEST';
-  const headlineValueText = formatValue(highlight.value, PRECISION, UNIT_PREFIX, UNIT_SUFFIX);
+  const headlineValueText = formatItemValue(
+    highlight.item,
+    UNIT_PREFIX,
+    UNIT_SUFFIX,
+    PRECISION,
+  );
   const deltaLabelUpper = `Δ VS ${formatTickLabelMjs(first.item.label).toUpperCase()}`;
   const deltaValueText = `${deltaSign}${formatValue(delta, PRECISION, UNIT_PREFIX, UNIT_SUFFIX)}  (${deltaSign}${deltaPct.toFixed(1)}%)`;
 
@@ -411,11 +427,11 @@ function renderHorizontalBarsSvg({ clip, items: rawItems, W, PAD, chartTop, char
       const widthPx = Math.max(2, (Number(item.value) / maxValue) * barW);
       const labelText = truncate(item.label, 22);
       const numText = `${i + 1}.`;
-      const valueText = formatValue(
-        item.value,
-        clip.valuePrecision ?? 1,
+      const valueText = formatItemValue(
+        item,
         clip.unitPrefix ?? '',
         clip.unitSuffix ?? '',
+        clip.valuePrecision ?? 1,
       );
       const focusBadge = item.highlight
         ? `<rect x="${labelColX + 30 + measure(labelText, 20) + 12}" y="${y + (rowHeight - 22) / 2}"
@@ -462,11 +478,11 @@ function renderStatSvg({ clip, items, W, PAD, chartTop, chartHeight }) {
   const supportValueSize = 36;
   const supportingGap = 60;
 
-  const headlineText = formatValue(
-    headline.value,
-    clip.valuePrecision ?? 1,
+  const headlineText = formatItemValue(
+    headline,
     clip.unitPrefix ?? '',
     clip.unitSuffix ?? '',
+    clip.valuePrecision ?? 1,
   );
 
   const labelEl = `
@@ -499,11 +515,11 @@ function renderStatSvg({ clip, items, W, PAD, chartTop, chartHeight }) {
       const labelY = ruleY + supportLabelSize + 18;
       const valueY = labelY + supportValueSize + 6;
       const color = item.highlight ? COLOR.brandPrimary : COLOR.brandSecondary;
-      const valueText = formatValue(
-        item.value,
-        clip.valuePrecision ?? 1,
+      const valueText = formatItemValue(
+        item,
         clip.unitPrefix ?? '',
         clip.unitSuffix ?? '',
+        clip.valuePrecision ?? 1,
       );
       supportingEls += `
         <text x="${colCx}" y="${labelY}" text-anchor="middle"
@@ -580,7 +596,12 @@ function renderDonutSvg({ clip, items, W, PAD, chartTop, chartHeight }) {
     const swatchY = y + rowH / 2 - 8;
     const labelY = y + rowH / 2 + 6;
     const valueColor = item.highlight ? COLOR.brandPrimary : COLOR.brandSecondary;
-    const valueText = formatValue(value, clip.valuePrecision ?? 1, clip.unitPrefix ?? '', clip.unitSuffix ?? '');
+    const valueText = formatItemValue(
+      item,
+      clip.unitPrefix ?? '',
+      clip.unitSuffix ?? '',
+      clip.valuePrecision ?? 1,
+    );
     legendEls += `
       <rect x="${legendX}" y="${swatchY}" width="16" height="16" rx="3" fill="${color}"
             stroke="${item.highlight ? COLOR.brandPrimary : 'none'}" stroke-width="${item.highlight ? 2 : 0}"/>
