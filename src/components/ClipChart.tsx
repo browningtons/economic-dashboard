@@ -21,6 +21,20 @@ const formatValue = (value: number, precision = 1, prefix = '', suffix = ''): st
   return `${prefix}${formatted}${suffix}`;
 };
 
+const formatItemValue = (
+  item: ClipItem,
+  clipPrefix: string,
+  clipSuffix: string,
+  clipPrecision: number,
+): string => {
+  return formatValue(
+    item.value,
+    item.valuePrecision ?? clipPrecision,
+    item.unitPrefix ?? clipPrefix,
+    item.unitSuffix ?? clipSuffix,
+  );
+};
+
 const ClipChart = React.memo(function ClipChart({
   items,
   unitPrefix = '',
@@ -142,7 +156,7 @@ const ClipChart = React.memo(function ClipChart({
                   fontSize: valueFontSize,
                 }}
               >
-                {formatValue(item.value, valuePrecision, unitPrefix, unitSuffix)}
+                {formatItemValue(item, unitPrefix, unitSuffix, valuePrecision)}
               </div>
             </div>
           );

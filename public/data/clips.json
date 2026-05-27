@@ -83,11 +83,11 @@
       "valuePrecision": 1,
       "items": [
         { "label": "US Federal Debt", "value": 35.2, "highlight": true },
-        { "label": "5 Years Ago", "value": 28.4 },
-        { "label": "10 Years Ago", "value": 17.8 },
-        { "label": "Annual Interest Cost", "value": 1.2 }
+        { "label": "vs 10Y ago", "value": 97, "unitPrefix": "+", "unitSuffix": "%", "valuePrecision": 0 },
+        { "label": "Of GDP", "value": 124, "unitPrefix": "", "unitSuffix": "%", "valuePrecision": 0 },
+        { "label": "Per capita", "value": 104, "unitPrefix": "$", "unitSuffix": "K", "valuePrecision": 0 }
       ],
-      "notes": "All values in trillions of US dollars. Federal debt has roughly doubled in 10 years; annual interest on that debt is now larger than the Pentagon budget.",
+      "notes": "Headline value in trillions; supporting stats use per-item unit overrides (% growth, % of GDP, $K per person) — the same field that any clip can use to mix units inside one chart.",
       "tags": ["fiscal", "debt", "us"],
       "addedAt": "2026-05-27"
     },

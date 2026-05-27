@@ -61,6 +61,20 @@ const formatValue = (value: number, precision = 1, prefix = '', suffix = ''): st
   return `${prefix}${formatted}${suffix}`;
 };
 
+const formatItemValue = (
+  item: ClipItem,
+  clipPrefix: string,
+  clipSuffix: string,
+  clipPrecision: number,
+): string => {
+  return formatValue(
+    item.value,
+    item.valuePrecision ?? clipPrecision,
+    item.unitPrefix ?? clipPrefix,
+    item.unitSuffix ?? clipSuffix,
+  );
+};
+
 const ClipChartDonut = React.memo(function ClipChartDonut({
   items,
   unitPrefix = '',
@@ -202,7 +216,7 @@ const ClipChartDonut = React.memo(function ClipChartDonut({
                   fontVariantNumeric: 'tabular-nums',
                 }}
               >
-                {formatValue(slice.item.value, valuePrecision, unitPrefix, unitSuffix)}
+                {formatItemValue(slice.item, unitPrefix, unitSuffix, valuePrecision)}
               </span>
             </div>
           );
