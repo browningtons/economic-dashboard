@@ -748,6 +748,9 @@ function generateAtomFeed(clips) {
       ]
         .filter(Boolean)
         .join('');
+      const categories = (clip.tags ?? [])
+        .map((tag) => `    <category term="${escapeXml(tag)}"/>`)
+        .join('\n');
       return `  <entry>
     <id>${escapeXml(url)}</id>
     <title>${escapeXml(clip.title)}</title>
@@ -758,6 +761,7 @@ function generateAtomFeed(clips) {
     <summary>${escapeXml(summary)}</summary>
     <content type="html"><![CDATA[${contentHtml}]]></content>
     <author><name>${escapeXml(clip.source?.label ?? 'Golden Data')}</name></author>
+${categories}
   </entry>`;
     })
     .join('\n');

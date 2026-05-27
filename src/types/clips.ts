@@ -28,6 +28,7 @@ export interface Clip {
   valuePrecision?: number;
   items: ClipItem[];
   notes?: string;
+  tags?: string[];
   addedAt: string;
 }
 

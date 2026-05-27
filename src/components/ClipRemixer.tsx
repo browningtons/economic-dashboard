@@ -32,6 +32,7 @@ interface DraftState {
   valuePrecision: string;
   items: ClipItem[];
   notes: string;
+  tags: string;
 }
 
 const CHART_TYPES: { value: ClipChartType; label: string; description: string; icon: React.ComponentType<{ size?: number; 'aria-hidden'?: boolean }> }[] = [
@@ -79,6 +80,18 @@ const EMPTY_DRAFT: DraftState = {
     { label: '', value: 0, flag: '', highlight: false },
   ],
   notes: '',
+  tags: '',
+};
+
+const parseTagInput = (raw: string): string[] => {
+  return Array.from(
+    new Set(
+      raw
+        .split(/[,#]+/)
+        .map((t) => t.trim().toLowerCase().replace(/\s+/g, '-'))
+        .filter((t) => t.length > 0 && t.length <= 32),
+    ),
+  );
 };
 
 const slugify = (s: string): string =>
@@ -124,6 +137,7 @@ const buildClipFromDraft = (draft: DraftState): Clip => {
     valuePrecision: precision,
     items: items.length > 0 ? items : [{ label: 'Sample', value: 1 }],
     notes: draft.notes.trim() || undefined,
+    tags: parseTagInput(draft.tags).length > 0 ? parseTagInput(draft.tags) : undefined,
     addedAt: today,
   };
 };
@@ -539,6 +553,31 @@ const ClipRemixer = React.memo(function ClipRemixer() {
                 onChange={(e) => update({ notes: e.target.value })}
                 placeholder="Why is this interesting? Any caveats?"
               />
+            </div>
+
+            <div>
+              <label className={labelClass} htmlFor="clip-tags">
+                Tags (comma-separated)
+              </label>
+              <input
+                id="clip-tags"
+                className={fieldClass}
+                value={draft.tags}
+                onChange={(e) => update({ tags: e.target.value })}
+                placeholder="markets, global, equities"
+              />
+              {parseTagInput(draft.tags).length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {parseTagInput(draft.tags).map((t) => (
+                    <span
+                      key={t}
+                      className="rounded-full border border-theme bg-muted-surface px-2 py-0.5 text-[10px] text-muted"
+                    >
+                      #{t}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Items editor */}
