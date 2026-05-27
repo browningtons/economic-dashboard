@@ -881,8 +881,9 @@ export default function App() {
     if (typeof window === 'undefined') return 'Dashboard';
     const clipHint = document.querySelector('meta[name="clip-id"]')?.getAttribute('content');
     const tagHint = document.querySelector('meta[name="active-tag"]')?.getAttribute('content');
+    const monthHint = document.querySelector('meta[name="active-month"]')?.getAttribute('content');
     const isClipsPath = /\/clips(?:\/|$)/.test(window.location.pathname);
-    return clipHint || tagHint || isClipsPath ? 'Clips' : 'Dashboard';
+    return clipHint || tagHint || monthHint || isClipsPath ? 'Clips' : 'Dashboard';
   });
   const [shareMode, setShareMode] = useState(false);
   const [viewMode, setViewMode] = useState<'raw' | 'relative'>('raw');
