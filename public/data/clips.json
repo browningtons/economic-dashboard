@@ -1,0 +1,35 @@
+{
+  "clips": [
+    {
+      "id": "taiwan-5th-largest-stock-market-2026-05-26",
+      "title": "Taiwan Just Became the World's 5th Largest Stock Market",
+      "subtitle": "Taiwan has overtaken India to claim the No. 5 spot among the world's most valuable stock markets.",
+      "source": {
+        "label": "World of Statistics",
+        "handle": "@stats_feed",
+        "url": "https://x.com/stats_feed",
+        "platform": "x"
+      },
+      "observedDate": "2026-05-26",
+      "views": 62900,
+      "chartType": "horizontalBar",
+      "unitPrefix": "$",
+      "unitSuffix": "T",
+      "valuePrecision": 1,
+      "items": [
+        { "label": "USA", "value": 78.0, "flag": "🇺🇸" },
+        { "label": "Mainland China", "value": 16.6, "flag": "🇨🇳" },
+        { "label": "Japan", "value": 8.7, "flag": "🇯🇵" },
+        { "label": "Hong Kong", "value": 7.3, "flag": "🇭🇰" },
+        { "label": "Taiwan", "value": 5.0, "flag": "🇹🇼", "highlight": true },
+        { "label": "India", "value": 4.9, "flag": "🇮🇳" },
+        { "label": "South Korea", "value": 4.5, "flag": "🇰🇷" },
+        { "label": "Canada", "value": 4.5, "flag": "🇨🇦" },
+        { "label": "UK", "value": 4.0, "flag": "🇬🇧" },
+        { "label": "France", "value": 3.5, "flag": "🇫🇷" }
+      ],
+      "notes": "Total stock market value, May 2026. Taiwan's surge driven by TSMC and the broader semiconductor rally.",
+      "addedAt": "2026-05-27"
+    }
+  ]
+}

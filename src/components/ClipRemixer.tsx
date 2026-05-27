@@ -1,0 +1,626 @@
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { Plus, Trash2, Copy, Check, Sparkles, RotateCcw, Save, FileDown } from 'lucide-react';
+import Card from './Card';
+import ClipCard from './ClipCard';
+import type { Clip, ClipItem, ClipPlatform } from '../types/clips';
+
+const DRAFT_KEY = 'economic-dashboard:clip-remix-draft:v1';
+
+const PLATFORMS: { value: ClipPlatform; label: string }[] = [
+  { value: 'x', label: 'X / Twitter' },
+  { value: 'twitter', label: 'Twitter (legacy)' },
+  { value: 'threads', label: 'Threads' },
+  { value: 'bluesky', label: 'Bluesky' },
+  { value: 'mastodon', label: 'Mastodon' },
+  { value: 'reddit', label: 'Reddit' },
+  { value: 'article', label: 'Article / Blog' },
+  { value: 'other', label: 'Other' },
+];
+
+interface DraftState {
+  title: string;
+  subtitle: string;
+  sourceLabel: string;
+  sourceHandle: string;
+  sourceUrl: string;
+  platform: ClipPlatform;
+  observedDate: string;
+  views: string;
+  unitPrefix: string;
+  unitSuffix: string;
+  valuePrecision: string;
+  items: ClipItem[];
+  notes: string;
+}
+
+const EMPTY_DRAFT: DraftState = {
+  title: '',
+  subtitle: '',
+  sourceLabel: '',
+  sourceHandle: '',
+  sourceUrl: '',
+  platform: 'x',
+  observedDate: new Date().toISOString().slice(0, 10),
+  views: '',
+  unitPrefix: '$',
+  unitSuffix: 'T',
+  valuePrecision: '1',
+  items: [
+    { label: '', value: 0, flag: '', highlight: false },
+    { label: '', value: 0, flag: '', highlight: false },
+  ],
+  notes: '',
+};
+
+const slugify = (s: string): string =>
+  s
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+
+const buildClipFromDraft = (draft: DraftState): Clip => {
+  const today = new Date().toISOString().slice(0, 10);
+  const titleSlug = slugify(draft.title || 'clip');
+  const id = `${titleSlug}-${draft.observedDate || today}`;
+  const precision = Math.max(0, Math.min(4, parseInt(draft.valuePrecision, 10) || 0));
+  const items: ClipItem[] = draft.items
+    .filter((it) => it.label.trim().length > 0)
+    .map((it) => ({
+      label: it.label.trim(),
+      value: Number(it.value) || 0,
+      flag: it.flag?.trim() || undefined,
+      highlight: it.highlight || undefined,
+    }));
+
+  const viewsNum = parseInt(draft.views.replace(/[,_\s]/g, ''), 10);
+
+  return {
+    id,
+    title: draft.title.trim() || '(untitled clip)',
+    subtitle: draft.subtitle.trim() || undefined,
+    source: {
+      label: draft.sourceLabel.trim() || 'Unknown',
+      handle: draft.sourceHandle.trim() || undefined,
+      url: draft.sourceUrl.trim() || undefined,
+      platform: draft.platform,
+    },
+    observedDate: draft.observedDate || today,
+    views: Number.isFinite(viewsNum) && viewsNum > 0 ? viewsNum : undefined,
+    chartType: 'horizontalBar',
+    unitPrefix: draft.unitPrefix || undefined,
+    unitSuffix: draft.unitSuffix || undefined,
+    valuePrecision: precision,
+    items: items.length > 0 ? items : [{ label: 'Sample', value: 1 }],
+    notes: draft.notes.trim() || undefined,
+    addedAt: today,
+  };
+};
+
+const loadDraft = (): DraftState => {
+  if (typeof window === 'undefined') return EMPTY_DRAFT;
+  try {
+    const raw = window.localStorage.getItem(DRAFT_KEY);
+    if (!raw) return EMPTY_DRAFT;
+    const parsed = JSON.parse(raw) as Partial<DraftState>;
+    return { ...EMPTY_DRAFT, ...parsed, items: parsed.items?.length ? parsed.items : EMPTY_DRAFT.items };
+  } catch {
+    return EMPTY_DRAFT;
+  }
+};
+
+const ClipRemixer = React.memo(function ClipRemixer() {
+  const [draft, setDraft] = useState<DraftState>(() => loadDraft());
+  const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+
+  // Auto-save draft to localStorage (debounced via setTimeout in effect)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const id = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      } catch {
+        /* ignore quota errors */
+      }
+    }, 250);
+    return () => window.clearTimeout(id);
+  }, [draft]);
+
+  const previewClip = useMemo(() => buildClipFromDraft(draft), [draft]);
+
+  const jsonOutput = useMemo(() => JSON.stringify(previewClip, null, 2), [previewClip]);
+
+  const update = useCallback((patch: Partial<DraftState>) => {
+    setDraft((prev) => ({ ...prev, ...patch }));
+  }, []);
+
+  const updateItem = useCallback((idx: number, patch: Partial<ClipItem>) => {
+    setDraft((prev) => ({
+      ...prev,
+      items: prev.items.map((it, i) => (i === idx ? { ...it, ...patch } : it)),
+    }));
+  }, []);
+
+  const addItem = useCallback(() => {
+    setDraft((prev) => ({
+      ...prev,
+      items: [...prev.items, { label: '', value: 0, flag: '', highlight: false }],
+    }));
+  }, []);
+
+  const removeItem = useCallback((idx: number) => {
+    setDraft((prev) => ({
+      ...prev,
+      items: prev.items.length > 1 ? prev.items.filter((_, i) => i !== idx) : prev.items,
+    }));
+  }, []);
+
+  const setHighlight = useCallback((idx: number) => {
+    setDraft((prev) => ({
+      ...prev,
+      items: prev.items.map((it, i) => ({ ...it, highlight: i === idx ? !it.highlight : false })),
+    }));
+  }, []);
+
+  const reset = useCallback(() => {
+    if (
+      typeof window !== 'undefined' &&
+      !window.confirm('Discard the current draft? This cannot be undone.')
+    ) {
+      return;
+    }
+    setDraft(EMPTY_DRAFT);
+    setSavedAt(null);
+  }, []);
+
+  const saveDraftNow = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      setSavedAt(new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }));
+    } catch {
+      setSavedAt('save failed');
+    }
+  }, [draft]);
+
+  const handleCopy = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(jsonOutput);
+      setCopyState('copied');
+      window.setTimeout(() => setCopyState('idle'), 1500);
+    } catch {
+      /* ignore — fallback handled via the textarea */
+    }
+  }, [jsonOutput]);
+
+  const handleDownload = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const blob = new Blob([jsonOutput], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${previewClip.id || 'clip'}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [jsonOutput, previewClip.id]);
+
+  const handlePasteTweet = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const text = window.prompt(
+      'Paste the tweet text below. The remixer will try to extract the title and a top-N list.\n\nFormat tips:\n• First line becomes the title\n• Lines like "1. USA: $78 trillion" or "USA — 78" are parsed as items',
+    );
+    if (!text) return;
+    const lines = text
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+    if (lines.length === 0) return;
+
+    let title = '';
+    let subtitle = '';
+    const items: ClipItem[] = [];
+    const itemPattern = /^(?:\d+\.\s*)?(?:([\p{Extended_Pictographic}\p{So}\p{Sk}]+)\s+)?(.+?)[:\s—–-]+\$?\s*([\d.,]+)\s*(?:trillion|billion|million|T|B|M)?/iu;
+
+    for (const line of lines) {
+      const m = line.match(itemPattern);
+      if (m && Number.isFinite(parseFloat(m[3].replace(/,/g, '')))) {
+        items.push({
+          label: m[2].trim(),
+          value: parseFloat(m[3].replace(/,/g, '')),
+          flag: m[1]?.trim() || undefined,
+          highlight: false,
+        });
+      } else if (!title) {
+        title = line;
+      } else if (!subtitle && !/^Top\b/i.test(line)) {
+        subtitle = line;
+      }
+    }
+
+    setDraft((prev) => ({
+      ...prev,
+      title: title || prev.title,
+      subtitle: subtitle || prev.subtitle,
+      items: items.length > 0 ? items : prev.items,
+    }));
+  }, []);
+
+  const fieldClass =
+    'w-full rounded-md border border-theme bg-secondary px-3 py-1.5 text-sm text-main placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-[var(--color-link)]/40';
+  const labelClass = 'block text-[11px] font-semibold uppercase tracking-wider text-muted mb-1';
+
+  return (
+    <Card className="p-7">
+      <div className="flex flex-col gap-6">
+        <header className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted">
+              <Sparkles size={12} aria-hidden />
+              Remix tool
+            </div>
+            <h3 className="mt-1 text-lg md:text-xl font-semibold text-main tracking-tight">
+              Add a new clip
+            </h3>
+            <p className="mt-1 text-sm text-muted">
+              Fill the fields, watch the live preview match the dashboard's look, then{' '}
+              <span className="font-semibold text-main">Copy JSON</span> and paste it into{' '}
+              <code className="rounded bg-muted-surface px-1 py-0.5 font-mono text-[11px]">
+                public/data/clips.json
+              </code>
+              .
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handlePasteTweet}
+              className="inline-flex items-center gap-1.5 rounded-md border border-theme bg-muted-surface px-3 py-1.5 text-xs font-medium text-main hover:bg-secondary"
+            >
+              <Sparkles size={12} aria-hidden />
+              Paste tweet to parse
+            </button>
+            <button
+              type="button"
+              onClick={saveDraftNow}
+              className="inline-flex items-center gap-1.5 rounded-md border border-theme bg-muted-surface px-3 py-1.5 text-xs font-medium text-main hover:bg-secondary"
+              title="Drafts auto-save, this just confirms a save"
+            >
+              <Save size={12} aria-hidden />
+              {savedAt ? `Saved ${savedAt}` : 'Save draft'}
+            </button>
+            <button
+              type="button"
+              onClick={reset}
+              className="inline-flex items-center gap-1.5 rounded-md border border-theme bg-muted-surface px-3 py-1.5 text-xs font-medium text-muted hover:text-main"
+            >
+              <RotateCcw size={12} aria-hidden />
+              Reset
+            </button>
+          </div>
+        </header>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* LEFT — form */}
+          <div className="flex flex-col gap-4">
+            <div>
+              <label className={labelClass} htmlFor="clip-title">
+                Title
+              </label>
+              <input
+                id="clip-title"
+                className={fieldClass}
+                value={draft.title}
+                onChange={(e) => update({ title: e.target.value })}
+                placeholder="Taiwan Just Became the World's 5th Largest Stock Market"
+              />
+            </div>
+            <div>
+              <label className={labelClass} htmlFor="clip-subtitle">
+                Subtitle
+              </label>
+              <textarea
+                id="clip-subtitle"
+                className={`${fieldClass} min-h-[64px] resize-y`}
+                value={draft.subtitle}
+                onChange={(e) => update({ subtitle: e.target.value })}
+                placeholder="Optional context line"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass} htmlFor="clip-source">
+                  Source
+                </label>
+                <input
+                  id="clip-source"
+                  className={fieldClass}
+                  value={draft.sourceLabel}
+                  onChange={(e) => update({ sourceLabel: e.target.value })}
+                  placeholder="World of Statistics"
+                />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="clip-handle">
+                  Handle
+                </label>
+                <input
+                  id="clip-handle"
+                  className={fieldClass}
+                  value={draft.sourceHandle}
+                  onChange={(e) => update({ sourceHandle: e.target.value })}
+                  placeholder="@stats_feed"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass} htmlFor="clip-platform">
+                  Platform
+                </label>
+                <select
+                  id="clip-platform"
+                  className={fieldClass}
+                  value={draft.platform}
+                  onChange={(e) => update({ platform: e.target.value as ClipPlatform })}
+                >
+                  {PLATFORMS.map((p) => (
+                    <option key={p.value} value={p.value}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="clip-url">
+                  Source URL
+                </label>
+                <input
+                  id="clip-url"
+                  className={fieldClass}
+                  value={draft.sourceUrl}
+                  onChange={(e) => update({ sourceUrl: e.target.value })}
+                  placeholder="https://x.com/..."
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass} htmlFor="clip-date">
+                  Observed date
+                </label>
+                <input
+                  id="clip-date"
+                  type="date"
+                  className={fieldClass}
+                  value={draft.observedDate}
+                  onChange={(e) => update({ observedDate: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="clip-views">
+                  Views (optional)
+                </label>
+                <input
+                  id="clip-views"
+                  className={fieldClass}
+                  value={draft.views}
+                  onChange={(e) => update({ views: e.target.value })}
+                  placeholder="62900"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className={labelClass} htmlFor="clip-prefix">
+                  Unit prefix
+                </label>
+                <input
+                  id="clip-prefix"
+                  className={fieldClass}
+                  value={draft.unitPrefix}
+                  onChange={(e) => update({ unitPrefix: e.target.value })}
+                  placeholder="$"
+                />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="clip-suffix">
+                  Unit suffix
+                </label>
+                <input
+                  id="clip-suffix"
+                  className={fieldClass}
+                  value={draft.unitSuffix}
+                  onChange={(e) => update({ unitSuffix: e.target.value })}
+                  placeholder="T"
+                />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="clip-precision">
+                  Decimals
+                </label>
+                <input
+                  id="clip-precision"
+                  type="number"
+                  min={0}
+                  max={4}
+                  className={fieldClass}
+                  value={draft.valuePrecision}
+                  onChange={(e) => update({ valuePrecision: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className={labelClass} htmlFor="clip-notes">
+                Notes (optional)
+              </label>
+              <textarea
+                id="clip-notes"
+                className={`${fieldClass} min-h-[60px] resize-y`}
+                value={draft.notes}
+                onChange={(e) => update({ notes: e.target.value })}
+                placeholder="Why is this interesting? Any caveats?"
+              />
+            </div>
+
+            {/* Items editor */}
+            <div className="rounded-lg border border-subtle bg-muted-surface/40 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className={labelClass} style={{ marginBottom: 0 }}>
+                  Items ({draft.items.length})
+                </span>
+                <button
+                  type="button"
+                  onClick={addItem}
+                  className="inline-flex items-center gap-1 rounded-md border border-theme bg-secondary px-2 py-1 text-xs font-medium text-main hover:bg-muted-surface"
+                >
+                  <Plus size={12} aria-hidden />
+                  Add row
+                </button>
+              </div>
+              <div className="flex flex-col gap-2">
+                {draft.items.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-2 rounded-md border border-subtle bg-secondary px-2 py-1.5"
+                  >
+                    <span className="w-5 font-mono text-[11px] text-muted">{idx + 1}.</span>
+                    <input
+                      className="w-10 rounded border border-theme bg-secondary px-1 py-1 text-center text-base"
+                      value={item.flag ?? ''}
+                      onChange={(e) => updateItem(idx, { flag: e.target.value })}
+                      placeholder="🇺🇸"
+                      aria-label="Flag emoji"
+                    />
+                    <input
+                      className="flex-1 rounded border border-theme bg-secondary px-2 py-1 text-sm text-main"
+                      value={item.label}
+                      onChange={(e) => updateItem(idx, { label: e.target.value })}
+                      placeholder="USA"
+                      aria-label="Item label"
+                    />
+                    <input
+                      type="number"
+                      step="any"
+                      className="w-24 rounded border border-theme bg-secondary px-2 py-1 text-right font-mono text-sm text-main"
+                      value={Number.isFinite(item.value) ? item.value : 0}
+                      onChange={(e) => updateItem(idx, { value: parseFloat(e.target.value) || 0 })}
+                      aria-label="Item value"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setHighlight(idx)}
+                      className="rounded-md border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider"
+                      style={
+                        item.highlight
+                          ? {
+                              color: 'var(--color-brand-primary)',
+                              borderColor:
+                                'color-mix(in oklab, var(--color-brand-primary) 40%, transparent)',
+                              backgroundColor:
+                                'color-mix(in oklab, var(--color-brand-primary) 14%, var(--color-bg-secondary))',
+                            }
+                          : {
+                              color: 'var(--color-text-muted)',
+                              borderColor: 'var(--color-border)',
+                              backgroundColor: 'var(--color-bg-secondary)',
+                            }
+                      }
+                      title="Toggle focus highlight"
+                    >
+                      Focus
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeItem(idx)}
+                      className="rounded-md border border-theme bg-muted-surface px-1.5 py-1 text-muted hover:text-main"
+                      title="Remove row"
+                      disabled={draft.items.length <= 1}
+                    >
+                      <Trash2 size={12} aria-hidden />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT — live preview + JSON */}
+          <div className="flex flex-col gap-4">
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <span className={labelClass} style={{ marginBottom: 0 }}>
+                  Live preview
+                </span>
+              </div>
+              <ClipCard clip={previewClip} />
+            </div>
+
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <span className={labelClass} style={{ marginBottom: 0 }}>
+                  JSON entry
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleDownload}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-theme bg-muted-surface px-2 py-1 text-xs font-medium text-main hover:bg-secondary"
+                  >
+                    <FileDown size={12} aria-hidden />
+                    Download
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-theme bg-secondary px-2 py-1 text-xs font-medium text-main hover:bg-muted-surface"
+                  >
+                    {copyState === 'copied' ? (
+                      <>
+                        <Check size={12} aria-hidden />
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={12} aria-hidden />
+                        Copy JSON
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+              <textarea
+                readOnly
+                value={jsonOutput}
+                className="h-64 w-full resize-y rounded-md border border-theme bg-muted-surface/40 p-3 font-mono text-[11px] leading-relaxed text-main"
+                onFocus={(e) => e.currentTarget.select()}
+                aria-label="JSON output for the new clip"
+              />
+              <p className="mt-2 text-[11px] leading-relaxed text-muted">
+                To persist this clip: open{' '}
+                <code className="rounded bg-muted-surface px-1 py-0.5 font-mono">
+                  public/data/clips.json
+                </code>
+                , append the JSON object to the{' '}
+                <code className="rounded bg-muted-surface px-1 py-0.5 font-mono">clips</code> array,
+                then commit. The dashboard reloads it on next visit.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+});
+
+export default ClipRemixer;
