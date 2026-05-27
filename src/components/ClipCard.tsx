@@ -1,11 +1,14 @@
-import React from 'react';
-import { ExternalLink, Eye, Calendar } from 'lucide-react';
+import React, { useState } from 'react';
+import { ExternalLink, Eye, Calendar, Globe, Twitter, Instagram } from 'lucide-react';
 import Card from './Card';
 import ClipChart from './ClipChart';
 import type { Clip } from '../types/clips';
 
+export type ClipViewMode = 'web' | 'twitter' | 'ig-square' | 'ig-portrait' | 'ig-story';
+
 interface ClipCardProps {
   clip: Clip;
+  defaultViewMode?: ClipViewMode;
 }
 
 const PLATFORM_LABEL: Record<string, string> = {
@@ -31,35 +34,311 @@ const formatObservedDate = (iso: string): string => {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
-const ClipCard = React.memo(function ClipCard({ clip }: ClipCardProps) {
-  const platformLabel = PLATFORM_LABEL[clip.source.platform] ?? 'Source';
+const safeHostname = (url: string): string => {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+};
 
+interface FrameSpec {
+  label: string;
+  shortLabel: string;
+  hint: string;
+  exportWidth: number;
+  exportHeight: number;
+  previewWidth: number;
+  previewHeight: number;
+  padding: number;
+  titleSize: number;
+  subtitleSize: number;
+  metaSize: number;
+  rowHeight: number;
+  labelWidth: number;
+  valueWidth: number;
+  fontScale: number;
+  hideNotes: boolean;
+  hideSubtitle: boolean;
+  gap: number;
+  icon: React.ComponentType<{ size?: number; 'aria-hidden'?: boolean }>;
+}
+
+const FRAME_SPECS: Record<Exclude<ClipViewMode, 'web'>, FrameSpec> = {
+  twitter: {
+    label: 'Twitter / X',
+    shortLabel: 'Twitter',
+    hint: '1200 × 675 (16:9). Screenshot the frame to share.',
+    exportWidth: 1200,
+    exportHeight: 675,
+    previewWidth: 600,
+    previewHeight: 338,
+    padding: 14,
+    titleSize: 16,
+    subtitleSize: 11,
+    metaSize: 10,
+    rowHeight: 18,
+    labelWidth: 132,
+    valueWidth: 62,
+    fontScale: 0.72,
+    hideNotes: true,
+    hideSubtitle: true,
+    gap: 6,
+    icon: Twitter,
+  },
+  'ig-square': {
+    label: 'Instagram Square',
+    shortLabel: 'IG Square',
+    hint: '1080 × 1080 (1:1). Screenshot the frame to share.',
+    exportWidth: 1080,
+    exportHeight: 1080,
+    previewWidth: 480,
+    previewHeight: 480,
+    padding: 20,
+    titleSize: 18,
+    subtitleSize: 12,
+    metaSize: 11,
+    rowHeight: 22,
+    labelWidth: 150,
+    valueWidth: 72,
+    fontScale: 0.84,
+    hideNotes: true,
+    hideSubtitle: false,
+    gap: 8,
+    icon: Instagram,
+  },
+  'ig-portrait': {
+    label: 'Instagram Portrait',
+    shortLabel: 'IG Portrait',
+    hint: '1080 × 1350 (4:5). Screenshot the frame to share.',
+    exportWidth: 1080,
+    exportHeight: 1350,
+    previewWidth: 432,
+    previewHeight: 540,
+    padding: 20,
+    titleSize: 18,
+    subtitleSize: 12,
+    metaSize: 11,
+    rowHeight: 24,
+    labelWidth: 140,
+    valueWidth: 72,
+    fontScale: 0.86,
+    hideNotes: true,
+    hideSubtitle: false,
+    gap: 10,
+    icon: Instagram,
+  },
+  'ig-story': {
+    label: 'Instagram Story',
+    shortLabel: 'IG Story',
+    hint: '1080 × 1920 (9:16). Screenshot the frame to share.',
+    exportWidth: 1080,
+    exportHeight: 1920,
+    previewWidth: 360,
+    previewHeight: 640,
+    padding: 20,
+    titleSize: 19,
+    subtitleSize: 13,
+    metaSize: 11,
+    rowHeight: 30,
+    labelWidth: 125,
+    valueWidth: 70,
+    fontScale: 0.86,
+    hideNotes: true,
+    hideSubtitle: false,
+    gap: 12,
+    icon: Instagram,
+  },
+};
+
+interface ViewOption {
+  mode: ClipViewMode;
+  label: string;
+  icon: React.ComponentType<{ size?: number; 'aria-hidden'?: boolean }>;
+}
+
+const VIEW_OPTIONS: ViewOption[] = [
+  { mode: 'web', label: 'Web', icon: Globe },
+  { mode: 'twitter', label: 'Twitter', icon: Twitter },
+  { mode: 'ig-square', label: 'IG 1:1', icon: Instagram },
+  { mode: 'ig-portrait', label: 'IG 4:5', icon: Instagram },
+  { mode: 'ig-story', label: 'IG 9:16', icon: Instagram },
+];
+
+interface FramedClipProps {
+  clip: Clip;
+  spec: FrameSpec;
+  platformLabel: string;
+}
+
+const FramedClip = React.memo(function FramedClip({ clip, spec, platformLabel }: FramedClipProps) {
   return (
-    <Card className="p-7">
-      <div className="flex flex-col gap-4">
-        <header className="flex flex-col gap-2">
-          <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted">
+    <div
+      data-clip-frame
+      className="relative mx-auto overflow-hidden rounded-2xl border border-theme bg-secondary shadow-lg"
+      style={{
+        width: spec.previewWidth,
+        height: spec.previewHeight,
+        padding: spec.padding,
+      }}
+    >
+      <div className="flex h-full flex-col" style={{ gap: spec.gap }}>
+        <header className="flex flex-col" style={{ gap: Math.max(4, spec.gap - 4) }}>
+          <div
+            className="flex flex-wrap items-center text-muted"
+            style={{ fontSize: spec.metaSize, gap: 6 }}
+          >
             <span
-              className="rounded-full border px-2 py-0.5 font-semibold uppercase tracking-wider"
+              className="rounded-full border font-semibold uppercase tracking-wider"
               style={{
                 color: 'var(--color-brand-accent)',
                 borderColor: 'color-mix(in oklab, var(--color-brand-accent) 35%, transparent)',
                 backgroundColor:
                   'color-mix(in oklab, var(--color-brand-accent) 10%, var(--color-bg-secondary))',
+                padding: '1px 6px',
+                fontSize: spec.metaSize,
               }}
             >
               {platformLabel}
             </span>
-            <span className="inline-flex items-center gap-1">
-              <Calendar size={12} aria-hidden />
+            <span className="inline-flex items-center" style={{ gap: 4 }}>
+              <Calendar size={Math.round(spec.metaSize * 1.1)} aria-hidden />
               {formatObservedDate(clip.observedDate)}
             </span>
             {typeof clip.views === 'number' && (
-              <span className="inline-flex items-center gap-1">
-                <Eye size={12} aria-hidden />
+              <span className="inline-flex items-center" style={{ gap: 4 }}>
+                <Eye size={Math.round(spec.metaSize * 1.1)} aria-hidden />
                 {formatViews(clip.views)} views
               </span>
             )}
+          </div>
+
+          <h3
+            className="font-semibold text-main tracking-tight"
+            style={{ fontSize: spec.titleSize, lineHeight: 1.2 }}
+          >
+            {clip.title}
+          </h3>
+          {!spec.hideSubtitle && clip.subtitle && (
+            <p
+              className="text-muted"
+              style={{ fontSize: spec.subtitleSize, lineHeight: 1.35 }}
+            >
+              {clip.subtitle}
+            </p>
+          )}
+        </header>
+
+        <div className="flex-1 overflow-hidden">
+          <ClipChart
+            items={clip.items}
+            unitPrefix={clip.unitPrefix}
+            unitSuffix={clip.unitSuffix}
+            valuePrecision={clip.valuePrecision}
+            rowHeight={spec.rowHeight}
+            labelWidth={spec.labelWidth}
+            valueWidth={spec.valueWidth}
+            fontScale={spec.fontScale}
+          />
+        </div>
+
+        {!spec.hideNotes && clip.notes && (
+          <p
+            className="rounded-md border border-subtle bg-muted-surface/60 text-muted"
+            style={{
+              fontSize: spec.metaSize,
+              lineHeight: 1.4,
+              padding: `${Math.max(4, spec.gap - 6)}px ${Math.max(6, spec.gap - 4)}px`,
+            }}
+          >
+            {clip.notes}
+          </p>
+        )}
+
+        <footer
+          className="flex flex-wrap items-center justify-between border-t border-subtle text-muted"
+          style={{
+            fontSize: spec.metaSize,
+            paddingTop: Math.max(4, spec.gap - 6),
+            gap: 8,
+          }}
+        >
+          <div className="flex items-center" style={{ gap: 6 }}>
+            <span className="font-semibold text-main">{clip.source.label}</span>
+            {clip.source.handle && <span className="font-mono">{clip.source.handle}</span>}
+          </div>
+          {clip.source.url && (
+            <span className="font-mono">{safeHostname(clip.source.url)}</span>
+          )}
+        </footer>
+      </div>
+    </div>
+  );
+});
+
+const ClipCard = React.memo(function ClipCard({ clip, defaultViewMode = 'web' }: ClipCardProps) {
+  const [viewMode, setViewMode] = useState<ClipViewMode>(defaultViewMode);
+  const platformLabel = PLATFORM_LABEL[clip.source.platform] ?? 'Source';
+  const isFramed = viewMode !== 'web';
+  const frameSpec = isFramed ? FRAME_SPECS[viewMode] : null;
+
+  return (
+    <Card className="p-7">
+      <div className="flex flex-col gap-4">
+        <header className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted">
+              <span
+                className="rounded-full border px-2 py-0.5 font-semibold uppercase tracking-wider"
+                style={{
+                  color: 'var(--color-brand-accent)',
+                  borderColor: 'color-mix(in oklab, var(--color-brand-accent) 35%, transparent)',
+                  backgroundColor:
+                    'color-mix(in oklab, var(--color-brand-accent) 10%, var(--color-bg-secondary))',
+                }}
+              >
+                {platformLabel}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Calendar size={12} aria-hidden />
+                {formatObservedDate(clip.observedDate)}
+              </span>
+              {typeof clip.views === 'number' && (
+                <span className="inline-flex items-center gap-1">
+                  <Eye size={12} aria-hidden />
+                  {formatViews(clip.views)} views
+                </span>
+              )}
+            </div>
+
+            <div
+              className="inline-flex flex-wrap items-center rounded-lg border border-theme bg-muted-surface p-0.5"
+              role="tablist"
+              aria-label="View selection"
+            >
+              {VIEW_OPTIONS.map((opt) => {
+                const Icon = opt.icon;
+                const isActive = viewMode === opt.mode;
+                return (
+                  <button
+                    key={opt.mode}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    onClick={() => setViewMode(opt.mode)}
+                    className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-colors ${
+                      isActive
+                        ? 'bg-secondary text-main shadow-sm border border-theme'
+                        : 'text-muted hover:text-main'
+                    }`}
+                    title={opt.label}
+                  >
+                    <Icon size={11} aria-hidden />
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <h3 className="text-lg md:text-xl font-semibold text-main tracking-tight">{clip.title}</h3>
@@ -68,17 +347,31 @@ const ClipCard = React.memo(function ClipCard({ clip }: ClipCardProps) {
           )}
         </header>
 
-        <ClipChart
-          items={clip.items}
-          unitPrefix={clip.unitPrefix}
-          unitSuffix={clip.unitSuffix}
-          valuePrecision={clip.valuePrecision}
-        />
+        {isFramed && frameSpec ? (
+          <div className="flex flex-col gap-3">
+            <div className="rounded-xl bg-muted-surface/40 py-6">
+              <FramedClip clip={clip} spec={frameSpec} platformLabel={platformLabel} />
+            </div>
+            <p className="text-center text-[11px] text-muted">
+              <span className="font-semibold text-main">{frameSpec.label}</span> · {frameSpec.hint}
+              {' · Preview shown at ½ scale; screenshot the frame and crop to share.'}
+            </p>
+          </div>
+        ) : (
+          <>
+            <ClipChart
+              items={clip.items}
+              unitPrefix={clip.unitPrefix}
+              unitSuffix={clip.unitSuffix}
+              valuePrecision={clip.valuePrecision}
+            />
 
-        {clip.notes && (
-          <p className="rounded-md border border-subtle bg-muted-surface/60 px-3 py-2 text-xs leading-relaxed text-muted">
-            {clip.notes}
-          </p>
+            {clip.notes && (
+              <p className="rounded-md border border-subtle bg-muted-surface/60 px-3 py-2 text-xs leading-relaxed text-muted">
+                {clip.notes}
+              </p>
+            )}
+          </>
         )}
 
         <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-subtle pt-3 text-xs text-muted">
