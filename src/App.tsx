@@ -23,7 +23,6 @@ import {
   Hammer,
   Factory,
 } from 'lucide-react';
-import appLogo from './assets/golden_data_icon_small.png';
 import DataTableView from './components/DataTableView';
 import DashboardView from './components/DashboardView';
 import BuffettView from './components/BuffettView';
@@ -1586,125 +1585,126 @@ export default function App() {
       
       {/* Header */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 bg-secondary p-7 rounded-2xl shadow-sm border border-theme/70">
-        <div className="flex items-center gap-4">
-          <img src={appLogo} alt="Economic Dashboard logo" className="w-14 h-14 object-contain shrink-0" />
-          <div>
-            <h1 className="text-2xl md:text-3xl font-semibold text-main tracking-tight">Economic Indicators</h1>
-            <p className="mt-0.5 text-xs text-muted">
-              Built by{' '}
-              <a
-                href="https://browningtons.github.io/golden-data/"
-                target="_blank"
-                rel="noreferrer"
-                className="font-medium text-link hover:underline"
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-3xl font-semibold text-main tracking-tight">Economic Indicators</h1>
+          <p className="mt-0.5 text-xs text-muted">
+            Built by{' '}
+            <a
+              href="https://browningtons.github.io/golden-data/"
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-link hover:underline"
+            >
+              Golden Data
+            </a>
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted">
+            <span>Last updated: {lastUpdatedText}</span>
+            {yieldCurveStatus && (
+              <span
+                className={`rounded-full border px-2 py-1 text-[11px] font-semibold leading-tight ${yieldCurveStatus.toneClassName}`}
+                title={`Latest 10Y minus 2Y Treasury spread from ${yieldCurveStatus.observedDate}`}
+                aria-label={`Yield curve status: ${yieldCurveStatus.label}`}
               >
-                Golden Data
-              </a>
-            </p>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
-              <span>Last updated: {lastUpdatedText}</span>
-              {yieldCurveStatus && (
-                <span
-                  className={`rounded-full border px-2 py-1 text-[11px] font-semibold leading-tight ${yieldCurveStatus.toneClassName}`}
-                  title={`Latest 10Y minus 2Y Treasury spread from ${yieldCurveStatus.observedDate}`}
-                  aria-label={`Yield curve status: ${yieldCurveStatus.label}`}
-                >
-                  {yieldCurveStatus.label}
-                </span>
-              )}
-              <span>GitHub CSV auto-updates from API calls on a scheduled cadence.</span>
-              <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-[11px] leading-tight">
-                Next auto-refresh: {nextAutoRefreshText}
+                {yieldCurveStatus.label}
               </span>
-              <details className="group relative">
-                <summary className="list-none cursor-pointer rounded-full border border-theme bg-muted-surface px-2 py-1 text-[11px] leading-tight text-main transition-colors hover:bg-secondary">
-                  Build: {BUILD_VERSION}
-                </summary>
-                <div className="absolute left-0 top-full z-30 mt-2 w-[min(32rem,calc(100vw-3rem))] rounded-2xl border border-theme bg-secondary p-4 shadow-xl">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-main">{BUILD_VERSION}</p>
-                      <p className="mt-1 text-xs font-medium text-link">{BUILD_VERSION_LABEL}</p>
-                      <p className="mt-2 text-xs leading-relaxed text-muted">{BUILD_VERSION_SUMMARY}</p>
-                    </div>
-                    <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
-                      {BUILD_NOTES.length} commits
-                    </span>
-                  </div>
-                  <div className="mt-4 border-t border-subtle pt-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">{BUILD_NOTES_TITLE}</p>
-                  </div>
-                  <div className="mt-3 max-h-80 space-y-2 overflow-y-auto pr-1">
-                    {BUILD_NOTES.map((note) => (
-                      <a
-                        key={`${note.hash}-${note.date}`}
-                        href={`https://github.com/browningtons/economic-dashboard/commit/${note.hash}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block rounded-xl border border-theme bg-muted-surface/80 px-3 py-2 no-underline transition-colors hover:bg-muted-surface"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-sm font-medium text-main">{note.title}</p>
-                          <span className="shrink-0 rounded-full border border-theme px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
-                            {note.hash}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-xs text-muted">{note.date}</p>
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              </details>
-            </div>
+            )}
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-muted">
+            <span>FRED CSV refreshes weekdays at 13:15 UTC.</span>
+            <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-[11px] leading-tight">
+              Next auto-refresh: {nextAutoRefreshText}
+            </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
-          {shareMode && (
-            <button
-              onClick={() => setShareMode(false)}
-              className="px-3 py-1.5 text-sm font-medium rounded-md border bg-muted-surface text-main border-theme"
-            >
-              Back to Metric Selector
-            </button>
-          )}
-          <div className="flex bg-muted-surface p-1 rounded-lg border border-theme">
-            {(['Dashboard', 'Buffett', 'Data Table', 'Clips'] as const).map((tab) => {
-              const isActive = activeTab === tab;
-              const isBuffettTab = tab === 'Buffett';
-              const isClipsTab = tab === 'Clips';
-              return (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
-                    isActive
-                      ? 'bg-secondary text-main shadow-sm border border-theme'
-                      : isBuffettTab || isClipsTab
-                        ? 'text-main border border-theme'
-                        : 'text-muted hover:text-main'
-                  }`}
-                  style={
-                    !isActive && isBuffettTab
-                      ? { backgroundColor: 'color-mix(in oklab, var(--color-brand-accent) 14%, var(--color-bg-secondary))' }
-                      : !isActive && isClipsTab
-                        ? { backgroundColor: 'color-mix(in oklab, var(--color-brand-primary) 10%, var(--color-bg-secondary))' }
-                        : undefined
-                  }
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    {tab}
-                    {isBuffettTab && !isActive && (
-                      <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--color-brand-primary)' }} />
-                    )}
-                    {isClipsTab && !isActive && (
-                      <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--color-brand-primary)' }} />
-                    )}
-                  </span>
-                </button>
-              );
-            })}
+        <div className="flex flex-col items-start md:items-end gap-2 shrink-0">
+          <div className="flex items-center gap-3 flex-wrap md:justify-end">
+            {shareMode && (
+              <button
+                onClick={() => setShareMode(false)}
+                className="px-3 py-1.5 text-sm font-medium rounded-md border bg-muted-surface text-main border-theme"
+              >
+                Back to Metric Selector
+              </button>
+            )}
+            <div className="flex bg-muted-surface p-1 rounded-lg border border-theme">
+              {(['Dashboard', 'Buffett', 'Data Table', 'Clips'] as const).map((tab) => {
+                const isActive = activeTab === tab;
+                const isBuffettTab = tab === 'Buffett';
+                const isClipsTab = tab === 'Clips';
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
+                      isActive
+                        ? 'bg-secondary text-main shadow-sm border border-theme'
+                        : isBuffettTab || isClipsTab
+                          ? 'text-main border border-theme'
+                          : 'text-muted hover:text-main'
+                    }`}
+                    style={
+                      !isActive && isBuffettTab
+                        ? { backgroundColor: 'color-mix(in oklab, var(--color-brand-accent) 14%, var(--color-bg-secondary))' }
+                        : !isActive && isClipsTab
+                          ? { backgroundColor: 'color-mix(in oklab, var(--color-brand-primary) 10%, var(--color-bg-secondary))' }
+                          : undefined
+                    }
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      {tab}
+                      {isBuffettTab && !isActive && (
+                        <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--color-brand-primary)' }} />
+                      )}
+                      {isClipsTab && !isActive && (
+                        <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--color-brand-primary)' }} />
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
+          <details className="group relative self-start md:self-end">
+            <summary className="list-none cursor-pointer rounded-full border border-theme bg-muted-surface px-2 py-1 text-[11px] leading-tight text-muted transition-colors hover:bg-secondary hover:text-main">
+              Build: {BUILD_VERSION}
+            </summary>
+            <div className="absolute right-0 top-full z-30 mt-2 w-[min(32rem,calc(100vw-3rem))] rounded-2xl border border-theme bg-secondary p-4 shadow-xl">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-main">{BUILD_VERSION}</p>
+                  <p className="mt-1 text-xs font-medium text-link">{BUILD_VERSION_LABEL}</p>
+                  <p className="mt-2 text-xs leading-relaxed text-muted">{BUILD_VERSION_SUMMARY}</p>
+                </div>
+                <span className="rounded-full border border-theme bg-muted-surface px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
+                  {BUILD_NOTES.length} commits
+                </span>
+              </div>
+              <div className="mt-4 border-t border-subtle pt-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">{BUILD_NOTES_TITLE}</p>
+              </div>
+              <div className="mt-3 max-h-80 space-y-2 overflow-y-auto pr-1">
+                {BUILD_NOTES.map((note) => (
+                  <a
+                    key={`${note.hash}-${note.date}`}
+                    href={`https://github.com/browningtons/economic-dashboard/commit/${note.hash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block rounded-xl border border-theme bg-muted-surface/80 px-3 py-2 no-underline transition-colors hover:bg-muted-surface"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium text-main">{note.title}</p>
+                      <span className="shrink-0 rounded-full border border-theme px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
+                        {note.hash}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted">{note.date}</p>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </details>
         </div>
       </header>
 
