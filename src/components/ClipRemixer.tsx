@@ -32,7 +32,6 @@ interface DraftState {
   valuePrecision: string;
   items: ClipItem[];
   notes: string;
-  tags: string;
 }
 
 const CHART_TYPES: { value: ClipChartType; label: string; description: string; icon: React.ComponentType<{ size?: number; 'aria-hidden'?: boolean }> }[] = [
@@ -80,18 +79,6 @@ const EMPTY_DRAFT: DraftState = {
     { label: '', value: 0, flag: '', highlight: false },
   ],
   notes: '',
-  tags: '',
-};
-
-const parseTagInput = (raw: string): string[] => {
-  return Array.from(
-    new Set(
-      raw
-        .split(/[,#]+/)
-        .map((t) => t.trim().toLowerCase().replace(/\s+/g, '-'))
-        .filter((t) => t.length > 0 && t.length <= 32),
-    ),
-  );
 };
 
 const slugify = (s: string): string =>
@@ -137,10 +124,172 @@ const buildClipFromDraft = (draft: DraftState): Clip => {
     valuePrecision: precision,
     items: items.length > 0 ? items : [{ label: 'Sample', value: 1 }],
     notes: draft.notes.trim() || undefined,
-    tags: parseTagInput(draft.tags).length > 0 ? parseTagInput(draft.tags) : undefined,
     addedAt: today,
   };
 };
+
+/**
+ * Smart-paste: accept any of
+ *   1. A full Clip JSON (from an AI tool that used CLIP_EXTRACTION_PROMPT)
+ *   2. A bare items[] array
+ *   3. Plain text (tweet, ranked list, story with numbers) — falls back to
+ *      a regex parse that handles "1. USA: $78 trillion" / "USA — 78" lines
+ *
+ * Returns a partial DraftState patch on success, or { error } on failure.
+ */
+const parseSmartPaste = (
+  raw: string,
+): { patch: Partial<DraftState>; summary: string } | { error: string } => {
+  const trimmed = raw.trim();
+  if (!trimmed) return { error: 'Paste something first.' };
+
+  // 1) Try JSON — either a full Clip object or an items[] array
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      const fromClip = (c: Partial<Clip>): Partial<DraftState> => ({
+        title: c.title ?? undefined,
+        subtitle: c.subtitle ?? undefined,
+        sourceLabel: c.source?.label ?? undefined,
+        sourceHandle: c.source?.handle ?? undefined,
+        sourceUrl: c.source?.url ?? undefined,
+        platform: c.source?.platform ?? undefined,
+        observedDate: c.observedDate ?? undefined,
+        views: typeof c.views === 'number' ? String(c.views) : undefined,
+        chartType: c.chartType ?? undefined,
+        unitPrefix: c.unitPrefix ?? undefined,
+        unitSuffix: c.unitSuffix ?? undefined,
+        valuePrecision:
+          typeof c.valuePrecision === 'number' ? String(c.valuePrecision) : undefined,
+        items: Array.isArray(c.items) && c.items.length > 0 ? c.items : undefined,
+        notes: c.notes ?? undefined,
+      });
+      // Strip undefined keys so the existing fields stay
+      const cleanPatch = (p: Partial<DraftState>): Partial<DraftState> =>
+        Object.fromEntries(Object.entries(p).filter(([, v]) => v !== undefined)) as Partial<DraftState>;
+
+      if (Array.isArray(parsed)) {
+        const items = parsed
+          .filter((it) => it && typeof it === 'object' && 'label' in it && 'value' in it)
+          .map((it: Partial<ClipItem>) => ({
+            label: String(it.label ?? ''),
+            value: Number(it.value) || 0,
+            flag: it.flag,
+            highlight: it.highlight,
+            unitPrefix: it.unitPrefix,
+            unitSuffix: it.unitSuffix,
+            valuePrecision: it.valuePrecision,
+          }));
+        if (items.length === 0) return { error: 'JSON array contained no valid items.' };
+        return {
+          patch: { items },
+          summary: `Loaded ${items.length} item${items.length === 1 ? '' : 's'} from JSON array.`,
+        };
+      }
+
+      if (parsed && typeof parsed === 'object') {
+        const patch = cleanPatch(fromClip(parsed));
+        if (Object.keys(patch).length === 0) {
+          return { error: 'JSON object didn\'t contain any recognised clip fields.' };
+        }
+        return {
+          patch,
+          summary: `Loaded ${Object.keys(patch).length} field${Object.keys(patch).length === 1 ? '' : 's'} from JSON.`,
+        };
+      }
+    } catch (e) {
+      return { error: `JSON parse failed: ${e instanceof Error ? e.message : 'unknown error'}.` };
+    }
+  }
+
+  // 2) Fall back to the tweet/text regex parser
+  const lines = trimmed
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (lines.length === 0) return { error: 'No lines to parse.' };
+
+  let title = '';
+  let subtitle = '';
+  const items: ClipItem[] = [];
+  // Require the number to be the *last* meaningful token on the line —
+  // otherwise things like "12-Month Low" get mis-parsed as items.
+  const itemPattern = /^(?:\d+\.\s*)?(?:([\p{Extended_Pictographic}\p{So}\p{Sk}]+)\s+)?(.+?)[:\s—–-]+\$?\s*([\d.,]+)\s*(?:trillion|billion|million|T|B|M)?\s*$/iu;
+
+  for (const line of lines) {
+    const m = line.match(itemPattern);
+    if (m && Number.isFinite(parseFloat(m[3].replace(/,/g, '')))) {
+      items.push({
+        label: m[2].trim(),
+        value: parseFloat(m[3].replace(/,/g, '')),
+        flag: m[1]?.trim() || undefined,
+        highlight: false,
+      });
+    } else if (!title) {
+      title = line;
+    } else if (!subtitle && !/^Top\b/i.test(line)) {
+      subtitle = line;
+    }
+  }
+
+  if (items.length === 0 && !title) {
+    return { error: 'Couldn\'t find a title or any "Label: number" lines.' };
+  }
+
+  return {
+    patch: {
+      ...(title ? { title } : {}),
+      ...(subtitle ? { subtitle } : {}),
+      ...(items.length > 0 ? { items } : {}),
+    },
+    summary: `Parsed ${items.length} item${items.length === 1 ? '' : 's'}${title ? ' + title' : ''}${subtitle ? ' + subtitle' : ''}.`,
+  };
+};
+
+const CLIP_EXTRACTION_PROMPT = `You're extracting a data visualization into JSON for the Golden Data Clip Remixer. I'll paste an image, a tweet, or a story with numbers. Return ONLY this JSON, no commentary, no markdown fences:
+
+{
+  "title": "headline, ≤60 chars",
+  "subtitle": "optional context line",
+  "source": {
+    "label": "publisher, e.g. World of Statistics",
+    "handle": "@username (optional)",
+    "url": "https://... (optional)",
+    "platform": "x | twitter | threads | bluesky | mastodon | reddit | article | other"
+  },
+  "observedDate": "YYYY-MM-DD",
+  "chartType": "horizontalBar | donut | stat | timeSeries",
+  "unitPrefix": "e.g. $ (optional)",
+  "unitSuffix": "e.g. T, %, B (optional)",
+  "valuePrecision": 0,
+  "items": [
+    {
+      "label": "USA",
+      "value": 78.0,
+      "flag": "🇺🇸",
+      "highlight": true,
+      "unitPrefix": "+",
+      "unitSuffix": "%",
+      "valuePrecision": 0
+    }
+  ],
+  "notes": "optional analyst take"
+}
+
+CHART TYPE GUIDANCE
+- horizontalBar — ranked lists (top-N countries / companies)
+- donut         — share of total / composition / "split of N"
+- stat          — ONE big number with up to 3 supporting context numbers. Mark the headline item with "highlight": true. Mix units via per-item unitPrefix/unitSuffix overrides.
+- timeSeries    — a single metric over time. items[].label is a date string (YYYY-MM-DD), items[].value is the number. Mark the most recent point with "highlight": true.
+
+ITEMS
+- Preserve order and ranking from the source.
+- Mark exactly ONE item with "highlight": true — the "subject" of the chart (the one being featured).
+- Per-item unit overrides let you mix units inside one chart (e.g. "$35T" headline + "+97%" supporting stat).
+- Drop fields you don't need; only label + value are required.
+
+Now, the input:
+`;
 
 const loadDraft = (): DraftState => {
   if (typeof window === 'undefined') return EMPTY_DRAFT;
@@ -158,6 +307,10 @@ const ClipRemixer = React.memo(function ClipRemixer() {
   const [draft, setDraft] = useState<DraftState>(() => loadDraft());
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [pasteText, setPasteText] = useState('');
+  const [pasteStatus, setPasteStatus] = useState<{ kind: 'ok' | 'err'; msg: string } | null>(null);
+  const [showAiPrompt, setShowAiPrompt] = useState(false);
+  const [promptCopied, setPromptCopied] = useState(false);
 
   // Auto-save draft to localStorage (debounced via setTimeout in effect)
   useEffect(() => {
@@ -253,45 +406,27 @@ const ClipRemixer = React.memo(function ClipRemixer() {
     URL.revokeObjectURL(url);
   }, [jsonOutput, previewClip.id]);
 
-  const handlePasteTweet = useCallback(() => {
-    if (typeof window === 'undefined') return;
-    const text = window.prompt(
-      'Paste the tweet text below. The remixer will try to extract the title and a top-N list.\n\nFormat tips:\n• First line becomes the title\n• Lines like "1. USA: $78 trillion" or "USA — 78" are parsed as items',
-    );
-    if (!text) return;
-    const lines = text
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean);
-    if (lines.length === 0) return;
-
-    let title = '';
-    let subtitle = '';
-    const items: ClipItem[] = [];
-    const itemPattern = /^(?:\d+\.\s*)?(?:([\p{Extended_Pictographic}\p{So}\p{Sk}]+)\s+)?(.+?)[:\s—–-]+\$?\s*([\d.,]+)\s*(?:trillion|billion|million|T|B|M)?/iu;
-
-    for (const line of lines) {
-      const m = line.match(itemPattern);
-      if (m && Number.isFinite(parseFloat(m[3].replace(/,/g, '')))) {
-        items.push({
-          label: m[2].trim(),
-          value: parseFloat(m[3].replace(/,/g, '')),
-          flag: m[1]?.trim() || undefined,
-          highlight: false,
-        });
-      } else if (!title) {
-        title = line;
-      } else if (!subtitle && !/^Top\b/i.test(line)) {
-        subtitle = line;
-      }
+  const handleApplyPaste = useCallback(() => {
+    const result = parseSmartPaste(pasteText);
+    if ('error' in result) {
+      setPasteStatus({ kind: 'err', msg: result.error });
+      return;
     }
+    setDraft((prev) => ({ ...prev, ...result.patch }));
+    setPasteStatus({ kind: 'ok', msg: result.summary });
+    setPasteText('');
+    window.setTimeout(() => setPasteStatus(null), 4000);
+  }, [pasteText]);
 
-    setDraft((prev) => ({
-      ...prev,
-      title: title || prev.title,
-      subtitle: subtitle || prev.subtitle,
-      items: items.length > 0 ? items : prev.items,
-    }));
+  const handleCopyPrompt = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(CLIP_EXTRACTION_PROMPT);
+      setPromptCopied(true);
+      window.setTimeout(() => setPromptCopied(false), 1500);
+    } catch {
+      /* fall through */
+    }
   }, []);
 
   const fieldClass =
@@ -308,26 +443,15 @@ const ClipRemixer = React.memo(function ClipRemixer() {
               Remix tool
             </div>
             <h3 className="mt-1 text-lg md:text-xl font-semibold text-main tracking-tight">
-              Add a new clip
+              Drop your data, get a branded chart
             </h3>
             <p className="mt-1 text-sm text-muted">
-              Fill the fields, watch the live preview match the dashboard's look, then{' '}
-              <span className="font-semibold text-main">Copy JSON</span> and paste it into{' '}
-              <code className="rounded bg-muted-surface px-1 py-0.5 font-mono text-[11px]">
-                public/data/clips.json
-              </code>
-              .
+              Paste JSON from an AI tool, a tweet's text, or any "Label: number" list —
+              the form below auto-fills, the live preview updates, and you can download
+              a PNG sized for X / Instagram / Stories.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={handlePasteTweet}
-              className="inline-flex items-center gap-1.5 rounded-md border border-theme bg-muted-surface px-3 py-1.5 text-xs font-medium text-main hover:bg-secondary"
-            >
-              <Sparkles size={12} aria-hidden />
-              Paste tweet to parse
-            </button>
             <button
               type="button"
               onClick={saveDraftNow}
@@ -347,6 +471,104 @@ const ClipRemixer = React.memo(function ClipRemixer() {
             </button>
           </div>
         </header>
+
+        {/* Smart paste — the front door */}
+        <div
+          className="flex flex-col gap-3 rounded-xl border p-4"
+          style={{
+            borderColor: 'color-mix(in oklab, var(--color-brand-primary) 30%, var(--color-border))',
+            backgroundColor:
+              'color-mix(in oklab, var(--color-brand-primary) 6%, var(--color-bg-secondary))',
+          }}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--color-brand-primary)' }}>
+              Smart paste
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowAiPrompt((v) => !v)}
+              className="inline-flex items-center gap-1.5 rounded-md border border-theme bg-secondary px-2 py-1 text-[11px] font-medium text-main hover:bg-muted-surface"
+              aria-expanded={showAiPrompt}
+            >
+              <Sparkles size={11} aria-hidden />
+              {showAiPrompt ? 'Hide AI prompt' : 'Use Claude / ChatGPT to extract'}
+            </button>
+          </div>
+          <textarea
+            value={pasteText}
+            onChange={(e) => setPasteText(e.target.value)}
+            placeholder='Paste a Clip JSON, an items[] array, a tweet, or a list like "1. USA: $78 trillion" …'
+            className="min-h-[96px] w-full resize-y rounded-md border border-theme bg-secondary p-3 font-mono text-[12px] leading-relaxed text-main placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-[var(--color-link)]/40"
+          />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-[11px] text-muted">
+              {pasteStatus ? (
+                <span
+                  style={{
+                    color:
+                      pasteStatus.kind === 'ok'
+                        ? 'var(--color-brand-primary)'
+                        : 'var(--color-text-muted)',
+                  }}
+                >
+                  {pasteStatus.msg}
+                </span>
+              ) : (
+                <span>JSON or text — auto-detected. The patch merges into the form below.</span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleApplyPaste}
+              disabled={!pasteText.trim()}
+              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+              style={{
+                color: 'var(--color-brand-primary)',
+                borderColor:
+                  'color-mix(in oklab, var(--color-brand-primary) 40%, transparent)',
+                backgroundColor:
+                  'color-mix(in oklab, var(--color-brand-primary) 12%, var(--color-bg-secondary))',
+              }}
+            >
+              <Sparkles size={12} aria-hidden />
+              Apply
+            </button>
+          </div>
+          {showAiPrompt && (
+            <div className="flex flex-col gap-2 border-t border-subtle pt-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] text-muted">
+                  Copy this into Claude or ChatGPT, attach your image / paste your story, and the
+                  JSON it returns goes straight into the textarea above.
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCopyPrompt}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-theme bg-secondary px-2 py-1 text-[11px] font-medium text-main hover:bg-muted-surface"
+                >
+                  {promptCopied ? (
+                    <>
+                      <Check size={11} aria-hidden />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={11} aria-hidden />
+                      Copy prompt
+                    </>
+                  )}
+                </button>
+              </div>
+              <textarea
+                readOnly
+                value={CLIP_EXTRACTION_PROMPT}
+                className="h-48 w-full resize-y rounded-md border border-theme bg-muted-surface/60 p-3 font-mono text-[11px] leading-relaxed text-main"
+                onFocus={(e) => e.currentTarget.select()}
+              />
+            </div>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* LEFT — form */}
@@ -553,31 +775,6 @@ const ClipRemixer = React.memo(function ClipRemixer() {
                 onChange={(e) => update({ notes: e.target.value })}
                 placeholder="Why is this interesting? Any caveats?"
               />
-            </div>
-
-            <div>
-              <label className={labelClass} htmlFor="clip-tags">
-                Tags (comma-separated)
-              </label>
-              <input
-                id="clip-tags"
-                className={fieldClass}
-                value={draft.tags}
-                onChange={(e) => update({ tags: e.target.value })}
-                placeholder="markets, global, equities"
-              />
-              {parseTagInput(draft.tags).length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {parseTagInput(draft.tags).map((t) => (
-                    <span
-                      key={t}
-                      className="rounded-full border border-theme bg-muted-surface px-2 py-0.5 text-[10px] text-muted"
-                    >
-                      #{t}
-                    </span>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Items editor */}

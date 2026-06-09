@@ -1,130 +1,24 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Bookmark, Filter, ChevronRight, Calendar, Tag, X as XIcon } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Sparkles } from 'lucide-react';
 import Card from './Card';
 import ClipCard from './ClipCard';
 import ClipRemixer from './ClipRemixer';
-import ClipAboutCard from './ClipAboutCard';
 import type { Clip, ClipsFile } from '../types/clips';
 
 const CLIPS_DATA_URL = `${import.meta.env.BASE_URL}data/clips.json`;
 
-type SortKey = 'newest' | 'oldest';
-
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-const formatYearMonth = (ym: string): string => {
-  const [y, m] = ym.split('-');
-  const idx = Number(m) - 1;
-  if (Number.isNaN(idx) || idx < 0 || idx > 11) return ym;
-  return `${MONTH_NAMES[idx]} ${y}`;
-};
-
-const clipYearMonth = (clip: Clip): string | null => {
-  const d = new Date(clip.addedAt || clip.observedDate);
-  if (Number.isNaN(d.getTime())) return null;
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-};
-
-// Avoid matching single-clip permalinks like /clips/some-slug/.
-// Clip-id pages always include <meta name="clip-id">, so if that's present we
-// treat the page as a single-clip page and skip month detection.
 const getDeepLinkClipId = (): string | null => {
   if (typeof window === 'undefined') return null;
   const hint = document.querySelector('meta[name="clip-id"]')?.getAttribute('content');
   if (hint) return hint;
-  // Path /clips/{id}/ — but only if it's NOT /clips/{year}/{month}/
-  const path = window.location.pathname;
-  if (/\/clips\/\d{4}\/\d{2}\/?$/.test(path)) return null;
-  return path.match(/\/clips\/([^/]+)\/?$/)?.[1] ?? null;
-};
-
-const getInitialMonthFromUrl = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  const hint = document
-    .querySelector('meta[name="active-month"]')
-    ?.getAttribute('content');
-  if (hint && /^\d{4}-\d{2}$/.test(hint)) return hint;
-  const pathMatch = window.location.pathname.match(/\/clips\/(\d{4})\/(\d{2})\/?$/);
-  if (pathMatch) return `${pathMatch[1]}-${pathMatch[2]}`;
-  const params = new URLSearchParams(window.location.search);
-  const m = params.get('month');
-  if (m && /^\d{4}-\d{2}$/.test(m)) return m;
-  return null;
-};
-
-const updateMonthInUrl = (month: string | null) => {
-  if (typeof window === 'undefined') return;
-  const url = new URL(window.location.href);
-  if (month) url.searchParams.set('month', month);
-  else url.searchParams.delete('month');
-  window.history.replaceState({}, '', url.toString());
-};
-
-const getInitialTagFromUrl = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  // 1) Static-rendered tag page (e.g. /clips/tag/labor/) embeds a hint
-  const hint = document
-    .querySelector('meta[name="active-tag"]')
-    ?.getAttribute('content');
-  if (hint) return hint.toLowerCase();
-  // 2) Tag path: /economic-dashboard/clips/tag/{tag}/
-  const pathMatch = window.location.pathname.match(/\/clips\/tag\/([^/]+)\/?$/);
-  if (pathMatch) return decodeURIComponent(pathMatch[1]).toLowerCase();
-  // 3) Query string ?tag=X
-  const params = new URLSearchParams(window.location.search);
-  const tag = params.get('tag');
-  return tag ? tag.toLowerCase() : null;
-};
-
-const updateTagInUrl = (tag: string | null) => {
-  if (typeof window === 'undefined') return;
-  const url = new URL(window.location.href);
-  if (tag) url.searchParams.set('tag', tag);
-  else url.searchParams.delete('tag');
-  window.history.replaceState({}, '', url.toString());
+  return window.location.pathname.match(/\/clips\/([^/]+)\/?$/)?.[1] ?? null;
 };
 
 const ClipsView = React.memo(function ClipsView() {
   const [clips, setClips] = useState<Clip[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [sortKey, setSortKey] = useState<SortKey>('newest');
-  const [platformFilter, setPlatformFilter] = useState<string>('all');
-  const [activeTag, setActiveTagState] = useState<string | null>(() => getInitialTagFromUrl());
-  const [activeMonth, setActiveMonthState] = useState<string | null>(() =>
-    getInitialMonthFromUrl(),
-  );
-  const [remixerOpen, setRemixerOpen] = useState(false);
   const [deepLinkClipId] = useState<string | null>(() => getDeepLinkClipId());
-
-  const setActiveTag = useCallback((tag: string | null) => {
-    setActiveTagState(tag);
-    updateTagInUrl(tag);
-  }, []);
-
-  const toggleTag = useCallback((tag: string) => {
-    setActiveTagState((current) => {
-      const next = current === tag ? null : tag;
-      updateTagInUrl(next);
-      return next;
-    });
-  }, []);
-
-  const setActiveMonth = useCallback((month: string | null) => {
-    setActiveMonthState(month);
-    updateMonthInUrl(month);
-  }, []);
-
-  const toggleMonth = useCallback((month: string) => {
-    setActiveMonthState((current) => {
-      const next = current === month ? null : month;
-      updateMonthInUrl(next);
-      return next;
-    });
-  }, []);
 
   useEffect(() => {
     if (!deepLinkClipId || isLoading) return;
@@ -138,14 +32,13 @@ const ClipsView = React.memo(function ClipsView() {
 
   useEffect(() => {
     let cancelled = false;
-
     const load = async () => {
       setIsLoading(true);
       setError(null);
       try {
         const response = await fetch(CLIPS_DATA_URL, { cache: 'no-store' });
         if (!response.ok) {
-          throw new Error(`Could not load clips (status ${response.status}).`);
+          throw new Error(`Could not load saved clips (status ${response.status}).`);
         }
         const payload = (await response.json()) as ClipsFile;
         if (cancelled) return;
@@ -159,360 +52,71 @@ const ClipsView = React.memo(function ClipsView() {
         if (!cancelled) setIsLoading(false);
       }
     };
-
     load();
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const platformOptions = useMemo(() => {
-    const set = new Set<string>();
-    clips.forEach((c) => set.add(c.source.platform));
-    return ['all', ...Array.from(set)];
-  }, [clips]);
-
-  const tagCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const clip of clips) {
-      for (const tag of clip.tags ?? []) {
-        counts.set(tag, (counts.get(tag) ?? 0) + 1);
-      }
-    }
-    return Array.from(counts.entries()).sort((a, b) =>
-      b[1] !== a[1] ? b[1] - a[1] : a[0].localeCompare(b[0]),
-    );
-  }, [clips]);
-
-  const monthBuckets = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const clip of clips) {
-      const ym = clipYearMonth(clip);
-      if (!ym) continue;
-      counts.set(ym, (counts.get(ym) ?? 0) + 1);
-    }
-    return Array.from(counts.entries()).sort((a, b) => b[0].localeCompare(a[0]));
-  }, [clips]);
-
-  const visibleClips = useMemo(() => {
-    let result = clips;
-    if (platformFilter !== 'all') {
-      result = result.filter((c) => c.source.platform === platformFilter);
-    }
-    if (activeTag) {
-      result = result.filter((c) => c.tags?.includes(activeTag));
-    }
-    if (activeMonth) {
-      result = result.filter((c) => clipYearMonth(c) === activeMonth);
-    }
-    const sorted = [...result].sort((a, b) => {
-      const aTime = new Date(a.observedDate).getTime();
-      const bTime = new Date(b.observedDate).getTime();
-      return sortKey === 'newest' ? bTime - aTime : aTime - bTime;
-    });
-    return sorted;
-  }, [clips, sortKey, platformFilter, activeTag, activeMonth]);
+  const recentClips = [...clips]
+    .sort((a, b) => new Date(b.observedDate).getTime() - new Date(a.observedDate).getTime())
+    .slice(0, 4);
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Section header */}
+      {/* Compact header — the page title sits above the Remixer, not a chrome panel */}
       <Card className="p-7">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-start gap-3">
-            <div
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-theme"
-              style={{
-                backgroundColor:
-                  'color-mix(in oklab, var(--color-brand-primary) 10%, var(--color-bg-secondary))',
-                color: 'var(--color-brand-primary)',
-              }}
-            >
-              <Bookmark size={20} aria-hidden />
-            </div>
-            <div>
-              <h2 className="text-xl md:text-2xl font-semibold text-main tracking-tight">Clips</h2>
-              <p className="mt-1 text-sm text-muted">
-                A running list of interesting data clips collected from Twitter / X and elsewhere —
-                remixed to match the dashboard's look.
-              </p>
-            </div>
+        <div className="flex items-start gap-3">
+          <div
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-theme"
+            style={{
+              backgroundColor:
+                'color-mix(in oklab, var(--color-brand-primary) 10%, var(--color-bg-secondary))',
+              color: 'var(--color-brand-primary)',
+            }}
+          >
+            <Sparkles size={20} aria-hidden />
           </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center gap-1 rounded-lg border border-theme bg-muted-surface p-1 text-xs">
-              <Filter size={12} className="ml-1 text-muted" aria-hidden />
-              <select
-                aria-label="Filter by platform"
-                value={platformFilter}
-                onChange={(e) => setPlatformFilter(e.target.value)}
-                className="bg-transparent px-2 py-1 text-xs font-medium text-main focus:outline-none"
-              >
-                {platformOptions.map((p) => (
-                  <option key={p} value={p}>
-                    {p === 'all' ? 'All platforms' : p}
-                  </option>
-                ))}
-              </select>
-              <div className="mx-1 h-4 w-px bg-[var(--color-border)]" />
-              <select
-                aria-label="Sort clips"
-                value={sortKey}
-                onChange={(e) => setSortKey(e.target.value as SortKey)}
-                className="bg-transparent px-2 py-1 text-xs font-medium text-main focus:outline-none"
-              >
-                <option value="newest">Newest first</option>
-                <option value="oldest">Oldest first</option>
-              </select>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setRemixerOpen((v) => !v)}
-              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors"
-              style={{
-                color: 'var(--color-brand-primary)',
-                borderColor: 'color-mix(in oklab, var(--color-brand-primary) 40%, transparent)',
-                backgroundColor:
-                  'color-mix(in oklab, var(--color-brand-primary) 12%, var(--color-bg-secondary))',
-              }}
-              aria-expanded={remixerOpen}
-            >
-              <ChevronRight
-                size={14}
-                aria-hidden
-                style={{ transform: remixerOpen ? 'rotate(90deg)' : 'rotate(0)' }}
-              />
-              {remixerOpen ? 'Hide remixer' : 'Remix a new clip'}
-            </button>
+          <div className="min-w-0">
+            <h2 className="text-xl md:text-2xl font-semibold text-main tracking-tight">
+              Clip Remix
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              Paste a data screenshot, a tweet, a story with numbers, or a ready-made JSON —
+              and get a chart in the dashboard's look. Download as PNG sized for X / Instagram /
+              Stories.
+            </p>
           </div>
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-3 border-t border-subtle pt-4 text-xs text-muted">
-          <span className="inline-flex items-center gap-1.5">
-            <span
-              className="inline-block h-2 w-2 rounded-full"
-              style={{ backgroundColor: 'var(--color-brand-primary)' }}
-            />
-            {clips.length} clip{clips.length === 1 ? '' : 's'} total
-          </span>
-          {clips.length > 0 && (
-            <span>
-              Latest:{' '}
-              {new Date(
-                clips.reduce(
-                  (max, c) => Math.max(max, new Date(c.observedDate).getTime() || 0),
-                  0,
-                ),
-              ).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-            </span>
-          )}
         </div>
       </Card>
 
-      <ClipAboutCard />
+      {/* The Remixer is the front door — always open, no toggle. */}
+      <ClipRemixer />
 
-      {tagCounts.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5" aria-label="Filter by tag">
-          <Tag size={12} className="text-muted" aria-hidden />
-          <span className="mr-1 text-[11px] uppercase tracking-wider text-muted">
-            Filter by tag
-          </span>
-          <button
-            type="button"
-            onClick={() => setActiveTag(null)}
-            className="rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors hover:bg-secondary"
-            style={
-              activeTag === null
-                ? {
-                    color: 'var(--color-brand-primary)',
-                    borderColor:
-                      'color-mix(in oklab, var(--color-brand-primary) 40%, transparent)',
-                    backgroundColor:
-                      'color-mix(in oklab, var(--color-brand-primary) 12%, var(--color-bg-secondary))',
-                  }
-                : {
-                    color: 'var(--color-text-muted)',
-                    borderColor: 'var(--color-border)',
-                    backgroundColor: 'var(--color-bg-secondary)',
-                  }
-            }
-          >
-            All ({clips.length})
-          </button>
-          {tagCounts.map(([tag, count]) => {
-            const isActive = activeTag === tag;
-            return (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => toggleTag(tag)}
-                className="rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors hover:bg-secondary"
-                style={
-                  isActive
-                    ? {
-                        color: 'var(--color-brand-primary)',
-                        borderColor:
-                          'color-mix(in oklab, var(--color-brand-primary) 40%, transparent)',
-                        backgroundColor:
-                          'color-mix(in oklab, var(--color-brand-primary) 12%, var(--color-bg-secondary))',
-                      }
-                    : {
-                        color: 'var(--color-text-muted)',
-                        borderColor: 'var(--color-border)',
-                        backgroundColor: 'var(--color-bg-secondary)',
-                      }
-                }
-              >
-                #{tag} <span className="text-[10px] opacity-70">({count})</span>
-              </button>
-            );
-          })}
-          {activeTag && (
-            <button
-              type="button"
-              onClick={() => setActiveTag(null)}
-              className="inline-flex items-center gap-1 rounded-full border border-theme bg-muted-surface px-2 py-0.5 text-[11px] font-medium text-muted hover:text-main"
-              title="Clear tag filter"
-            >
-              <XIcon size={10} aria-hidden />
-              Clear
-            </button>
-          )}
-        </div>
+      {/* Small "Recent" strip below — saved examples from public/data/clips.json. */}
+      {!isLoading && !error && recentClips.length > 0 && (
+        <>
+          <div className="flex items-baseline justify-between border-t border-subtle pt-6">
+            <h3 className="text-base font-semibold text-main">Recent remixes</h3>
+            <span className="text-[11px] text-muted">{clips.length} saved</span>
+          </div>
+          <div className="flex flex-col gap-6">
+            {recentClips.map((clip) => (
+              <ClipCard
+                key={clip.id}
+                clip={clip}
+                highlighted={clip.id === deepLinkClipId}
+              />
+            ))}
+          </div>
+        </>
       )}
 
-      {monthBuckets.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5" aria-label="Archive by month">
-          <Calendar size={12} className="text-muted" aria-hidden />
-          <span className="mr-1 text-[11px] uppercase tracking-wider text-muted">
-            Archive
-          </span>
-          <button
-            type="button"
-            onClick={() => setActiveMonth(null)}
-            className="rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors hover:bg-secondary"
-            style={
-              activeMonth === null
-                ? {
-                    color: 'var(--color-brand-primary)',
-                    borderColor:
-                      'color-mix(in oklab, var(--color-brand-primary) 40%, transparent)',
-                    backgroundColor:
-                      'color-mix(in oklab, var(--color-brand-primary) 12%, var(--color-bg-secondary))',
-                  }
-                : {
-                    color: 'var(--color-text-muted)',
-                    borderColor: 'var(--color-border)',
-                    backgroundColor: 'var(--color-bg-secondary)',
-                  }
-            }
-          >
-            All time ({clips.length})
-          </button>
-          {monthBuckets.map(([ym, count]) => {
-            const isActive = activeMonth === ym;
-            return (
-              <button
-                key={ym}
-                type="button"
-                onClick={() => toggleMonth(ym)}
-                className="rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors hover:bg-secondary"
-                style={
-                  isActive
-                    ? {
-                        color: 'var(--color-brand-primary)',
-                        borderColor:
-                          'color-mix(in oklab, var(--color-brand-primary) 40%, transparent)',
-                        backgroundColor:
-                          'color-mix(in oklab, var(--color-brand-primary) 12%, var(--color-bg-secondary))',
-                      }
-                    : {
-                        color: 'var(--color-text-muted)',
-                        borderColor: 'var(--color-border)',
-                        backgroundColor: 'var(--color-bg-secondary)',
-                      }
-                }
-              >
-                {formatYearMonth(ym)}{' '}
-                <span className="text-[10px] opacity-70">({count})</span>
-              </button>
-            );
-          })}
-          {activeMonth && (
-            <button
-              type="button"
-              onClick={() => setActiveMonth(null)}
-              className="inline-flex items-center gap-1 rounded-full border border-theme bg-muted-surface px-2 py-0.5 text-[11px] font-medium text-muted hover:text-main"
-              title="Clear month filter"
-            >
-              <XIcon size={10} aria-hidden />
-              Clear
-            </button>
-          )}
-        </div>
-      )}
-
-      {activeMonth && (
-        <div
-          className="rounded-xl border px-4 py-3 text-sm"
-          style={{
-            borderColor: 'color-mix(in oklab, var(--color-brand-primary) 35%, var(--color-border))',
-            backgroundColor:
-              'color-mix(in oklab, var(--color-brand-primary) 8%, var(--color-bg-secondary))',
-            color: 'var(--color-text-main)',
-          }}
-        >
-          <span className="font-semibold" style={{ color: 'var(--color-brand-primary)' }}>
-            Archive view:
-          </span>{' '}
-          {formatYearMonth(activeMonth)} ·{' '}
-          {visibleClips.length} clip{visibleClips.length === 1 ? '' : 's'}{' '}
-          {visibleClips.length > 0 ? `(of ${clips.length} total)` : ''}
-        </div>
-      )}
-
-      {remixerOpen && <ClipRemixer />}
-
-      {/* Clip list */}
-      {isLoading ? (
-        <div className="flex flex-col gap-4">
-          {[1, 2].map((i) => (
-            <div
-              key={i}
-              className="bg-secondary border border-theme/70 rounded-xl p-7 shadow-sm space-y-3"
-            >
-              <div className="skeleton h-5 w-32" />
-              <div className="skeleton h-7 w-3/4" />
-              <div className="skeleton h-4 w-1/2" />
-              <div className="skeleton h-64 w-full" />
-            </div>
-          ))}
-        </div>
-      ) : error ? (
+      {error && (
         <Card className="p-7">
-          <h3 className="text-base font-semibold text-main">Couldn't load clips</h3>
+          <h3 className="text-base font-semibold text-main">Couldn't load saved clips</h3>
           <p className="mt-1 text-sm text-muted">{error}</p>
         </Card>
-      ) : visibleClips.length === 0 ? (
-        <Card className="p-7">
-          <h3 className="text-base font-semibold text-main">No clips match these filters</h3>
-          <p className="mt-1 text-sm text-muted">
-            Try a different platform or clear the filter. Or open the remixer above to add the first
-            clip.
-          </p>
-        </Card>
-      ) : (
-        <div className="flex flex-col gap-6">
-          {visibleClips.map((clip) => (
-            <ClipCard
-              key={clip.id}
-              clip={clip}
-              highlighted={clip.id === deepLinkClipId}
-              activeTag={activeTag}
-              onTagClick={toggleTag}
-            />
-          ))}
-        </div>
       )}
     </div>
   );
