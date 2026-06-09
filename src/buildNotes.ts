@@ -11,6 +11,16 @@ export interface BuildNote {
 
 export const BUILD_NOTES: BuildNote[] = [
   {
+    hash: '0f428d1',
+    date: 'May 15, 2026',
+    title: 'Add yield-curve pill and document FRED data sources',
+  },
+  {
+    hash: 'bf9232c',
+    date: 'May 8, 2026',
+    title: 'Auto-trigger Pages deploy after data auto-update',
+  },
+  {
     hash: '34a5623',
     date: 'Mar 17, 2026',
     title: 'Add dashboard data confidence layer',
