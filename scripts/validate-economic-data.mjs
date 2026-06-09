@@ -2,6 +2,7 @@
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const STOCK_MARKET_COLUMN = 'Stock Market (b)';
 
@@ -754,7 +755,32 @@ async function main() {
   console.log('Validation passed.');
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
-});
+// Pure helpers are exported for unit testing. main() only runs when this file
+// is invoked directly as a script (not when imported by the test suite).
+export {
+  SERIES_CONFIG,
+  STOCK_MARKET_COLUMN,
+  monthKeyFromDate,
+  parseObservedMonth,
+  parseCsvRow,
+  parseCsvNumber,
+  addMonths,
+  monthDiff,
+  compareMonthKeys,
+  currentMonthKey,
+  expectedReleaseWindow,
+  getRecentMonths,
+  getRecentSeries,
+  aggregateToMonthly,
+  parseFlexibleMonthKey,
+  multiplierForUnits,
+  expandQuarterlyMonths,
+  main,
+};
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  });
+}
