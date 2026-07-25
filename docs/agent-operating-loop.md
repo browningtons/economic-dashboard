@@ -80,6 +80,11 @@ absence of a run — only a failed one. When you add or review a scheduled job,
 ask what it reports on the day it stops doing its job, and make that state
 distinguishable from success.
 
+The outage was fixed the same day, **but the blind spot was not** — it is now
+tracked as R1a, and it is the reason backlog task 2 exists. Restarting a stopped
+pipeline is not the same as being able to tell when it stops. Don't let the
+green badge that's now accurate convince the next session that this is closed.
+
 **Absence is the hard failure mode here.** Prefer freshness checks that are
 driven by wall-clock age of the artifact (`generatedAt` in `data_status.json`)
 over checks that only run inside the job that might not fire.
@@ -90,10 +95,14 @@ over checks that only run inside the job that might not fire.
 - **Recurring agents are single writers.** Follow the
   [pack automation PR contract](https://github.com/browningtons/mission-control/blob/main/docs/pack-automation-contract.md):
   one stable `pack/<lane>` branch, update its open PR, no-op when unchanged.
-- **Do not re-enable a disabled workflow as a side effect of unrelated work.**
-  Someone turned `update-data.yml` and `deploy.yml` off deliberately on
-  2026-07-03; re-enabling resumes automated commits to `main` and republishes a
-  public site. That is Paul's call — see R1.
+- **Do not enable or disable a workflow as a side effect of unrelated work.**
+  Toggling one resumes or halts automated commits to `main` and republishes a
+  public site — always Paul's call, never an incidental step. (Both workflows
+  were off from 2026-07-03 to 2026-07-24 and were re-enabled on his explicit
+  authorization; see R1 under Resolved. The rule stands for the next time.)
+- **Check that the pipeline actually ran before trusting the badge.** `PASS` in
+  `data_status.json` describes the last run, whenever that was — it says nothing
+  about whether a run happened today. Read `generatedAt` first, `status` second.
 - **`public/data/*` is generated.** Don't hand-edit the CSV or
   `data_status.json`; change the script and regenerate.
 - **If a public claim and the code disagree, fix one or the other in the same

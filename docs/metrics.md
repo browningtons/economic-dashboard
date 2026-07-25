@@ -26,17 +26,29 @@ and it is already computed — it just needs to be *watched*.
 | Question | Field | Healthy value | Action when it breaks |
 |---|---|---|---|
 | Did the last validation pass? | `status` | `PASS` | Read `failures[]`; see the auto-filed "Data validation alert" issue. |
-| **Is the pipeline still running at all?** | `generatedAt` | within ~4 days | **This is the one that failed.** 21 days stale as of 2026-07-24 — see R1. Nothing watches it today; backlog task 2 adds the check. |
+| **Is the pipeline still running at all?** | `generatedAt` | within ~4 days | **This is the one that failed.** Was 21 days stale on 2026-07-24; pipeline re-enabled the same day and `generatedAt` is current again (R1 Resolved). **Still nothing watches it** — backlog task 2 adds the check (R1a). |
 | How many series are broken? | `failedSeriesCount` / `totalSeriesCount` | `0` / `27` | Investigate the named series against FRED. |
 | Are any series silently forward-filled? | `series[].forwardFill` | `0` | A growing forward-fill count means the source stopped publishing. |
 | Is a series lagging its release window? | `series[].releaseWindowStatus` | `PASS` | Check the FRED release calendar for that series. |
 | Is the headline Buffett ratio computable? | `latestBuffettRatio` | non-`null` | `null` means the market-cap override or the `NCBCEL` fallback failed. |
 
-**Reading the table above on 2026-07-24:** `status: PASS`, `failureCount: 0`,
-`latestBuffettRatio: null`, `generatedAt: 2026-07-03`. Five of six rows look
-healthy. The file is three weeks old and the sixth row is the only one that says
-so. That asymmetry is the entire lesson — see the operating loop's "a green
-heartbeat is not evidence of a working system."
+**Reading the table on 2026-07-24, before the pipeline was restarted:**
+`status: PASS`, `failureCount: 0`, `latestBuffettRatio: null`,
+`generatedAt: 2026-07-03`. Five of six rows looked healthy. The file was three
+weeks old and the sixth row was the only one that said so. That asymmetry is the
+entire lesson — see the operating loop's "a green heartbeat is not evidence of a
+working system."
+
+**After the restart (2026-07-25T04:22:34Z):** `status: PASS`, `failureCount: 0`,
+`failedSeriesCount: 0/27`, `releaseCalendarBreaches: 0`, `latestDataMonth:
+2026-07`. Genuinely healthy this time. Note the first five rows read *identically*
+in both snapshots — which is precisely why the freshness row has to be checked by
+something other than a human glancing at the badge.
+
+`latestBuffettRatio` remains `null`. That is expected, not a regression: the
+market-cap series is FRED `NCBCEL`, quarterly and forward-filled, so the newest
+month has no value yet. Treat a `null` here as informational unless it persists
+past a quarter boundary.
 
 ## Build health (watched by CI)
 

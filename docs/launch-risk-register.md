@@ -16,54 +16,28 @@ observed directly — commands and outputs are recorded as evidence.
 
 ## Active Risks
 
-### R1 (P0) — The data-refresh and Pages-deploy workflows are both disabled; the site has served 21-day-stale data under a "PASS" health badge
+### R1a (P1) — Nothing detects a pipeline that stops running
 
-Both scheduled/deploy workflows are in state `disabled_manually`. The refresh has
-not run since 2026-07-03; today is 2026-07-24. The dashboard still renders
-`data_status.json` — generated 2026-07-03, reading `"status": "PASS"`,
-`"failureCount": 0`, `"nextScheduledRefreshUtc": "2026-07-06T13:15:00.000Z"` — so
-a visitor sees a healthy-pipeline badge on three-week-old data. `2026-07` rows in
-the CSV are mostly empty; June releases that have since published are missing.
+**This is the unresolved half of R1** (the outage itself is fixed — see Resolved).
+The 21-day outage was invisible because every check in this repo and in the
+watchtower pack keys on a run that *fails*. A workflow that is
+`disabled_manually`, or a cron schedule that stops firing, produces no failed run
+and therefore no signal. The dashboard kept rendering a `PASS` badge the whole
+time.
 
-- Domain: deploy readiness / pipeline health
-- Evidence:
-  ```
-  $ gh workflow list --all
-  CI                                       active              309130958
-  Deploy Vite React App to GitHub Pages    disabled_manually   217902327
-  Update Economic Data                     disabled_manually   238848286
-  pages-build-deployment                   active              211008939
+Re-enabling the workflows restored the data but did **not** close this. The exact
+same outage can recur tomorrow and would again go unnoticed for weeks.
 
-  $ git log -1 --date=iso -- public/data/economic_indicators.csv
-  8810b38 2026-07-03 15:24:13 +0000 chore(data): auto-update economic indicators snapshot
-  ```
-  Last `schedule` run of *Update Economic Data*: 2026-07-03T15:23:41Z. No runs of
-  any workflow at all since 2026-07-08.
-- Why nobody noticed: **a disabled workflow produces no failed run.** The repo's
-  own alerting (`send-validation-alert.mjs`, the auto-filed "Data validation
-  alert" issue) only fires when validation *runs and fails*. The watchtower pack
-  likewise barks on failing pipelines, not absent ones. This failure mode is
-  invisible to every check that currently exists.
-- Suspected trigger: the deploy workflow failed on 2026-07-02
-  (`workflow_dispatch`, 10m45s, conclusion `failure`) and both workflows were
-  switched off the following day — plausibly to stop the noise, then never
-  switched back.
-- Next mitigation, in order:
-  1. **Paul's decision first** — confirm *why* they were disabled before
-     re-enabling. Re-enabling resumes automated commits to `main` and republishes
-     a public site.
-     `gh workflow enable "Update Economic Data" && gh workflow enable "Deploy Vite React App to GitHub Pages"`
-  2. Then run once by hand (`gh workflow run update-data.yml`) and confirm the
-     CSV advances and the badge date moves.
-  3. Then close the detection gap so this cannot recur silently — see R2's
-     freshness-check note. A staleness check that fails CI when
-     `data_status.json.generatedAt` is older than ~4 days catches *absence*,
-     which nothing currently does.
-- Verification: `gh workflow list --all` shows both `active`; a fresh commit to
-  `public/data/economic_indicators.csv` lands; `generatedAt` is within 4 days.
-- **Deliberately not fixed in the bootstrap session** — flipping repo state is
-  outward-facing (publishes a public site), the original reason for disabling is
-  unknown, and first-wolf bootstrap seeds rather than ships.
+- Domain: pipeline health / observability
+- Evidence: between 2026-07-03 and 2026-07-24 the repo produced zero alerts, zero
+  auto-filed issues, and zero watchtower barks while publicly serving stale data.
+  `send-validation-alert.mjs` and the "Data validation alert" issue flow both hang
+  off `steps.validate.outcome == 'failure'`, which requires the job to have run.
+- Next mitigation: a wall-clock freshness check that runs *outside* the refresh
+  job — fail CI when `data_status.json.generatedAt` is older than ~4 days, so any
+  push surfaces it, and make the in-app health badge render stale-PASS as
+  unhealthy. See backlog task 2.
+- Verification: backdate `generatedAt` in a fixture → check fails.
 
 ### R2 (P1) — Validation failure does not block the commit, push, or deploy of bad data
 
@@ -81,9 +55,13 @@ and marks the run failed. The gate reports the fire after publishing it.
   `git push origin main`) → `Trigger Pages deploy` (`if: steps.commit.outputs.pushed == 'true'`)
   → `Mark run failed when validation fails`.
 - Impact: any FRED drift, format change, or bad series that validation is
-  designed to catch reaches the public dashboard anyway. This is latent right
-  now only because the workflow is disabled (R1) — re-enabling R1 without fixing
-  R2 arms it.
+  designed to catch reaches the public dashboard anyway.
+- **Status changed 2026-07-24: this is now LIVE, not latent.** It was previously
+  harmless only because the workflow was switched off. Paul authorized re-enabling
+  and the pipeline is running again on the weekday 13:15 UTC schedule (next run
+  2026-07-27T13:15Z), so the unguarded path is armed. The 2026-07-24 manual run
+  passed validation, so nothing bad has shipped — but the next failure publishes
+  before it alerts. **This is the top-priority fix in the repo.**
 - Next mitigation: gate the commit on validation —
   `if: always() && steps.validate.outcome == 'success'` — or split into a
   fail-closed path that still uploads the report and opens the issue but does not
@@ -131,10 +109,11 @@ A push whose tests fail still deploys, because `deploy.yml` only runs
   whether the *build* fails; test failures are advisory.
 - Next mitigation: either run `npm test` inside the deploy job before the build,
   or convert `deploy.yml` to `on: workflow_run` completing successfully for CI.
-  Note this interacts with R1 — `deploy.yml` is currently disabled, and the
-  active `pages-build-deployment` workflow plus the existing `gh-pages` branch
-  suggest the Pages source may be branch-based rather than Actions-artifact
-  based. **Confirm the real publish path before changing the deploy wiring.**
+- Publish path **confirmed 2026-07-24**: `deploy.yml` is the real publisher.
+  Run `30143917658` (triggered by the refresh job) succeeded and republished the
+  site, so Pages source is the Actions artifact, not the stale `gh-pages` branch.
+  The earlier ambiguity from the active `pages-build-deployment` workflow is
+  resolved — this task no longer needs an investigation step.
 - Verification: push a commit with a deliberately failing test to a scratch
   branch merged to `main` in a test repo, or inspect that the deploy job's run
   list shows the gate.
@@ -156,6 +135,46 @@ Sibling pack repos (`mission-control`) carry `eslint.config.js` and gate on it.
   script, and a CI step. Land it *after* R3 so CI isn't red on two axes at once.
   New dev dependencies — flag per the hard rules.
 - Verification: `npm run lint` exits 0; CI shows a lint step.
+
+## Resolved
+
+### R1 (P0) — Data-refresh and Pages-deploy workflows disabled; 21-day-stale data under a "PASS" badge — RESOLVED 2026-07-24
+
+Both `Update Economic Data` and `Deploy Vite React App to GitHub Pages` were in
+state `disabled_manually`, apparently switched off on 2026-07-03 after a deploy
+failure on 07-02 and never switched back. The refresh had not run since
+2026-07-03; the dashboard rendered a `"status": "PASS"` badge generated the same
+day, so a visitor saw a healthy pipeline on three-week-old data. No alerts, no
+issues, no barks — see R1a for why.
+
+**Fixed 2026-07-24 on Paul's explicit authorization** (Launch Shield had left it
+open as a `[→ paul]` handoff rather than flipping public-facing repo state
+unilaterally):
+
+```
+$ gh workflow enable "Update Economic Data"
+$ gh workflow enable "Deploy Vite React App to GitHub Pages"
+$ gh workflow run update-data.yml -f requested_by=launch-shield-2026-07-24
+```
+
+Verified end to end:
+
+- `gh workflow list --all` → all four workflows `active`.
+- Run `30143901473` succeeded in 34s. `Validate refreshed data against
+  thresholds` **passed**, so the unguarded R2 path was not exercised.
+- Data advanced: commit `c85841f` on `main`. June 2026 filled in (population,
+  housing starts 215000 → 217000, three previously-empty series); July mortgage
+  rates moved 5.79/6.43 → 5.96/6.58.
+- `data_status.json` now `generatedAt: 2026-07-25T04:22:34Z`, `status: PASS`,
+  `failedSeriesCount: 0/27`, `releaseCalendarBreaches: 0`,
+  `nextScheduledRefreshUtc: 2026-07-27T13:15:00Z`.
+- Pages deploy `30143917658` succeeded — the public site is republished on fresh
+  data.
+
+**What this did not fix:** R1a (nothing detects a *stopped* pipeline) and R2
+(validation failure still doesn't block publish, and is now armed). Resolving R1
+without those two means the outage can silently recur, and the next validation
+failure ships before it alerts.
 
 ## Watching (not yet Active)
 

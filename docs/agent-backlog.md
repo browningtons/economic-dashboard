@@ -26,11 +26,11 @@ Score = Impact + Confidence + Risk Reduction - Effort
 
 ## Handoffs
 
-- `[→ paul]` **Decide whether to re-enable the two disabled workflows** (R1). Not
-  an agent call — re-enabling resumes automated commits to `main` and republishes
-  a public site, and the reason they were disabled on 2026-07-03 is unrecorded.
-  See R1 for the exact commands and the ordering (decide → enable → dispatch once
-  → then close the detection gap).
+- ~~`[→ paul]` Decide whether to re-enable the two disabled workflows (R1).~~
+  **Closed 2026-07-24** — Paul authorized; both workflows re-enabled, refresh
+  dispatched and passed, site republished on fresh data. See R1 under Resolved.
+  **The pipeline is now live and running weekdays at 13:15 UTC with R2 unfixed**,
+  which is why task 1 below jumped to the top.
 - `[→ learning-loop]` **Promote the absent-run blind spot to the pack.** The
   watchtower barks on *failing* pipelines; it cannot see a workflow that is
   `disabled_manually` or a schedule that stopped firing. `economic-dashboard`
@@ -55,9 +55,14 @@ Score = Impact + Confidence + Risk Reduction - Effort
   3. A comment records *why* the commit is gated.
 - Verify: tighten a validation threshold on a scratch branch, dispatch the
   workflow, confirm no commit lands on `main` and the alert issue still opens.
-- Note: do this **before** R1 is re-enabled, not after.
+- **Urgency raised 2026-07-24.** The intended order was "fix this, then
+  re-enable." It went the other way — Paul re-enabled first (R1 Resolved), so the
+  pipeline is now running on the weekday schedule with this gate still open. Next
+  scheduled run: 2026-07-27T13:15Z. Until this ships, a validation failure
+  publishes bad data to the public dashboard and only then alerts. **Do this
+  first, before anything else in this repo.**
 
-### 2. Add a data-freshness check that fails on absence (closes the R1 detection gap)
+### 2. Add a data-freshness check that fails on absence (closes R1a)
 
 - Domain: pipeline health
 - Impact: 5 — makes a stopped pipeline visible; this is the thing that failed
@@ -75,8 +80,11 @@ Score = Impact + Confidence + Risk Reduction - Effort
   3. The UI's health badge reflects staleness too: a `PASS` older than the
      threshold should not render as healthy. (If the badge change is more than a
      trivial edit, split it out and file it `[→ user-journey]`.)
-- Verify: `generatedAt` backdated in a fixture → check fails; current file →
-  passes once R1 is resolved.
+- Verify: `generatedAt` backdated in a fixture → check fails; current file
+  (`2026-07-25T04:22:34Z`) → passes.
+- Note: R1 being resolved makes this *more* valuable, not less — the pipeline is
+  running again, so this check now has a healthy baseline to protect rather than
+  a known-broken state to flag.
 
 ### 3. Fix the live type error and add a typecheck gate (closes R3)
 
@@ -143,4 +151,18 @@ Score = Impact + Confidence + Risk Reduction - Effort
   `npm run build` (succeeds, 2,292 modules, clip pre-render OK),
   `npm audit --omit=dev` (0 vulnerabilities), `npx tsc --noEmit` (1 error — R3),
   `gh workflow list --all` (two workflows `disabled_manually` — R1).
-- Follow-ups: R1 needs Paul's decision; tasks 1–2 are the next agent work.
+- Follow-ups: tasks 1–2 are the next agent work.
+
+### 2026-07-24 — Restart the data pipeline (R1, on Paul's authorization)
+
+- Actions: `gh workflow enable` on both `Update Economic Data` and `Deploy Vite
+  React App to GitHub Pages`; `gh workflow run update-data.yml`.
+- Verified: run `30143901473` succeeded in 34s with validation **passing** (so the
+  open R2 path was not exercised); data commit `c85841f` landed on `main` with
+  June/July series advancing; `data_status.json generatedAt` moved 2026-07-03 →
+  2026-07-25T04:22:34Z, `0/27` series failing; Pages deploy `30143917658`
+  succeeded and republished the public site.
+- No repo files changed by this action — it was workflow state plus a bot commit.
+- Follow-ups: **R2 is now armed** (task 1, next scheduled run 2026-07-27T13:15Z)
+  and **R1a is untouched** (task 2). Restarting the pipeline did not add the
+  ability to notice it stopping again.
