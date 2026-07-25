@@ -39,38 +39,6 @@ same outage can recur tomorrow and would again go unnoticed for weeks.
   unhealthy. See backlog task 2.
 - Verification: backdate `generatedAt` in a fixture → check fails.
 
-### R2 (P1) — Validation failure does not block the commit, push, or deploy of bad data
-
-In `.github/workflows/update-data.yml` the validation step is
-`continue-on-error: true`, and the commit step that follows is `if: always()`.
-So when validation fails, the pipeline still commits the bad CSV to `main`,
-pushes it, and triggers the Pages deploy — *then* opens an issue, sends alerts,
-and marks the run failed. The gate reports the fire after publishing it.
-
-- Domain: deploy safety / data honesty
-- Evidence: `.github/workflows/update-data.yml` step order —
-  `Validate refreshed data against thresholds` (id `validate`,
-  `continue-on-error: true`) → `Open issue if validation fails` → `Commit and
-  push if data changed` (id `commit`, `if: always()`, runs
-  `git push origin main`) → `Trigger Pages deploy` (`if: steps.commit.outputs.pushed == 'true'`)
-  → `Mark run failed when validation fails`.
-- Impact: any FRED drift, format change, or bad series that validation is
-  designed to catch reaches the public dashboard anyway.
-- **Status changed 2026-07-24: this is now LIVE, not latent.** It was previously
-  harmless only because the workflow was switched off. Paul authorized re-enabling
-  and the pipeline is running again on the weekday 13:15 UTC schedule (next run
-  2026-07-27T13:15Z), so the unguarded path is armed. The 2026-07-24 manual run
-  passed validation, so nothing bad has shipped — but the next failure publishes
-  before it alerts. **This is the top-priority fix in the repo.**
-- Next mitigation: gate the commit on validation —
-  `if: always() && steps.validate.outcome == 'success'` — or split into a
-  fail-closed path that still uploads the report and opens the issue but does not
-  push. Keep the artifact upload and issue-filing on `always()` so a failure is
-  still diagnosable.
-- Verification: force a validation failure (e.g. tighten a threshold in a
-  scratch branch), dispatch the workflow, confirm no commit lands on `main` and
-  the issue is still filed.
-
 ### R3 (P2) — CI never typechecks, and a type error is already live on `main`
 
 `npm run build` is `vite build`, which transpiles without typechecking. No
@@ -138,6 +106,45 @@ Sibling pack repos (`mission-control`) carry `eslint.config.js` and gate on it.
 
 ## Resolved
 
+### R2 (P1) — Validation failure did not block the commit, push, or deploy of bad data — RESOLVED 2026-07-24
+
+In `.github/workflows/update-data.yml` the validation step is
+`continue-on-error: true`, and the commit step that followed it was
+`if: always()`. So when validation failed, the pipeline still committed the bad
+CSV to `main`, pushed it, and triggered the Pages deploy — *then* opened an
+issue, sent alerts, and marked the run failed. The gate reported the fire after
+publishing it.
+
+This was harmless only while the workflow was switched off. Resolving R1
+re-armed it, which is why it was fixed the same day.
+
+**Fix:** the commit step is now
+`if: always() && steps.validate.outcome == 'success'`.
+
+`outcome` is the *pre*-`continue-on-error` result, so it reads `failure` on a
+real validation failure and `skipped` if an earlier step (e.g. the FRED pull)
+died — neither is `success`, so both cases fail closed. `always()` is retained so
+the gate is evaluated rather than short-circuited by upstream status. The
+artifact upload, issue filing, and alerting stay on their own conditions, so a
+failure is still fully diagnosable — only the *publish* is withheld. The
+run-failure message now states explicitly that the data was not committed or
+deployed.
+
+**Verified on a throwaway branch** (`tmp/r2-gate-test`, since deleted) carrying
+the identical gate with `git push origin main`, the deploy trigger, the issue
+step, and the Resend alert step all neutered — so a broken gate could not reach
+`main` and no mail could be sent:
+
+| Case | `Commit and push` | `Trigger Pages deploy` | Run |
+|---|---|---|---|
+| Validation **fails** (run `30146058767`) | **skipped** | **skipped** | failure |
+| Validation **passes** (run `30146081329`) | success | success | success |
+
+`Upload validation report` succeeded in both. In the failing run the `Validate`
+step's *conclusion* is `success` (masked by `continue-on-error`) while its
+*outcome* is `failure` — confirming the gate reads the field that actually
+reflects validation, not the masked one.
+
 ### R1 (P0) — Data-refresh and Pages-deploy workflows disabled; 21-day-stale data under a "PASS" badge — RESOLVED 2026-07-24
 
 Both `Update Economic Data` and `Deploy Vite React App to GitHub Pages` were in
@@ -171,10 +178,11 @@ Verified end to end:
 - Pages deploy `30143917658` succeeded — the public site is republished on fresh
   data.
 
-**What this did not fix:** R1a (nothing detects a *stopped* pipeline) and R2
-(validation failure still doesn't block publish, and is now armed). Resolving R1
-without those two means the outage can silently recur, and the next validation
-failure ships before it alerts.
+**What this did not fix:** R1a (nothing detects a *stopped* pipeline) and, at the
+time, R2 (validation failure did not block publish, and re-enabling armed it).
+R2 was closed later the same day — see above. **R1a remains open and is now the
+highest-severity item in the repo:** the pipeline is running and fail-closed, but
+nothing would notice if it stopped running altogether.
 
 ## Watching (not yet Active)
 

@@ -144,9 +144,15 @@ jobs:
           ALERT_SUBJECT: 'Economic Dashboard validation failed'
         run: npm run alert:data
 
+      # Gated on validation passing. `continue-on-error` above keeps the job
+      # alive so the report uploads, the issue opens, and alerts send — but the
+      # data must not reach `main` or the public dashboard unless it validated.
+      # `steps.validate.outcome` is the pre-continue-on-error result, so it is
+      # 'failure' on a real validation failure and 'skipped' if an earlier step
+      # (e.g. the FRED pull) died — neither of which is 'success'.
       - name: Commit and push if data changed
         id: commit
-        if: always()
+        if: always() && steps.validate.outcome == 'success'
         run: |
           if git diff --quiet -- public/data/economic_indicators.csv public/data/data_status.json; then
             echo "No data change detected."
@@ -172,5 +178,5 @@ jobs:
       - name: Mark run failed when validation fails
         if: steps.validate.outcome == 'failure'
         run: |
-          echo "::error::Validation failed. See the uploaded artifact and issue comment for details."
+          echo "::error::Validation failed. The refreshed data was NOT committed and NOT deployed — main and the live dashboard still hold the last good snapshot. See the uploaded artifact and issue comment for details."
           exit 1
