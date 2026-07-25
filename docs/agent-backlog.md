@@ -29,8 +29,8 @@ Score = Impact + Confidence + Risk Reduction - Effort
 - ~~`[→ paul]` Decide whether to re-enable the two disabled workflows (R1).~~
   **Closed 2026-07-24** — Paul authorized; both workflows re-enabled, refresh
   dispatched and passed, site republished on fresh data. See R1 under Resolved.
-  **The pipeline is now live and running weekdays at 13:15 UTC with R2 unfixed**,
-  which is why task 1 below jumped to the top.
+  The pipeline is live and running weekdays at 13:15 UTC. It was briefly live
+  with R2 unfixed; R2 was closed the same day, so the refresh now fails closed.
 - `[→ learning-loop]` **Promote the absent-run blind spot to the pack.** The
   watchtower barks on *failing* pipelines; it cannot see a workflow that is
   `disabled_manually` or a schedule that stopped firing. `economic-dashboard`
@@ -41,28 +41,7 @@ Score = Impact + Confidence + Risk Reduction - Effort
 
 ## Ready Tasks — Priority Order
 
-### 1. Gate the data commit on validation passing (closes R2)
-
-- Domain: deploy safety
-- Impact: 5 — stops bad data reaching the public dashboard
-- Confidence: 5 — a one-line `if:` change on a step that already has an id
-- Risk reduction: 5 — closes the P1
-- Effort: 1 (10 min)
-- Done criteria:
-  1. In `.github/workflows/update-data.yml`, the `Commit and push if data
-     changed` step becomes `if: always() && steps.validate.outcome == 'success'`.
-  2. The artifact upload, issue filing, and alert steps still run on failure.
-  3. A comment records *why* the commit is gated.
-- Verify: tighten a validation threshold on a scratch branch, dispatch the
-  workflow, confirm no commit lands on `main` and the alert issue still opens.
-- **Urgency raised 2026-07-24.** The intended order was "fix this, then
-  re-enable." It went the other way — Paul re-enabled first (R1 Resolved), so the
-  pipeline is now running on the weekday schedule with this gate still open. Next
-  scheduled run: 2026-07-27T13:15Z. Until this ships, a validation failure
-  publishes bad data to the public dashboard and only then alerts. **Do this
-  first, before anything else in this repo.**
-
-### 2. Add a data-freshness check that fails on absence (closes R1a)
+### 1. Add a data-freshness check that fails on absence (closes R1a)
 
 - Domain: pipeline health
 - Impact: 5 — makes a stopped pipeline visible; this is the thing that failed
@@ -86,7 +65,7 @@ Score = Impact + Confidence + Risk Reduction - Effort
   running again, so this check now has a healthy baseline to protect rather than
   a known-broken state to flag.
 
-### 3. Fix the live type error and add a typecheck gate (closes R3)
+### 2. Fix the live type error and add a typecheck gate (closes R3)
 
 - Domain: CI / build health
 - Impact: 4 — type regressions currently ship silently
@@ -102,7 +81,7 @@ Score = Impact + Confidence + Risk Reduction - Effort
      to fold it into the standard local gate.
 - Verify: `npx tsc --noEmit` exits 0; CI shows the step.
 
-### 4. Gate the Pages deploy on tests (closes R4)
+### 3. Gate the Pages deploy on tests (closes R4)
 
 - Domain: deploy readiness
 - Impact: 4
@@ -116,7 +95,7 @@ Score = Impact + Confidence + Risk Reduction - Effort
   workflow actually publishes runs `npm test` before building.
 - Verify: a failing test blocks a publish.
 
-### 5. Add an ESLint flat config and a lint gate (closes R5)
+### 4. Add an ESLint flat config and a lint gate (closes R5)
 
 - Domain: CI / build health
 - Impact: 2 · Confidence: 4 · Risk reduction: 2 · Effort: 2
@@ -127,7 +106,7 @@ Score = Impact + Confidence + Risk Reduction - Effort
 - Note: new dev dependencies — flag per the operating loop's hard rules. Land
   after task 3 so CI isn't red on two axes at once.
 
-### 6. Add a smoke test for the dashboard render path
+### 5. Add a smoke test for the dashboard render path
 
 - Domain: test coverage
 - Impact: 3 · Confidence: 3 · Risk reduction: 2 · Effort: 3
@@ -142,6 +121,26 @@ Score = Impact + Confidence + Risk Reduction - Effort
 - Verify: `npm test` shows the new case.
 
 ## Completed
+
+### 2026-07-24 — Gate the data commit on validation passing (closes R2)
+
+- Change: `.github/workflows/update-data.yml`, commit step `if: always()` →
+  `if: always() && steps.validate.outcome == 'success'`. Run-failure message now
+  states the data was not committed or deployed.
+- Why `outcome` and not `conclusion`: `continue-on-error: true` masks the
+  validate step's *conclusion* to `success` even when it fails. `outcome` is the
+  pre-mask result. Reading `conclusion` here would have silently no-oped the gate
+  — verified in the failing run below, where conclusion=success, outcome=failure.
+- `always()` retained so the condition is evaluated rather than short-circuited;
+  a `skipped` validate (earlier step died) also fails closed.
+- Verified on throwaway branch `tmp/r2-gate-test` (deleted after) with the push,
+  deploy trigger, issue step, and Resend alert all neutered so a broken gate
+  could not reach `main` and no mail could be sent:
+  - validation fails → run `30146058767`: commit **skipped**, deploy **skipped**,
+    run red, report artifact still uploaded.
+  - validation passes → run `30146081329`: commit ran, deploy ran, run green.
+- Follow-ups: **R1a is now the top risk** — the pipeline fails closed, but
+  nothing detects it not running at all. That is task 1.
 
 ### 2026-07-24 — Onboard `economic-dashboard` to the pack (Launch Shield, first-wolf bootstrap)
 
