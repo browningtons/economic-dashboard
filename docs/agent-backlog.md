@@ -31,13 +31,18 @@ Score = Impact + Confidence + Risk Reduction - Effort
   dispatched and passed, site republished on fresh data. See R1 under Resolved.
   The pipeline is live and running weekdays at 13:15 UTC. It was briefly live
   with R2 unfixed; R2 was closed the same day, so the refresh now fails closed.
-- `[→ learning-loop]` **Promote the absent-run blind spot to the pack.** The
-  watchtower barks on *failing* pipelines; it cannot see a workflow that is
-  `disabled_manually` or a schedule that stopped firing. `economic-dashboard`
-  sat 21 days in exactly that state with a green public health badge and never
-  produced a bark. Worth a cross-repo sweep (`gh workflow list --all` per Tier-A
-  repo) and a standing watchtower check for "no run in N days" alongside the
-  existing failure check.
+- ~~`[→ learning-loop]` **Promote the absent-run blind spot to the pack.**~~
+  **Claimed 2026-07-26 by Learning Loop.** Promoted to the canonical loop as
+  [*Liveness: every check we own tests for failure, none tests for absence*](https://github.com/browningtons/mission-control/blob/main/docs/agent-operating-loop.md),
+  into `agents/launch-shield.md` (the wolf that owns CI health) and
+  `agents/learning-loop.md` (the ring-wide sweep), and filed as
+  mission-control **A19** — give every wolf a `pipeline_runs` heartbeat, the way
+  the business-arm routines already do, so a lane that stops is a one-line query.
+  **The sweep paid off on its first outing:** `base-layer` re-entered the Tier-A
+  ring on 07-24 with all four workflows — including `CI` — still
+  `disabled_manually` from its archive period, and no run of any kind since
+  2026-06-07. Filed as mission-control **A17**. This repo's own instance is the
+  one that taught the pack to look.
 
 ## Ready Tasks — Priority Order
 
