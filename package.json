@@ -11,6 +11,7 @@
     "update:data": "node scripts/update-economic-data.mjs",
     "validate:data": "node scripts/validate-economic-data.mjs",
     "alert:data": "node scripts/send-validation-alert.mjs",
+    "check:freshness": "node scripts/check-data-freshness.mjs",
     "test": "vitest run"
   },
   "dependencies": {

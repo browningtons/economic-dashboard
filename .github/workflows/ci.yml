@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+  schedule:
+    # Daily freshness sentinel (R1a): a refresh pipeline that stops firing
+    # produces no failed run, so CI must check snapshot age on the wall clock
+    # even when nobody pushes.
+    - cron: '45 14 * * *'
 
 jobs:
   verify:
@@ -17,3 +23,6 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      # R1a: fail CI when the committed data snapshot is older than the
+      # allowed window — surfaces a silently-stopped refresh pipeline.
+      - run: npm run check:freshness

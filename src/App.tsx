@@ -28,6 +28,7 @@ import DashboardView from './components/DashboardView';
 import BuffettView from './components/BuffettView';
 import ClipsView from './components/ClipsView';
 import { DASHBOARD_PRESETS } from './presets';
+import { isStatusStale } from './utils/staleness';
 import type { DashboardPreset } from './presets';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useToast } from './components/Toast';
@@ -1032,6 +1033,8 @@ export default function App() {
             notify.info('Pipeline status unavailable — freshness labels may be incomplete.');
           } else if (status.status === 'FAIL') {
             notify.warning(`Pipeline validation: ${status.failureCount ?? 0} issue(s) detected.`);
+          } else if (isStatusStale(status.generatedAt)) {
+            notify.warning('Data is stale — the refresh pipeline may have stopped running.');
           }
         }
       } catch (error) {
