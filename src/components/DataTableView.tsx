@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Card from './Card';
 import { BUILD_NOTES, BUILD_NOTES_TITLE, BUILD_VERSION, BUILD_VERSION_LABEL, BUILD_VERSION_SUMMARY } from '../buildNotes';
 import type { Cadence, DataPoint, DataSourceInfo, MetricConfig, PipelineStatus } from '../types/dashboard';
+import { STALE_AFTER_DAYS, isStatusStale } from '../utils/staleness';
 
 interface MetricHealthRow {
   id: string;
@@ -265,14 +266,23 @@ const DataTableView = React.memo(function DataTableView({ data, metrics, metricS
     return counts;
   }, [metrics.length, pipelineStatus]);
 
+  // R1a: a PASS only counts as healthy while it is recent. A refresh pipeline
+  // that stops running leaves the last PASS frozen in place — treat that as
+  // unhealthy rather than rendering it green.
+  const statusIsStale = pipelineStatus != null && isStatusStale(pipelineStatus.generatedAt, now);
+
   const pipelineHealthText = pipelineStatus?.status === 'FAIL'
     ? `${pipelineStatus.failedSeriesCount ?? 0} of ${pipelineStatus.totalSeriesCount ?? metrics.length} data sources have issues`
     : pipelineStatus?.status === 'PASS'
-      ? 'All data sources are up to date'
+      ? statusIsStale
+        ? `Last successful refresh is more than ${STALE_AFTER_DAYS} days old — the data pipeline may have stopped running`
+        : 'All data sources are up to date'
       : 'Pipeline status unavailable';
 
   const validationSummary = pipelineStatus?.status === 'PASS'
-    ? 'Latest validation passed.'
+    ? statusIsStale
+      ? 'Latest validation passed, but the result is stale.'
+      : 'Latest validation passed.'
     : pipelineStatus?.status === 'FAIL'
       ? `${pipelineStatus.failureCount ?? 0} validation issue${(pipelineStatus.failureCount ?? 0) === 1 ? '' : 's'} detected.`
       : 'Validation status unavailable.';
@@ -463,7 +473,12 @@ const DataTableView = React.memo(function DataTableView({ data, metrics, metricS
               Needs attention
             </span>
           )}
-          {pipelineStatus?.status === 'PASS' && (
+          {pipelineStatus?.status === 'PASS' && statusIsStale && (
+            <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-600">
+              Stale — pipeline may be stopped
+            </span>
+          )}
+          {pipelineStatus?.status === 'PASS' && !statusIsStale && (
             <span className="rounded-full bg-green-500/10 px-3 py-1 text-xs font-medium text-green-600">
               Healthy
             </span>
