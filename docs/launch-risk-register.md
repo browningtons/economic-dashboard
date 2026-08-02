@@ -184,8 +184,61 @@ R2 was closed later the same day — see above. **R1a remains open and is now th
 highest-severity item in the repo:** the pipeline is running and fail-closed, but
 nothing would notice if it stopped running altogether.
 
+## Trust-surface review — clean, 2026-07-30 (Trust Ledger)
+
+First Trust Ledger visit. **No change shipped, because nothing in this lane is
+wrong.** Recorded here so the next wolf doesn't re-derive it — and because a
+clean visit that leaves no trace looks identical to a visit that never
+happened.
+
+The lane's test is: *does any public claim describe behavior the code does not
+actually do?* Five surfaces checked against the **live site**, not the source:
+
+- **Freshness honesty — correct, and this is the one that matters.** R1a's fix
+  is live on `main`: `isStatusStale` (4-day window, mirroring
+  `scripts/check-data-freshness.mjs`) means a frozen `PASS` renders as stale
+  rather than healthy. That closes the exact trust hole R1 described — a green
+  badge over three-week-old data. Live `data_status.json` at review time:
+  `generatedAt: 2026-07-30T15:22Z`, `status: PASS`, `failedSeriesCount: 0/27`,
+  `nextScheduledRefreshUtc: 2026-07-31T13:15Z`.
+- **Stated cadence matches the actual schedule.** `update-data.yml` is
+  `cron: '15 13 * * 1-5'`; the published next-refresh timestamp agrees.
+- **No trackers, so no privacy gap.** The live page and all three JS bundles
+  were grepped for GA/GTM/Plausible/PostHog/Hotjar/Clarity/Segment/Sentry —
+  **zero hits.** The site collects nothing, so it owes no privacy policy. Worth
+  re-checking whenever an analytics dependency is added.
+- **Attribution is present and specific.** Every series links to its own FRED
+  page in-app, and `sources.md` maps all 27 fields to series IDs, frequency,
+  units, and transform notes.
+- **README claims match the code**, including the subtle one: *"`Stock
+  Market (b)` uses FRED `NCBCEL` as a quarterly fallback, forward-filled
+  monthly"* is exactly what the data does.
+
+**One near-miss worth recording, because the correction is the useful part.**
+Live `data_status.json` reports `latestBuffettRatio: 0`, and the live CSV has
+an empty `Stock Market (b)` for 2026-06 and 2026-07 — which reads at first
+glance like the public Buffett Indicator chart plotting a false 0%, i.e. the
+strongest possible undervaluation signal, on a dashboard whose entire purpose
+is valuation. **It does not.** Two guards prevent it:
+
+1. The CSV parser maps an empty cell to `undefined` (`!isNaN(Number(value)) &&
+   value !== ''`), not to `Number('') === 0`.
+2. `buffettValue` is only computed when both inputs are `!== undefined`, so
+   those months carry no value and the chart simply ends at 2026-05.
+
+And the empty months are *correct*: `NCBCEL` is quarterly with
+`forwardFill: 2`, so `csvLatest: 2026-05` from `sourceLatest: 2026-03` is the
+expected state, which is why validation passes it.
+
 ## Watching (not yet Active)
 
+- **`latestBuffettRatio: 0` conflates "zero" with "unavailable."** Harmless
+  today because nothing renders that field — the dashboard computes the ratio
+  from the CSV instead. It becomes a live wrong number the moment anyone
+  surfaces it in the UI or an alert, and `0` is the most misleading possible
+  placeholder for this particular metric. If it is ever displayed, emit `null`
+  and render "unavailable". Filed by Trust Ledger 2026-07-30; not Active
+  because there is no current public claim to be wrong.
 - **Dev-toolchain advisories.** `npm audit --omit=dev` reports **0
   vulnerabilities** — the production tree is clean. The full tree reports 3 (2
   high, 1 moderate): `vite` (path traversal in optimized-deps `.map` handling,
