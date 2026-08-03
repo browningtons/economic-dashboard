@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-07-31T15:28:22.168Z",
-  "evaluatedMonth": "2026-07",
-  "nextScheduledRefreshUtc": "2026-08-03T13:15:00.000Z",
+  "generatedAt": "2026-08-03T15:51:11.654Z",
+  "evaluatedMonth": "2026-08",
+  "nextScheduledRefreshUtc": "2026-08-04T13:15:00.000Z",
   "status": "PASS",
   "failureCount": 0,
   "warningCount": 0,
@@ -25,7 +25,7 @@
       "threshold": 0.15,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-05..2026-06",
+      "expectedReleaseWindow": "2026-06..2026-07",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -40,7 +40,7 @@
       "threshold": 1.5,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-05..2026-06",
+      "expectedReleaseWindow": "2026-06..2026-07",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -55,7 +55,7 @@
       "threshold": 350,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-04..2026-05",
+      "expectedReleaseWindow": "2026-05..2026-06",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -70,7 +70,7 @@
       "threshold": 300,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-05..2026-06",
+      "expectedReleaseWindow": "2026-06..2026-07",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -85,7 +85,7 @@
       "threshold": 400,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-05..2026-06",
+      "expectedReleaseWindow": "2026-06..2026-07",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -100,7 +100,7 @@
       "threshold": 0.2,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-05..2026-07",
+      "expectedReleaseWindow": "2026-06..2026-08",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -115,7 +115,7 @@
       "threshold": 0.15,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-06..2026-07",
+      "expectedReleaseWindow": "2026-07..2026-08",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -130,7 +130,7 @@
       "threshold": 0.15,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-06..2026-07",
+      "expectedReleaseWindow": "2026-07..2026-08",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -145,7 +145,7 @@
       "threshold": 125,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-06..2026-07",
+      "expectedReleaseWindow": "2026-07..2026-08",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -160,7 +160,7 @@
       "threshold": 0.2,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-05..2026-06",
+      "expectedReleaseWindow": "2026-06..2026-07",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -175,7 +175,7 @@
       "threshold": 1,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-03..2026-05",
+      "expectedReleaseWindow": "2026-04..2026-06",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -190,7 +190,7 @@
       "threshold": 1,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-05..2026-06",
+      "expectedReleaseWindow": "2026-06..2026-07",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -205,7 +205,7 @@
       "threshold": 10,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-03..2026-05",
+      "expectedReleaseWindow": "2026-04..2026-06",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -220,7 +220,7 @@
       "threshold": 2500,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-04..2026-06",
+      "expectedReleaseWindow": "2026-05..2026-07",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -235,7 +235,7 @@
       "threshold": 400,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-02..2026-04",
+      "expectedReleaseWindow": "2026-03..2026-05",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -250,7 +250,7 @@
       "threshold": 0.15,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-06..2026-07",
+      "expectedReleaseWindow": "2026-07..2026-08",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -265,7 +265,7 @@
       "threshold": 0.15,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-06..2026-07",
+      "expectedReleaseWindow": "2026-07..2026-08",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -280,7 +280,7 @@
       "threshold": 5,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-05..2026-06",
+      "expectedReleaseWindow": "2026-06..2026-07",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -295,7 +295,7 @@
       "threshold": 15000,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-05..2026-06",
+      "expectedReleaseWindow": "2026-06..2026-07",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -310,7 +310,7 @@
       "threshold": 2,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-04..2026-06",
+      "expectedReleaseWindow": "2026-05..2026-07",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -325,7 +325,7 @@
       "threshold": 1,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-04..2026-06",
+      "expectedReleaseWindow": "2026-05..2026-07",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -340,7 +340,7 @@
       "threshold": 0.3,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-05..2026-06",
+      "expectedReleaseWindow": "2026-06..2026-07",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -355,7 +355,7 @@
       "threshold": 30000,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-06..2026-07",
+      "expectedReleaseWindow": "2026-07..2026-08",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -370,7 +370,7 @@
       "threshold": 100,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-04..2026-06",
+      "expectedReleaseWindow": "2026-05..2026-07",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -385,7 +385,7 @@
       "threshold": 100,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-04..2026-06",
+      "expectedReleaseWindow": "2026-05..2026-07",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -400,7 +400,7 @@
       "threshold": 200000,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-04..2026-06",
+      "expectedReleaseWindow": "2026-05..2026-07",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     },
@@ -415,7 +415,7 @@
       "threshold": 1.5,
       "maxAbsDiff": "0.0000",
       "mismatchCount": 0,
-      "expectedReleaseWindow": "2026-05..2026-06",
+      "expectedReleaseWindow": "2026-06..2026-07",
       "releaseWindowStatus": "PASS",
       "releaseWindowGapMonths": 0
     }
