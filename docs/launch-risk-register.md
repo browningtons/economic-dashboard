@@ -230,6 +230,57 @@ And the empty months are *correct*: `NCBCEL` is quarterly with
 `forwardFill: 2`, so `csvLatest: 2026-05` from `sourceLatest: 2026-03` is the
 expected state, which is why validation passes it.
 
+### R6 (P1) — The embedded-CSV fallback was silent, and could render 11-month-old data under a fresh PASS — RESOLVED 2026-08-12 (User Journey)
+
+**This is R1's trust hole reached through a different pipe, and `isStatusStale`
+could not catch it.** R1a's fix asks "is the *status file* stale?" The status
+file was never the only way to show old numbers.
+
+`getCsvData()` in `src/App.tsx` tries three sources in order — the opt-in Google
+Sheet, the deployed `public/data/economic_indicators.csv`, then `RAW_CSV_DATA`,
+a CSV literal compiled into the bundle — and returns whichever answers first,
+recording nothing about which one did. The freshness label and the PASS badge
+come from a **separate** fetch of `data_status.json`. Nothing tied the two
+together.
+
+- Domain: first-run clarity / data trust
+- Evidence (read from `origin/main` at `28a8007`):
+  - `RAW_CSV_DATA` ends at **9/1/2025**; `public/data/economic_indicators.csv`
+    runs through **8/1/2026** — an **11-month** gap.
+  - `data_status.json` at the time: `generatedAt: 2026-08-11T14:33:42Z`,
+    `status: PASS`, `failedSeriesCount: 0/27`.
+  - `dataWarning` state existed and was piped to `DashboardView` (rendered at
+    `DashboardView.tsx:276`) but was only ever set for malformed rows — the
+    fallback never set it.
+  - `lastUpdatedText` preferred `pipelineStatus.generatedAt` unconditionally.
+  - The `!response.ok` branch of the local-CSV fetch had no `console.warn` at
+    all, so a 404 left no trace anywhere.
+- Impact: if the CSV fetch failed while the status fetch succeeded — a flaky
+  connection, a proxy or blocker that treats `.csv` differently from `.json`, a
+  partial deploy — a first-time visitor saw a complete, confident dashboard of
+  **September-2025 data** labelled *"Last updated: Aug 11, 2026, 8:33 AM"* under
+  a green PASS, plus a `Loaded N data points` **success** toast. Nothing on
+  screen distinguished it from live data.
+- Fix: `getCsvData()` now returns a `CsvSource` discriminator
+  (`'sheet' | 'local' | 'embedded'`). New pure helper `src/utils/dataSource.ts`
+  owns the two decisions, so they are unit-testable without a DOM:
+  - `pipelineFreshnessAppliesTo(source)` — `lastUpdatedText` now falls through to
+    the last observation actually plotted instead of the pipeline's run time,
+    and the PASS/stale toasts are suppressed, when the rows are the bundled
+    snapshot. **The status file describes a run that never touched that data.**
+  - `fallbackWarning(source, latestPointLabel)` — sets `dataWarning` (finally
+    wiring up the banner that already existed) naming where the snapshot ends,
+    and fires a warning toast instead of the success toast.
+  - `!response.ok` on the local CSV now warns to the console with the status.
+- Verification: `npx vitest run` → 23 passed / 3 files (8 new in
+  `src/utils/dataSource.test.ts`, covering both decisions and the
+  unknown-last-observation case). `npm run build` green; both new strings are
+  present in `dist/assets/*.js`, so the path is compiled and reachable.
+- **Not verified in a live browser** — this wolf cannot drive one, and the repo
+  has no jsdom/testing-library, so the *wiring* (App state → banner) is argued
+  from the source, not executed. The decision logic underneath it is tested.
+  See the `[→ launch-shield]` handoff in the backlog for closing that gap.
+
 ## Watching (not yet Active)
 
 - **`latestBuffettRatio: 0` conflates "zero" with "unavailable."** Harmless
