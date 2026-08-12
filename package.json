@@ -12,6 +12,7 @@
     "validate:data": "node scripts/validate-economic-data.mjs",
     "alert:data": "node scripts/send-validation-alert.mjs",
     "check:freshness": "node scripts/check-data-freshness.mjs",
+    "audit:deps": "npm audit --omit=dev --audit-level=low",
     "test": "vitest run"
   },
   "dependencies": {

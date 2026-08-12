@@ -1,0 +1,45 @@
+####
+# Scheduled dependency audit.
+#
+# CI (ci.yml) already runs `npm run audit:deps`, but only on push and
+# pull_request. That means it can only ever catch an advisory that is already
+# published *at the moment someone happens to push* — and this repo can sit
+# quiet for weeks between data-pipeline commits. A quiet repo is not a safe
+# repo, it is an unaudited one.
+#
+# This workflow runs the same gate on a clock, so detection is bounded by the
+# schedule instead of by commit activity. It deliberately runs `npm run
+# audit:deps` — the identical script CI uses — so the scheduled gate and the
+# push gate cannot drift apart.
+#
+# A failing run here is picked up by the watchtower's pipeline sweep and barks
+# like any other red workflow; a run that stops appearing barks as "went silent."
+####
+name: Dependency audit
+
+on:
+  schedule:
+    # Daily at 12:00 UTC. Clear of the repo's other crons (data refresh 13:15
+    # UTC weekdays, CI freshness sentinel 14:45 UTC) so the runs don't cluster.
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    name: Audit production dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Also catches a lockfile that no longer resolves — a yanked or removed
+      # version is a dependency-safety failure even when no advisory exists.
+      - run: npm ci
+
+      - name: Audit (production deps only)
+        run: npm run audit:deps
