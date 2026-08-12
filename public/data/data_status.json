@@ -8,7 +8,7 @@
   "failedSeriesCount": 0,
   "totalSeriesCount": 27,
   "latestDataMonth": "2026-08",
-  "latestBuffettRatio": 0,
+  "latestBuffettRatio": null,
   "failures": [],
   "warnings": [],
   "topAlerts": [],

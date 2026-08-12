@@ -10,6 +10,7 @@ import {
   multiplierForUnits,
   parseCsvRow,
   parseCsvNumber,
+  computeBuffettRatio,
 } from './validate-economic-data.mjs';
 
 // These tests cover the trust-path logic the FRED dashboard relies on:
@@ -91,5 +92,25 @@ describe('CSV parsing primitives', () => {
     expect(multiplierForUnits('billions')).toBe(1);
     expect(multiplierForUnits('millions')).toBe(0.001);
     expect(multiplierForUnits('trillions')).toBe(1000);
+  });
+});
+
+describe('Buffett ratio — a missing input must never publish as 0', () => {
+  it('returns null when the stock-market cell is blank (the misleading-0 bug)', () => {
+    // parseCsvNumber('') is null, not Number('') === 0. Guard against a blank
+    // stock cell surfacing as a real-looking 0% market-cap-to-GDP ratio.
+    expect(computeBuffettRatio(31865.721, parseCsvNumber(''))).toBeNull();
+    expect(computeBuffettRatio(31865.721, null)).toBeNull();
+  });
+
+  it('returns null when GDP is missing or non-positive', () => {
+    expect(computeBuffettRatio(null, 69511.628)).toBeNull();
+    expect(computeBuffettRatio(0, 69511.628)).toBeNull();
+    expect(computeBuffettRatio(-1, 69511.628)).toBeNull();
+  });
+
+  it('computes the ratio as a percentage, rounded to 4 dp, when both are present', () => {
+    expect(computeBuffettRatio(100, 200)).toBe(200);
+    expect(computeBuffettRatio(31865.721, 69511.628)).toBe(218.1392);
   });
 });
