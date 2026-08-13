@@ -26,6 +26,22 @@ Score = Impact + Confidence + Risk Reduction - Effort
 
 ## Handoffs
 
+- `[→ launch-shield]` **Nothing checks that the deployed site actually serves
+  `data/economic_indicators.csv`.** R6 (see the register) fixed the *symptom* —
+  the app now says so when it falls back to the bundled snapshot — but nothing
+  detects the *trigger*. A post-deploy check that fetches
+  `https://browningtons.github.io/economic-dashboard/data/economic_indicators.csv`
+  and asserts HTTP 200 plus a last row within ~40 days would catch a missing or
+  truncated data file before a visitor does. This is the same absence-shaped
+  blind spot as R1a, one layer out: R1a asks whether the pipeline ran, this asks
+  whether its output actually reached the CDN. Filed 2026-08-12 by User Journey.
+- `[→ trust-ledger]` **Re-read the freshness surface after R6.** Your 2026-07-30
+  review checked `isStatusStale` against the live site and correctly called it
+  clean; R6 is the case that review could not see, because it only appears when
+  the CSV and status fetches disagree. The header no longer dates bundled rows
+  with the pipeline's run time — worth a look on your next visit to confirm the
+  copy reads honestly in that state. Filed 2026-08-12 by User Journey.
+
 - ~~`[→ paul]` Decide whether to re-enable the two disabled workflows (R1).~~
   **Closed 2026-07-24** — Paul authorized; both workflows re-enabled, refresh
   dispatched and passed, site republished on fresh data. See R1 under Resolved.
@@ -126,6 +142,40 @@ Score = Impact + Confidence + Risk Reduction - Effort
 - Verify: `npm test` shows the new case.
 
 ## Completed
+
+### 2026-08-12 — Make the embedded-CSV fallback visible (closes R6)
+
+- First User Journey visit to this repo. No bark, no `[→ user-journey]` handoff,
+  no open P0 — all four open risks (R1a, R3, R4, R5) are pipeline/CI work in
+  other lanes — so this was a first-run walk of the deployed journey, traced in
+  source.
+- Found: the app silently falls back to a CSV literal compiled into the bundle
+  (last observation **9/2025**, vs **8/2026** live) while the freshness label and
+  PASS badge read from a *separate* `data_status.json` fetch that can succeed
+  independently. Result: 11-month-old numbers under "Last updated: Aug 11, 2026"
+  and a green PASS, with a `Loaded N data points` success toast. Full evidence in
+  R6.
+- Change: `src/utils/dataSource.ts` (new, pure) +
+  `src/utils/dataSource.test.ts` (new, 8 cases) + `src/App.tsx` wiring.
+  `getCsvData()` now reports which source answered; freshness is attributed to
+  the source that produced the rows on screen; the long-dead `dataWarning`
+  banner is finally set; the success toast becomes a warning; the `!response.ok`
+  path gets a `console.warn`.
+- Why a separate pure module rather than inline conditionals: `vitest.config.mjs`
+  runs in a `node` environment and the repo has no jsdom or testing-library, so
+  logic embedded in the component is untestable here. Extracting the two
+  decisions follows the `src/utils/staleness.ts` precedent and makes them
+  regression-tested. **Adding jsdom was out of scope for one session and would
+  have been a new dev dependency** — flagged rather than taken.
+- Verify: `npx vitest run` → 23 passed / 3 files. `npm run build` green.
+  `grep -o "Live data could not be loaded" dist/assets/*.js` matches.
+- Note: `npx tsc --noEmit` **could not be run** — TypeScript is not installed in
+  this repo at all, which is consistent with R3 ("CI never typechecks") and means
+  R3's recorded `DashboardView.tsx:458` error was not re-confirmed this session.
+  The Vite build transpiles clean.
+- Follow-ups filed: `[→ launch-shield]` (detect the trigger, not just the
+  symptom) and `[→ trust-ledger]` (re-read the freshness copy in the fallback
+  state) — both under Handoffs.
 
 ### 2026-07-24 — Gate the data commit on validation passing (closes R2)
 
