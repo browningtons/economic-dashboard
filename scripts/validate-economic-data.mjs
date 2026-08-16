@@ -86,6 +86,18 @@ function parseCsvNumber(raw) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
+// Market-cap-to-GDP ("Buffett ratio"), as a percentage. Returns null whenever
+// either input is missing or GDP is non-positive. A blank CSV cell must never be
+// published as a valuation: `Number('')` is 0 (and passes Number.isFinite), so
+// an empty stock-market cell used to surface as a very-real-looking 0% ratio.
+// Callers pass values already run through parseCsvNumber, which maps blanks to
+// null, so a genuinely-missing input yields null here rather than a fake 0.
+function computeBuffettRatio(latestGdp, latestStock) {
+  if (latestGdp === null || latestStock === null) return null;
+  if (!(latestGdp > 0)) return null;
+  return Number(((latestStock / latestGdp) * 100).toFixed(4));
+}
+
 function addMonths(monthKey, delta) {
   const [year, month] = monthKey.split('-').map(Number);
   const date = new Date(Date.UTC(year, month - 1 + delta, 1));
@@ -678,11 +690,9 @@ async function main() {
 
   const latestMonth = csvMonths.at(-1) ?? null;
   const latestRow = latestMonth ? rowByMonth.get(latestMonth) : null;
-  const latestGdp = latestRow && gdpIndex !== -1 ? Number(latestRow[gdpIndex]) : null;
-  const latestStock = latestRow && stockIndex !== -1 ? Number(latestRow[stockIndex]) : null;
-  const latestBuffett = Number.isFinite(latestGdp) && Number.isFinite(latestStock) && latestGdp > 0
-    ? (latestStock / latestGdp) * 100
-    : null;
+  const latestGdp = latestRow && gdpIndex !== -1 ? parseCsvNumber(latestRow[gdpIndex]) : null;
+  const latestStock = latestRow && stockIndex !== -1 ? parseCsvNumber(latestRow[stockIndex]) : null;
+  const latestBuffett = computeBuffettRatio(latestGdp, latestStock);
 
   const topAlerts = [
     ...topInvestigations.map((item) => ({
@@ -721,7 +731,7 @@ async function main() {
     failedSeriesCount: summaries.filter((item) => item.status === 'FAIL').length,
     totalSeriesCount: summaries.length,
     latestDataMonth: latestMonth,
-    latestBuffettRatio: latestBuffett !== null ? Number(latestBuffett.toFixed(4)) : null,
+    latestBuffettRatio: latestBuffett,
     failures,
     warnings,
     topAlerts,
@@ -764,6 +774,7 @@ export {
   parseObservedMonth,
   parseCsvRow,
   parseCsvNumber,
+  computeBuffettRatio,
   addMonths,
   monthDiff,
   compareMonthKeys,

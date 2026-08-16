@@ -283,26 +283,39 @@ together.
 
 ## Watching (not yet Active)
 
-- **`latestBuffettRatio: 0` conflates "zero" with "unavailable."** Harmless
-  today because nothing renders that field — the dashboard computes the ratio
-  from the CSV instead. It becomes a live wrong number the moment anyone
-  surfaces it in the UI or an alert, and `0` is the most misleading possible
-  placeholder for this particular metric. If it is ever displayed, emit `null`
-  and render "unavailable". Filed by Trust Ledger 2026-07-30; not Active
-  because there is no current public claim to be wrong.
-- **Dev-toolchain advisories.** `npm audit --omit=dev` reports **0
-  vulnerabilities** — the production tree is clean. The full tree reports 3 (2
-  high, 1 moderate): `vite` (path traversal in optimized-deps `.map` handling,
-  `server.fs.deny` bypass on Windows), `postcss` (source-map path traversal),
-  `esbuild` (dev-server request forwarding). All are dev-server/build-time only
-  and this app ships as static files with no server. Remediation is a Vite major
-  bump — breaking, and not worth doing ahead of R1–R4. Re-check each visit.
-- **Lockfile drift, apparently already handled.** `package.json` carries
-  `overrides` pinning `@emnapi/core`, `@emnapi/runtime`, `@emnapi/wasi-threads`
-  — the pack's known mac-prunes-emnapi-from-lock failure that breaks `npm ci` on
-  Linux CI. `npm ci` succeeds locally and CI passed on 2026-07-08, so the
-  override is holding. Two **unpushed local branches** (`fix/lockfile-sync`,
-  `fix/lockfile-linux-emnapi`) still exist in Paul's checkout and appear
-  superseded — confirm before pruning.
+- **`latestBuffettRatio: 0` conflates "zero" with "unavailable." — RESOLVED
+  2026-08-12.** Was harmless because nothing renders that field — the dashboard
+  computes the ratio from the CSV instead — but `0` is the most misleading
+  possible placeholder for this metric, a live wrong number the moment anyone
+  surfaces it in the UI or an alert. Filed by Trust Ledger 2026-07-30. **Fix:**
+  the generator now routes the latest GDP/stock cells through `parseCsvNumber`
+  (blank → `null`) and a `computeBuffettRatio` helper that returns `null` for any
+  missing or non-positive input, so a blank `Stock Market (b)` cell can no longer
+  coerce via `Number('') === 0` into a fake 0% ratio. `data_status.json` now
+  emits `null`; regression-tested in `validate-economic-data.test.mjs`.
+- **Dev-toolchain advisories — now gated automatically.** `npm audit
+  --omit=dev` reports **0 vulnerabilities** — the production tree is clean. The
+  full tree reports 4 (3 high, 1 moderate): `vite`, `postcss`, `esbuild`, and
+  `nanoid` — all dev-server/build-time only, and this app ships as static files
+  with no server. Remediation is a Vite major bump — breaking, and not worth
+  doing ahead of R1–R4. As of 2026-08-12 the production-tree audit no longer
+  depends on a manual re-check: `npm run audit:deps`
+  (`npm audit --omit=dev --audit-level=low`) runs on every push/PR in `ci.yml`
+  **and** daily via `dependency-audit.yml`, sharing one script so the two gates
+  cannot drift. A new production advisory now fails CI or barks from the
+  scheduled run within a day. The dev-only advisories above stay intentionally
+  out of scope (`--omit=dev`).
+- **Lockfile drift, already handled; superseded branches pruned 2026-08-12.**
+  `package.json` carries `overrides` pinning `@emnapi/core`, `@emnapi/runtime`,
+  `@emnapi/wasi-threads` — the pack's known mac-prunes-emnapi-from-lock failure
+  that breaks `npm ci` on Linux CI. `npm ci` succeeds locally and in CI, so the
+  override is holding. The two superseded local branches were confirmed contained
+  on `main` and deleted: `fix/lockfile-sync` landed via merged PR #11 (its
+  `package-lock.json` blob is identical to the #11 merge commit; `git cherry`
+  shows a patch-id match on `main`), and `fix/lockfile-linux-emnapi` via merged
+  PR #12 (its `package-lock.json` is byte-identical to current `main`, and the
+  overrides are present). `fix/r1a-freshness-detection` was **kept**, not pruned:
+  its R1a work landed via PR #17, but it still carries an un-landed "agent context
+  layer" commit (`CLAUDE.md`, `docs/agent-notes.md`) that is absent from `main`.
 - **`0.0.0` version, `private: true`.** No release identity. Cosmetic for a
   static public site; note only.

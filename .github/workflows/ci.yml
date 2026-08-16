@@ -26,3 +26,7 @@ jobs:
       # R1a: fail CI when the committed data snapshot is older than the
       # allowed window — surfaces a silently-stopped refresh pipeline.
       - run: npm run check:freshness
+      # Fail the push/PR gate on a production-dependency advisory. Runs the exact
+      # `audit:deps` script the scheduled dependency-audit.yml workflow runs, so
+      # the push gate and the daily scheduled gate can never drift apart.
+      - run: npm run audit:deps
