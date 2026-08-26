@@ -1783,7 +1783,7 @@ export default function App() {
 
           {activeTab === 'Data Table' && (
             <ErrorBoundary section="Data Table">
-              <DataTableView data={data} metrics={METRICS} metricSources={METRIC_SOURCES} now={clockNow} pipelineStatus={pipelineStatus} />
+              <DataTableView data={data} metrics={METRICS} metricSources={METRIC_SOURCES} now={clockNow} pipelineStatus={pipelineStatus} pipelineStatusApplies={pipelineFreshnessAppliesTo(csvSource)} />
             </ErrorBoundary>
           )}
 
