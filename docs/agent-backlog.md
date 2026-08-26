@@ -26,15 +26,22 @@ Score = Impact + Confidence + Risk Reduction - Effort
 
 ## Handoffs
 
-- `[→ launch-shield]` **Nothing checks that the deployed site actually serves
-  `data/economic_indicators.csv`.** R6 (see the register) fixed the *symptom* —
-  the app now says so when it falls back to the bundled snapshot — but nothing
-  detects the *trigger*. A post-deploy check that fetches
-  `https://browningtons.github.io/economic-dashboard/data/economic_indicators.csv`
-  and asserts HTTP 200 plus a last row within ~40 days would catch a missing or
-  truncated data file before a visitor does. This is the same absence-shaped
-  blind spot as R1a, one layer out: R1a asks whether the pipeline ran, this asks
-  whether its output actually reached the CDN. Filed 2026-08-12 by User Journey.
+- ~~`[→ launch-shield]` **Nothing checks that the deployed site actually serves
+  `data/economic_indicators.csv`.**~~ **Closed 2026-08-26 by Launch Shield.**
+  `scripts/check-deployed-data.mjs` fetches the live CSV, asserts HTTP 200, and
+  fails when the last row is older than 40 days. See Completed for why it
+  isn't wired into `deploy.yml` yet — `[→ paul]` below.
+- `[→ paul]` **Wire `npm run check:deployed` into `deploy.yml` — the pack's PAT
+  can't push workflow-file edits.** `git push` rejected with *"refusing to
+  allow a Personal Access Token to create or update workflow
+  `.github/workflows/deploy.yml` without `workflow` scope"* — the same class of
+  blocker Learning Loop and Launch Shield already hit on `appkit` (A8) and
+  `mission-control`'s Actions checkout. The check itself is on `main` via this
+  PR (`scripts/check-deployed-data.mjs`, `npm run check:deployed`), tested and
+  verified against the live site — only the four-line workflow addition is
+  blocked. Add a `verify` job to `.github/workflows/deploy.yml`, `needs:
+  deploy`, that checks out, sets up Node 22, and runs `npm run check:deployed`
+  (see this PR's description for the exact diff). Filed to Meseeks 2026-08-26.
 - `[→ trust-ledger]` **Re-read the freshness surface after R6.** Your 2026-07-30
   review checked `isStatusStale` against the live site and correctly called it
   clean; R6 is the case that review could not see, because it only appears when
@@ -62,31 +69,16 @@ Score = Impact + Confidence + Risk Reduction - Effort
 
 ## Ready Tasks — Priority Order
 
-### 1. Add a data-freshness check that fails on absence (closes R1a)
+> Task 1 (data-freshness check, closes R1a) shipped 2026-07-26 via
+> [#17](https://github.com/browningtons/economic-dashboard/pull/17)
+> (`scripts/check-data-freshness.mjs` + `ci.yml`'s daily cron), including its
+> UI-badge done-criterion (`src/utils/staleness.ts`'s `isStatusStale`, wired
+> into `App.tsx`/`DataTableView.tsx`, confirmed live by Trust Ledger
+> 2026-07-30). It was never moved out of Ready or into Completed, and R1a was
+> never moved to Resolved in the register — both fixed this visit; see
+> Completed and the register's R1a entry.
 
-- Domain: pipeline health
-- Impact: 5 — makes a stopped pipeline visible; this is the thing that failed
-- Confidence: 4 — straightforward, but the threshold needs judgment around
-  weekday-only scheduling and holidays
-- Risk reduction: 5 — converts a silent 21-day outage into a red check
-- Effort: 2 (25 min)
-- Done criteria:
-  1. A script (or a vitest case alongside
-     `scripts/validate-economic-data.test.mjs`) reads
-     `public/data/data_status.json` and fails when `generatedAt` is older than a
-     configurable max age (~4 days covers a weekend plus one missed weekday).
-  2. It runs in `ci.yml`, so it fails on *any* push — not only inside the
-     refresh job that might not fire.
-  3. The UI's health badge reflects staleness too: a `PASS` older than the
-     threshold should not render as healthy. (If the badge change is more than a
-     trivial edit, split it out and file it `[→ user-journey]`.)
-- Verify: `generatedAt` backdated in a fixture → check fails; current file
-  (`2026-07-25T04:22:34Z`) → passes.
-- Note: R1 being resolved makes this *more* valuable, not less — the pipeline is
-  running again, so this check now has a healthy baseline to protect rather than
-  a known-broken state to flag.
-
-### 2. Fix the live type error and add a typecheck gate (closes R3)
+### 1. Fix the live type error and add a typecheck gate (closes R3)
 
 - Domain: CI / build health
 - Impact: 4 — type regressions currently ship silently
@@ -102,21 +94,30 @@ Score = Impact + Confidence + Risk Reduction - Effort
      to fold it into the standard local gate.
 - Verify: `npx tsc --noEmit` exits 0; CI shows the step.
 
-### 3. Gate the Pages deploy on tests (closes R4)
+### 2. Gate the Pages deploy on tests (closes R4)
 
 - Domain: deploy readiness
 - Impact: 4
-- Confidence: 2 — **investigate first.** `deploy.yml` is disabled while
-  `pages-build-deployment` is active and a `gh-pages` branch exists, so the
-  actual publish path is ambiguous. Confirm whether Pages source is "GitHub
-  Actions" or "deploy from branch" before rewiring.
+- Confidence: 4 — the publish path is no longer ambiguous, on two independent
+  confirmations: the register's R4 entry (2026-07-24, run `30143917658`) and
+  this visit (2026-08-26) diffing the live `index.html`'s hashed asset
+  filenames against a local `npm run build` — they match byte-for-byte, and
+  don't match raw unbuilt `main`-branch source. `deploy.yml`'s `deploy` job
+  (`actions/deploy-pages@v4`) is the real publisher; `gh-pages` branch and
+  `pages-build-deployment` are stale vestiges from before the Actions
+  migration, not the live path — this task's old "investigate first" line was
+  itself stale, since R4 answered the question a month ago and nobody updated
+  this entry to match.
 - Risk reduction: 3
 - Effort: 2
-- Done criteria: the publish path is documented in this repo, and whichever
-  workflow actually publishes runs `npm test` before building.
-- Verify: a failing test blocks a publish.
+- Done criteria: `deploy.yml`'s `build` job runs `npm test` (and, once task 1
+  lands, `npx tsc --noEmit`) before `npm run build`, so a broken test fails
+  the workflow before `upload-pages-artifact` runs.
+- Verify: a failing test blocks a publish (push a temporarily-broken test on a
+  throwaway branch/dispatch, confirm the `build` job goes red before
+  `deploy-pages` runs, then revert).
 
-### 4. Add an ESLint flat config and a lint gate (closes R5)
+### 3. Add an ESLint flat config and a lint gate (closes R5)
 
 - Domain: CI / build health
 - Impact: 2 · Confidence: 4 · Risk reduction: 2 · Effort: 2
@@ -125,9 +126,9 @@ Score = Impact + Confidence + Risk Reduction - Effort
   chosen rule set (warnings acceptable initially).
 - Verify: `npm run lint` exits 0.
 - Note: new dev dependencies — flag per the operating loop's hard rules. Land
-  after task 3 so CI isn't red on two axes at once.
+  after task 2 so CI isn't red on two axes at once.
 
-### 5. Add a smoke test for the dashboard render path
+### 4. Add a smoke test for the dashboard render path
 
 - Domain: test coverage
 - Impact: 3 · Confidence: 3 · Risk reduction: 2 · Effort: 3
@@ -142,6 +143,38 @@ Score = Impact + Confidence + Risk Reduction - Effort
 - Verify: `npm test` shows the new case.
 
 ## Completed
+
+### 2026-08-26 — Detect the CDN not serving current data (closes the `[→ launch-shield]` handoff)
+
+- Claimed the `[→ launch-shield]` handoff User Journey filed 2026-08-12: R1a's
+  freshness check (`check-data-freshness.mjs`) only reads the *committed*
+  `data_status.json` on the wall clock, so it catches a stopped refresh
+  pipeline but not a refresh that ran and committed fine while its output
+  never reached the CDN (a bad Pages deploy, a caching layer serving a stale
+  artifact, a truncated upload).
+- Change: `scripts/check-deployed-data.mjs` (new, pure `checkDeployedData()` +
+  CLI wrapper, mirrors `check-data-freshness.mjs`'s shape) fetches the live
+  `https://browningtons.github.io/economic-dashboard/data/economic_indicators.csv`,
+  asserts HTTP 200, and fails when the last row's Observed Date is older than
+  40 days. `scripts/check-deployed-data.test.mjs` (7 cases, fetch mocked —
+  200/404/network-error/empty-body/custom-threshold). New `npm run
+  check:deployed` script.
+- **Not wired into CI in this change.** A `verify` job on `deploy.yml`,
+  `needs: deploy`, was written and tested locally, but `git push` was rejected:
+  *"refusing to allow a Personal Access Token to create or update workflow
+  `.github/workflows/deploy.yml` without `workflow` scope"* — the pack's PAT
+  cannot push workflow-file edits at all, the same blocker `appkit` A8 and
+  `mission-control`'s Actions checkout already hit. Filed `[→ paul]` above
+  with the exact job to add by hand; the check itself ships and can be run
+  manually (`npm run check:deployed`) in the meantime.
+- Also reconciled two stale-documentation findings hit while reading the
+  register and backlog against the actual repo state (task 1 and task 2 in
+  Ready Tasks, R1a in the register) — see those entries for detail. Both were
+  real work already shipped (PR #17, and R4's investigation) that nobody
+  updated the docs to reflect, not new mission work.
+- Verify: `npx vitest run` → 33 passed / 4 files (was 26/3). `npm run build`
+  green. `node scripts/check-deployed-data.mjs` against the real live URL →
+  `Deployed CSV is fresh: last row is 25.6 days old (max 40).`, exit 0.
 
 ### 2026-08-12 — Make the embedded-CSV fallback visible (closes R6)
 

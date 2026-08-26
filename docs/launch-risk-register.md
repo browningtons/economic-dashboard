@@ -16,29 +16,6 @@ observed directly — commands and outputs are recorded as evidence.
 
 ## Active Risks
 
-### R1a (P1) — Nothing detects a pipeline that stops running
-
-**This is the unresolved half of R1** (the outage itself is fixed — see Resolved).
-The 21-day outage was invisible because every check in this repo and in the
-watchtower pack keys on a run that *fails*. A workflow that is
-`disabled_manually`, or a cron schedule that stops firing, produces no failed run
-and therefore no signal. The dashboard kept rendering a `PASS` badge the whole
-time.
-
-Re-enabling the workflows restored the data but did **not** close this. The exact
-same outage can recur tomorrow and would again go unnoticed for weeks.
-
-- Domain: pipeline health / observability
-- Evidence: between 2026-07-03 and 2026-07-24 the repo produced zero alerts, zero
-  auto-filed issues, and zero watchtower barks while publicly serving stale data.
-  `send-validation-alert.mjs` and the "Data validation alert" issue flow both hang
-  off `steps.validate.outcome == 'failure'`, which requires the job to have run.
-- Next mitigation: a wall-clock freshness check that runs *outside* the refresh
-  job — fail CI when `data_status.json.generatedAt` is older than ~4 days, so any
-  push surfaces it, and make the in-app health badge render stale-PASS as
-  unhealthy. See backlog task 2.
-- Verification: backdate `generatedAt` in a fixture → check fails.
-
 ### R3 (P2) — CI never typechecks, and a type error is already live on `main`
 
 `npm run build` is `vite build`, which transpiles without typechecking. No
@@ -180,9 +157,43 @@ Verified end to end:
 
 **What this did not fix:** R1a (nothing detects a *stopped* pipeline) and, at the
 time, R2 (validation failure did not block publish, and re-enabling armed it).
-R2 was closed later the same day — see above. **R1a remains open and is now the
-highest-severity item in the repo:** the pipeline is running and fail-closed, but
-nothing would notice if it stopped running altogether.
+R2 was closed later the same day — see above. R1a was closed two days later,
+2026-07-26 — see Resolved below; this paragraph is left as it was written, as
+a record of what was true at the time.
+
+### R1a (P1) — Nothing detects a pipeline that stops running — RESOLVED 2026-07-26
+
+**This was the unresolved half of R1.** The 21-day outage was invisible because
+every check in this repo and in the watchtower pack keyed on a run that
+*fails*. A workflow that is `disabled_manually`, or a cron schedule that stops
+firing, produces no failed run and therefore no signal. The dashboard kept
+rendering a `PASS` badge the whole time. Re-enabling the workflows (R1)
+restored the data but did not close this — the exact same outage could recur
+and again go unnoticed for weeks.
+
+**Fix (PR [#17](https://github.com/browningtons/economic-dashboard/pull/17)):**
+`scripts/check-data-freshness.mjs` reads `data_status.json`'s `generatedAt` on
+the wall clock — outside the refresh job, so it runs on *any* CI trigger
+including `ci.yml`'s own daily `45 14 * * *` cron, not only when the refresh
+pipeline happens to fire. `npm run check:freshness` fails when the snapshot is
+older than 4 days. The in-app health badge got the same treatment separately:
+`src/utils/staleness.ts`'s `isStatusStale` renders a stale `PASS` as unhealthy
+rather than healthy, wired into `App.tsx` and `DataTableView.tsx`.
+
+**Verification:** `scripts/check-data-freshness.test.mjs` backdates
+`generatedAt` in a fixture and asserts the check fails; the current committed
+file passes. Confirmed live this session (2026-08-26) — `data_status.json`'s
+`generatedAt` is same-day, and `ci.yml`'s daily cron run is green.
+
+**This section was stale for a month.** Active Risks and the R1 note above
+both kept saying R1a was open, even though two later entries in this same file
+(Trust-surface review, 2026-07-30, and R6, 2026-08-12) already referred to
+"R1a's fix" as landed — the fix and the register disagreed with each other for
+weeks and nobody reconciled them until this visit. Same root cause as the
+backlog's task-1/task-3 drift found the same session: **a register that only
+gets written forward drifts the same way a runner-copy prompt does** — grep
+for a risk's ID across the whole file, not just its own Active-Risks heading,
+before trusting its placement.
 
 ## Trust-surface review — clean, 2026-07-30 (Trust Ledger)
 
