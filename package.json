@@ -14,6 +14,7 @@
     "check:freshness": "node scripts/check-data-freshness.mjs",
     "check:deployed": "node scripts/check-deployed-data.mjs",
     "audit:deps": "npm audit --omit=dev --audit-level=low",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
@@ -32,6 +33,7 @@
     "baseline-browser-mapping": "^2.10.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
+    "typescript": "^7.0.2",
     "vite": "^5.4.0",
     "vitest": "^4.1.8"
   },

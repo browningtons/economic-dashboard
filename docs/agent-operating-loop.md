@@ -39,9 +39,12 @@ of the product, not decoration.
 3. Ship the chosen item in one focused change:
    - Make the edit.
    - Add or update tests so the change is covered.
-   - Run the local gate: `npm test && npm run build`. There is no `npm run
-     verify` aggregate in this repo yet, and **no lint or typecheck step at
-     all** — see R3/R5. Add `npx tsc --noEmit` by hand until R3 is closed.
+   - Run the local gate: `npm test && npm run typecheck && npm run build`.
+     There is no `npm run verify` aggregate in this repo yet, and **no lint
+     step** — see R5. `typecheck` (`tsc --noEmit`) is part of the local gate
+     (closes R3) but **not yet wired into `ci.yml`** — the pack's PAT can't
+     push workflow-file edits; see the `[→ paul]` handoff in
+     `agent-backlog.md`. Add `npm run lint` here too once R5 lands.
    - Update any doc the change invalidates (README, [metrics.md](metrics.md),
      `sources.md`).
 4. Move the backlog item to **Completed** with a dated entry: files touched,

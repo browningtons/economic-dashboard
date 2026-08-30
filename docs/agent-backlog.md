@@ -42,6 +42,17 @@ Score = Impact + Confidence + Risk Reduction - Effort
   blocked. Add a `verify` job to `.github/workflows/deploy.yml`, `needs:
   deploy`, that checks out, sets up Node 22, and runs `npm run check:deployed`
   (see this PR's description for the exact diff). Filed to Meseeks 2026-08-26.
+- `[→ paul]` **Wire `npm run typecheck` into `ci.yml` — same PAT `workflow`
+  scope blocker as above.** `git push` rejected pushing this branch's
+  `.github/workflows/ci.yml` edit with the identical error. `tsc --noEmit`
+  is fixed and the script ships on `main` via this PR (closes R3) — only a
+  one-line workflow addition is blocked. Add, after the existing `npm test`
+  step in `.github/workflows/ci.yml`:
+  ```yaml
+        - run: npm run typecheck
+  ```
+  (before `npm run build`, so a type error fails fast). Filed to Meseeks
+  2026-08-30.
 - `[→ trust-ledger]` **Re-read the freshness surface after R6.** Your 2026-07-30
   review checked `isStatusStale` against the live site and correctly called it
   clean; R6 is the case that review could not see, because it only appears when
@@ -78,23 +89,7 @@ Score = Impact + Confidence + Risk Reduction - Effort
 > never moved to Resolved in the register — both fixed this visit; see
 > Completed and the register's R1a entry.
 
-### 1. Fix the live type error and add a typecheck gate (closes R3)
-
-- Domain: CI / build health
-- Impact: 4 — type regressions currently ship silently
-- Confidence: 4 — the error is a Recharts label-renderer signature mismatch;
-  the fix is narrowing the return type, not a redesign
-- Risk reduction: 4
-- Effort: 2 (25 min)
-- Done criteria:
-  1. `src/components/DashboardView.tsx:458` typechecks — the custom label
-     renderer returns a `ReactElement`, not `ReactNode`.
-  2. `"typecheck": "tsc --noEmit"` added to `package.json` scripts.
-  3. `ci.yml` runs it, and `docs/agent-operating-loop.md`'s gate line is updated
-     to fold it into the standard local gate.
-- Verify: `npx tsc --noEmit` exits 0; CI shows the step.
-
-### 2. Gate the Pages deploy on tests (closes R4)
+### 1. Gate the Pages deploy on tests (closes R4)
 
 - Domain: deploy readiness
 - Impact: 4
@@ -110,14 +105,15 @@ Score = Impact + Confidence + Risk Reduction - Effort
   this entry to match.
 - Risk reduction: 3
 - Effort: 2
-- Done criteria: `deploy.yml`'s `build` job runs `npm test` (and, once task 1
-  lands, `npx tsc --noEmit`) before `npm run build`, so a broken test fails
-  the workflow before `upload-pages-artifact` runs.
+- Done criteria: `deploy.yml`'s `build` job runs `npm test` and
+  `npm run typecheck` (now in `package.json`, closed 2026-08-30) before
+  `npm run build`, so a broken test or type error fails the workflow before
+  `upload-pages-artifact` runs.
 - Verify: a failing test blocks a publish (push a temporarily-broken test on a
   throwaway branch/dispatch, confirm the `build` job goes red before
   `deploy-pages` runs, then revert).
 
-### 3. Add an ESLint flat config and a lint gate (closes R5)
+### 2. Add an ESLint flat config and a lint gate (closes R5)
 
 - Domain: CI / build health
 - Impact: 2 · Confidence: 4 · Risk reduction: 2 · Effort: 2
@@ -126,9 +122,9 @@ Score = Impact + Confidence + Risk Reduction - Effort
   chosen rule set (warnings acceptable initially).
 - Verify: `npm run lint` exits 0.
 - Note: new dev dependencies — flag per the operating loop's hard rules. Land
-  after task 2 so CI isn't red on two axes at once.
+  after task 1 so CI isn't red on two axes at once.
 
-### 4. Add a smoke test for the dashboard render path
+### 3. Add a smoke test for the dashboard render path
 
 - Domain: test coverage
 - Impact: 3 · Confidence: 3 · Risk reduction: 2 · Effort: 3
@@ -143,6 +139,31 @@ Score = Impact + Confidence + Risk Reduction - Effort
 - Verify: `npm test` shows the new case.
 
 ## Completed
+
+### 2026-08-30 — Fix the live type error and add a typecheck gate (closes R3)
+
+- Change: narrowed `renderReferenceLabel`'s prop type in
+  `src/components/DashboardView.tsx` from `React.ReactNode` to
+  `React.ReactElement` — every real caller (`App.tsx`) always returns a
+  `<RenderLabel>` element, so the broader `ReactNode` (which also admits
+  `bigint`, `string`, etc.) was wrong, not the Recharts `label` prop's
+  narrower `ImplicitLabelType`. Added `typescript` as a dev dependency and
+  `"typecheck": "tsc --noEmit"` in `package.json`, and folded it into
+  `docs/agent-operating-loop.md`'s local gate line.
+- **Not wired into `ci.yml` in this change** — same PAT `workflow`-scope
+  blocker as the `check:deployed` handoff above; `git push` rejected the
+  workflow-file edit. Filed `[→ paul]` above with the exact one-line diff;
+  the script ships and runs manually (`npm run typecheck`) in the meantime.
+- Verify: `npx tsc --noEmit` exits 0. `npx vitest run` → 33 passed / 4 files
+  (unchanged). `npm run build` green. `npm audit --omit=dev` → 0
+  vulnerabilities.
+- Note: this repo had no `typescript` package at all despite `.tsx` sources
+  and a `tsconfig.json` — Vite's build only transpiles, never typechecks, so
+  the gap was invisible to every existing check. The typecheck task was
+  already documented in Ready Tasks (the operating loop's "flag a new
+  dependency in the backlog first" rule), so adding the dependency here
+  fulfills that flag rather than skipping it.
+- Follow-up: task 1 (deploy gate, closes R4) now references this gate.
 
 ### 2026-08-26 — Detect the CDN not serving current data (closes the `[→ launch-shield]` handoff)
 

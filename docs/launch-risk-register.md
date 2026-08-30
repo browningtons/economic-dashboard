@@ -16,28 +16,6 @@ observed directly — commands and outputs are recorded as evidence.
 
 ## Active Risks
 
-### R3 (P2) — CI never typechecks, and a type error is already live on `main`
-
-`npm run build` is `vite build`, which transpiles without typechecking. No
-`tsc --noEmit` exists in any script or workflow. A real error is currently on
-`main` and ships undetected.
-
-- Domain: CI / build health
-- Evidence:
-  ```
-  $ npx tsc --noEmit
-  src/components/DashboardView.tsx(458,21): error TS2322:
-    Type '(props: any) => ReactNode' is not assignable to type 'ImplicitLabelType | undefined'.
-  ```
-  `npm run build` exits 0 on the same tree.
-- Impact: type regressions in a 2,292-module React app reach production silently.
-  `tsconfig.json` already sets `noImplicitAny` and `strictNullChecks`, so the
-  intent to typecheck exists — only the gate is missing.
-- Next mitigation: fix the `DashboardView.tsx:458` label-renderer typing, add a
-  `"typecheck": "tsc --noEmit"` script, and add it to `ci.yml`. Fix and gate in
-  the same change, or CI goes red on merge.
-- Verification: `npx tsc --noEmit` exits 0; CI shows a typecheck step.
-
 ### R4 (P2) — The Pages deploy is not gated on CI; failing tests do not stop a publish
 
 `ci.yml` and `deploy.yml` both trigger on push to `main` and are independent —
@@ -82,6 +60,28 @@ Sibling pack repos (`mission-control`) carry `eslint.config.js` and gate on it.
 - Verification: `npm run lint` exits 0; CI shows a lint step.
 
 ## Resolved
+
+### R3 (P2) — CI never typechecks, and a type error is already live on `main` — RESOLVED 2026-08-30
+
+`npm run build` is `vite build`, which transpiles without typechecking, so a
+real type error (`DashboardView.tsx:458` — the reference-label renderer
+declared a `React.ReactNode` return type but Recharts' `ReferenceArea.label`
+callback requires `React.ReactElement`; the implementation always returns a
+`<RenderLabel>` element) had been shipping undetected.
+
+- Fix: narrowed the `renderReferenceLabel` prop type to `React.ReactElement`
+  (`src/components/DashboardView.tsx`); added TypeScript as a dev dependency
+  with a `"typecheck": "tsc --noEmit"` script (`package.json`); folded it into
+  the local gate in `docs/agent-operating-loop.md`.
+- **Not wired into `ci.yml` in this change** — `git push` was rejected:
+  *"refusing to allow a Personal Access Token to create or update workflow
+  `.github/workflows/ci.yml` without `workflow` scope"*, the same class of
+  blocker `[→ paul]` already covers for `deploy.yml`'s `check:deployed` job.
+  Filed `[→ paul]` in `docs/agent-backlog.md` with the exact one-line diff to
+  add by hand (`- run: npm run typecheck`, after `npm test`); the script
+  itself ships and runs manually (`npm run typecheck`) in the meantime.
+- Verification: `npx tsc --noEmit` exits 0; `npm test` (33 passed / 4 files);
+  `npm run build` green.
 
 ### R2 (P1) — Validation failure did not block the commit, push, or deploy of bad data — RESOLVED 2026-07-24
 
