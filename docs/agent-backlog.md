@@ -24,6 +24,53 @@ Use this score:
 Score = Impact + Confidence + Risk Reduction - Effort
 ```
 
+## Radical bets
+
+*(Filed by Learning Loop, 2026-W36 Pathfinder pass — Jobs-to-be-done lens. Proposals
+for Paul to select, NOT auto-build. `economic-dashboard` is the last Tier-A repo to
+get a Pathfinder pass — see `portfolio.md`'s Pathfinder log in `mission-control`.)*
+
+**The job (as built):** the site is a "pick a lens, eyeball a chart" tool for a
+visitor who already knows what they're looking for — `src/presets.ts` pairs 2-4 FRED
+series per named narrative, `DashboardView.tsx` renders a dual-axis chart plus an R²
+stat. That's closer to *"see if two macro series still move together"* than to
+*"tell me if I should be worried about the economy,"* which is the job most visitors
+actually walk in with.
+
+1. **🌶 Give every chart a one-sentence plain-English verdict.** The site already
+   computes the R² correlation; the missing piece isn't data, it's narration — an
+   R² number means nothing to a lay reader, but *"Housing and mortgage rates have
+   decoupled since 2023 — buyers stopped waiting for rates to drop"* does. Why now:
+   this is the single biggest gap between what the app computes and what a visitor
+   can use, and it's the cheapest to test — no backend change. Smallest slice:
+   hand-write one static interpretive caption for each of the 5 existing presets,
+   shown under the chart title (no LLM, no dynamic generation yet). Risk: medium —
+   stale or wrong interpretive copy ages worse than a raw chart, and getting the
+   tone wrong on public economic commentary is reputationally sensitive; needs a
+   review cadence tied to data updates, not a one-time write.
+
+2. **Give the site memory — a "since you last checked" diff.** The only
+   `localStorage` use anywhere in `src/` today is `ClipRemixer.tsx`'s producer-side
+   draft autosave; there's no visitor-facing bookmark, watchlist, or return-visit
+   state at all, so every visit re-derives the same read from scratch. Smallest
+   slice: a single home-page banner comparing the latest data point on the default
+   preset to its value on the visitor's last recorded visit (timestamp in
+   `localStorage`), browser-only, no auth/backend needed. Risk: low-medium — FRED
+   revises historical values between visits, so a naive diff could show a "change"
+   that's actually a data revision, not new information; needs to diff against the
+   *as-of-last-visit* vintage, not just re-read today's series.
+
+3. **Retire the pipeline-health badge as the UI's organizing metaphor.**
+   `docs/launch-risk-register.md` R6 (resolved 2026-08-12) found the app could
+   render an 11-month-stale embedded CSV under a fresh-looking green "PASS" badge —
+   evidence the UX is built around *"did the pipeline succeed"* (the operator's
+   question) rather than *"is this number current"* (the visitor's question), even
+   after the specific bug closed. Smallest slice: restyle the existing freshness
+   badge to speak the visitor's question directly ("Updated through July 2026 —
+   normal"), driven by the same underlying check, instead of exposing internal
+   pipeline state as the primary trust signal. Risk: low — presentation-only change
+   over an already-correct check.
+
 ## Handoffs
 
 - `[→ launch-shield]` **Nothing checks that the deployed site actually serves
