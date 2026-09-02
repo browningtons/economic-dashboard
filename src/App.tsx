@@ -1373,6 +1373,21 @@ export default function App() {
 
   const activeMetricConfidence = useMemo<DashboardMetricConfidence[]>(() => (
     activeMetricSources.map(({ metric, source }) => {
+      // Same trust hole as `lastUpdatedText` above and DataTableView's Data
+      // Health card: `pipelineStatus` reports on the deployed CSV's last
+      // pipeline run, which never touched the bundled fallback snapshot. On
+      // the fallback this must not render "Fresh" (or any pipeline-derived
+      // confidence) over data the pipeline never saw.
+      if (!pipelineFreshnessAppliesTo(csvSource)) {
+        return {
+          metric,
+          source,
+          level: 'unknown',
+          label: 'Unknown',
+          detail: 'Not applicable — showing the snapshot bundled with this build.',
+        };
+      }
+
       const pipeline = pipelineSeriesByColumn.get(metric.label);
       const breach = releaseBreachByColumn.get(metric.label);
 
@@ -1433,7 +1448,7 @@ export default function App() {
         detail: `Current through ${pipeline.csvLatest}`,
       };
     })
-  ), [activeMetricSources, pipelineSeriesByColumn, releaseBreachByColumn]);
+  ), [activeMetricSources, pipelineSeriesByColumn, releaseBreachByColumn, csvSource]);
 
   const leftAxisMetrics = useMemo(() => {
     if (viewMode === 'relative') return activeMetrics;

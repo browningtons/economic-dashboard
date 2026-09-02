@@ -136,6 +136,35 @@ Score = Impact + Confidence + Risk Reduction - Effort
 
 ## Completed
 
+### 2026-09-02 — Dashboard tab's headline metric cards made the same false claim, a third time
+
+- Same visit, same open `pack/trust-ledger` PR — found while re-reading the
+  08-26 fix for other instances before landing it, not from a new handoff.
+- Found: `App.tsx`'s `activeMetricConfidence` (the per-metric confidence
+  badge and "Current through <month>" text on the Dashboard tab's headline
+  cards, `DashboardView.tsx:517-554` — the most prominent view in the app,
+  not a secondary tab) read `pipelineStatus` directly with no `csvSource`
+  gate, unlike the sibling `lastUpdatedText` memo four lines above it in the
+  same file, which already carries this exact comment: *"On the embedded
+  fallback the status file can be fresh and PASS while the chart is the
+  bundled snapshot — reporting `generatedAt` there would put today's
+  timestamp on old data."* On the fallback this rendered a green **"Fresh"**
+  badge and `Current through ${pipeline.csvLatest}` — the live pipeline's
+  month — over headline values drawn from up to 11-month-stale bundled data.
+  Third occurrence of the identical hole R6 (header) and the 08-26 entry
+  above (Data Table tab) already closed elsewhere in this same file.
+- Change: `activeMetricConfidence` now short-circuits to `level: 'unknown'`,
+  `label: 'Unknown'`, `detail: 'Not applicable — showing the snapshot
+  bundled with this build.'` when `!pipelineFreshnessAppliesTo(csvSource)`,
+  before touching `pipelineStatus` at all — same gate, same wording as the
+  08-26 fix, `csvSource` added to the memo's dependency array.
+- Verification: `npm run build` green (incl. clip pre-render); `npm test`
+  26/26 passing (no regression; same missing jsdom/testing-library gap as
+  the 08-26 entry — no component test to extend).
+- Grepped the rest of `src/` for other direct `pipelineStatus` reads after
+  this: only `App.tsx` and `DataTableView.tsx` reference it, and every read
+  in both files is now gated. No fourth instance found this visit.
+
 ### 2026-08-26 — Data Table tab's "Data Health" card made the same false claim R6 fixed elsewhere
 
 - Claimed the `[→ trust-ledger]` handoff User Journey filed 2026-08-12 asking
