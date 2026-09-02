@@ -57,6 +57,19 @@ Sibling pack repos (`mission-control`) carry `eslint.config.js` and gate on it.
   `@eslint/js` + `typescript-eslint` + `eslint-plugin-react-hooks`, a `lint`
   script, and a CI step. Land it *after* R3 so CI isn't red on two axes at once.
   New dev dependencies — flag per the hard rules.
+- **Blocked 2026-09-02, tried and reverted:** R3's fix (same PR) added
+  `typescript@^7.0.2` as a dev dependency. `typescript-eslint@8.69.0` (`latest`,
+  and `canary` is only `8.69.1-alpha.0`) refuses to run at all against TS 7 —
+  not a peer-range warning, a hard exit: *"typescript-eslint does not support TS
+  7.0"* ([tracking issue](https://github.com/typescript-eslint/typescript-eslint/issues/10940),
+  open, unresolved). Installed with `--legacy-peer-deps` to get past the peer
+  conflict, wrote the standard flat config (matches
+  `our-family-lizard/eslint.config.js`), and `npx eslint .` errored before
+  linting a single file. R3 and R5 are no longer independent: landing R3 first
+  is what breaks R5's own stated mitigation. Options for whoever picks this up:
+  wait on typescript-eslint's TS 7 support, or split `typescript` into a
+  lint-only lower major via a second install (messy, not attempted). Reverted
+  cleanly — no eslint deps or config left in the tree.
 - Verification: `npm run lint` exits 0; CI shows a lint step.
 
 ## Resolved
