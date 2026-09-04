@@ -281,6 +281,49 @@ together.
   from the source, not executed. The decision logic underneath it is tested.
   See the `[→ launch-shield]` handoff in the backlog for closing that gap.
 
+**Follow-up 2026-08-26 (Trust Ledger) — the header was fixed; the Data Table
+tab's own "Data Health" card was not, and made the identical false claim.**
+Filed as a `[→ trust-ledger]` handoff by User Journey on 08-12 asking for a
+re-read of the freshness surface after this fix. `DataTableView.tsx`'s Data
+Health card (pipeline PASS/FAIL badge, "All data sources are up to date",
+"Last checked <time>", per-series fresh/stale counts, "Latest month", and the
+top-alerts list) is driven entirely by `pipelineStatus` with no `csvSource`
+check — so on the exact fallback this risk describes, that card would still
+render a green **"Healthy"** badge and a fresh "Last checked" timestamp for
+data that is up to 11 months stale, even though the header right above it
+(and the `dataWarning` banner) correctly say otherwise. Same trust hole,
+different view, because the fix above only touched `lastUpdatedText` and the
+toasts in `App.tsx`. Fix: `DataTableView` now takes a required
+`pipelineStatusApplies` prop (`pipelineFreshnessAppliesTo(csvSource)`, passed
+from `App.tsx`) and every pipeline-status-derived string/badge in the Data
+Health card is gated on it — on the fallback it now reads "Not applicable —
+showing the snapshot bundled with this build" instead of asserting health it
+cannot know. Verification: `npm run build` green, `npm test` 26/26 passing
+(no regression; this repo has no component-level tests to extend — see the
+08-12 note above about the missing jsdom/testing-library gap, still open).
+
+**Follow-up 2026-09-02 (Trust Ledger) — the same hole, a third time, on the
+Dashboard tab's headline cards — the most-seen view in the app.** Found while
+re-reading the 08-26 fix before landing it, not from a new handoff.
+`App.tsx`'s `activeMetricConfidence` — the per-metric confidence badge and
+"Current through <month>" text on the Dashboard tab's headline cards
+(`DashboardView.tsx:517-554`) — read `pipelineStatus` directly with no
+`csvSource` gate, even though the sibling `lastUpdatedText` memo four lines
+above it in the same file already carries the comment explaining exactly why
+that is unsafe. On the fallback this rendered a green **"Fresh"** badge and
+`Current through <the live pipeline's month>` over headline values drawn from
+up to 11-month-stale bundled data — the single most visible instance of this
+bug yet, since the Dashboard is the default tab. Fix: `activeMetricConfidence`
+now short-circuits to `level: 'unknown'`, `label: 'Unknown'`, `detail: 'Not
+applicable — showing the snapshot bundled with this build.'` when
+`!pipelineFreshnessAppliesTo(csvSource)`, matching the 08-26 fix's gate and
+wording; `csvSource` added to the memo's dependency array. Verification:
+`npm run build` green (incl. clip pre-render), `npm test` 26/26 passing (same
+missing jsdom/testing-library gap, no component test to extend). Grepped the
+rest of `src/` for other direct `pipelineStatus` reads afterward: only
+`App.tsx` and `DataTableView.tsx` reference it, and every read in both is now
+gated — no fourth instance found this visit.
+
 ## Watching (not yet Active)
 
 - **`latestBuffettRatio: 0` conflates "zero" with "unavailable." — RESOLVED

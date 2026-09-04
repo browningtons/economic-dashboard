@@ -35,13 +35,6 @@ Score = Impact + Confidence + Risk Reduction - Effort
   truncated data file before a visitor does. This is the same absence-shaped
   blind spot as R1a, one layer out: R1a asks whether the pipeline ran, this asks
   whether its output actually reached the CDN. Filed 2026-08-12 by User Journey.
-- `[→ trust-ledger]` **Re-read the freshness surface after R6.** Your 2026-07-30
-  review checked `isStatusStale` against the live site and correctly called it
-  clean; R6 is the case that review could not see, because it only appears when
-  the CSV and status fetches disagree. The header no longer dates bundled rows
-  with the pipeline's run time — worth a look on your next visit to confirm the
-  copy reads honestly in that state. Filed 2026-08-12 by User Journey.
-
 - ~~`[→ paul]` Decide whether to re-enable the two disabled workflows (R1).~~
   **Closed 2026-07-24** — Paul authorized; both workflows re-enabled, refresh
   dispatched and passed, site republished on fresh data. See R1 under Resolved.
@@ -142,6 +135,55 @@ Score = Impact + Confidence + Risk Reduction - Effort
 - Verify: `npm test` shows the new case.
 
 ## Completed
+
+### 2026-09-02 — Dashboard tab's headline metric cards made the same false claim, a third time
+
+- Same visit, same open `pack/trust-ledger` PR — found while re-reading the
+  08-26 fix for other instances before landing it, not from a new handoff.
+- Found: `App.tsx`'s `activeMetricConfidence` (the per-metric confidence
+  badge and "Current through <month>" text on the Dashboard tab's headline
+  cards, `DashboardView.tsx:517-554` — the most prominent view in the app,
+  not a secondary tab) read `pipelineStatus` directly with no `csvSource`
+  gate, unlike the sibling `lastUpdatedText` memo four lines above it in the
+  same file, which already carries this exact comment: *"On the embedded
+  fallback the status file can be fresh and PASS while the chart is the
+  bundled snapshot — reporting `generatedAt` there would put today's
+  timestamp on old data."* On the fallback this rendered a green **"Fresh"**
+  badge and `Current through ${pipeline.csvLatest}` — the live pipeline's
+  month — over headline values drawn from up to 11-month-stale bundled data.
+  Third occurrence of the identical hole R6 (header) and the 08-26 entry
+  above (Data Table tab) already closed elsewhere in this same file.
+- Change: `activeMetricConfidence` now short-circuits to `level: 'unknown'`,
+  `label: 'Unknown'`, `detail: 'Not applicable — showing the snapshot
+  bundled with this build.'` when `!pipelineFreshnessAppliesTo(csvSource)`,
+  before touching `pipelineStatus` at all — same gate, same wording as the
+  08-26 fix, `csvSource` added to the memo's dependency array.
+- Verification: `npm run build` green (incl. clip pre-render); `npm test`
+  26/26 passing (no regression; same missing jsdom/testing-library gap as
+  the 08-26 entry — no component test to extend).
+- Grepped the rest of `src/` for other direct `pipelineStatus` reads after
+  this: only `App.tsx` and `DataTableView.tsx` reference it, and every read
+  in both files is now gated. No fourth instance found this visit.
+
+### 2026-08-26 — Data Table tab's "Data Health" card made the same false claim R6 fixed elsewhere
+
+- Claimed the `[→ trust-ledger]` handoff User Journey filed 2026-08-12 asking
+  for a re-read of the freshness surface after R6.
+- Found: `DataTableView.tsx`'s Data Health card (PASS/FAIL/stale badge, "All
+  data sources are up to date", "Last checked <time>", per-series health
+  counts, "Latest month", top alerts) reads `pipelineStatus` directly with no
+  `csvSource` check — so on the embedded fallback it still shows a green
+  "Healthy" badge and a fresh "Last checked" timestamp over data that can be
+  up to 11 months stale, exactly the claim R6 removed from the header one
+  component over.
+- Change: `DataTableView` now takes a required `pipelineStatusApplies` prop
+  (`pipelineFreshnessAppliesTo(csvSource)`, wired from `App.tsx`); every
+  pipeline-status-derived string and badge in the card is gated on it and
+  reads "Not applicable — showing the snapshot bundled with this build" on
+  the fallback instead of asserting health.
+- Verification: `npm run build` green; `npm test` 26/26 passing (no
+  component-level test to extend — this repo has no jsdom/testing-library,
+  a standing gap noted in R6's own verification section).
 
 ### 2026-08-12 — Make the embedded-CSV fallback visible (closes R6)
 

@@ -27,6 +27,14 @@ interface DataTableViewProps {
   metricSources: Record<string, DataSourceInfo>;
   now: Date;
   pipelineStatus?: PipelineStatus | null;
+  /**
+   * False when `data` came from the bundled fallback snapshot rather than a
+   * live fetch (see `pipelineFreshnessAppliesTo` in `utils/dataSource.ts`).
+   * `pipelineStatus` describes the pipeline's last run against the deployed
+   * CSV, which never touched the embedded literal — so its PASS/FAIL/stale
+   * verdict must not be presented as describing the rows on screen.
+   */
+  pipelineStatusApplies: boolean;
 }
 
 const ROW_HEIGHT = 36;
@@ -74,7 +82,7 @@ function csvEscape(value: string | number | undefined) {
   return `"${raw.replace(/"/g, '""')}"`;
 }
 
-const DataTableView = React.memo(function DataTableView({ data, metrics, metricSources, now, pipelineStatus }: DataTableViewProps) {
+const DataTableView = React.memo(function DataTableView({ data, metrics, metricSources, now, pipelineStatus, pipelineStatusApplies }: DataTableViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [yearFilter, setYearFilter] = useState('ALL');
   const [showMissingOnly, setShowMissingOnly] = useState(false);
@@ -242,7 +250,7 @@ const DataTableView = React.memo(function DataTableView({ data, metrics, metricS
       unknown: 0,
     };
 
-    if (!pipelineStatus?.series?.length) {
+    if (!pipelineStatusApplies || !pipelineStatus?.series?.length) {
       counts.unknown = metrics.length;
       return counts;
     }
@@ -264,30 +272,38 @@ const DataTableView = React.memo(function DataTableView({ data, metrics, metricS
     });
 
     return counts;
-  }, [metrics.length, pipelineStatus]);
+  }, [metrics.length, pipelineStatus, pipelineStatusApplies]);
 
   // R1a: a PASS only counts as healthy while it is recent. A refresh pipeline
   // that stops running leaves the last PASS frozen in place — treat that as
   // unhealthy rather than rendering it green.
-  const statusIsStale = pipelineStatus != null && isStatusStale(pipelineStatus.generatedAt, now);
+  const statusIsStale = pipelineStatusApplies && pipelineStatus != null && isStatusStale(pipelineStatus.generatedAt, now);
 
-  const pipelineHealthText = pipelineStatus?.status === 'FAIL'
-    ? `${pipelineStatus.failedSeriesCount ?? 0} of ${pipelineStatus.totalSeriesCount ?? metrics.length} data sources have issues`
+  // R6 (2026-08-12): `pipelineStatus` reports on the deployed CSV's last
+  // pipeline run, which never touched the bundled fallback snapshot. On the
+  // fallback, presenting its PASS/FAIL/stale verdict as describing the rows
+  // on screen is the same trust hole the header fix closed, one view over.
+  const pipelineHealthText = !pipelineStatusApplies
+    ? 'Not applicable — showing the snapshot bundled with this build, not the pipeline\'s output.'
+    : pipelineStatus?.status === 'FAIL'
+      ? `${pipelineStatus.failedSeriesCount ?? 0} of ${pipelineStatus.totalSeriesCount ?? metrics.length} data sources have issues`
+      : pipelineStatus?.status === 'PASS'
+        ? statusIsStale
+          ? `Last successful refresh is more than ${STALE_AFTER_DAYS} days old — the data pipeline may have stopped running`
+          : 'All data sources are up to date'
+        : 'Pipeline status unavailable';
+
+  const validationSummary = !pipelineStatusApplies
+    ? 'Not applicable to the bundled snapshot.'
     : pipelineStatus?.status === 'PASS'
       ? statusIsStale
-        ? `Last successful refresh is more than ${STALE_AFTER_DAYS} days old — the data pipeline may have stopped running`
-        : 'All data sources are up to date'
-      : 'Pipeline status unavailable';
+        ? 'Latest validation passed, but the result is stale.'
+        : 'Latest validation passed.'
+      : pipelineStatus?.status === 'FAIL'
+        ? `${pipelineStatus.failureCount ?? 0} validation issue${(pipelineStatus.failureCount ?? 0) === 1 ? '' : 's'} detected.`
+        : 'Validation status unavailable.';
 
-  const validationSummary = pipelineStatus?.status === 'PASS'
-    ? statusIsStale
-      ? 'Latest validation passed, but the result is stale.'
-      : 'Latest validation passed.'
-    : pipelineStatus?.status === 'FAIL'
-      ? `${pipelineStatus.failureCount ?? 0} validation issue${(pipelineStatus.failureCount ?? 0) === 1 ? '' : 's'} detected.`
-      : 'Validation status unavailable.';
-
-  const lastCheckedText = pipelineStatus?.generatedAt
+  const lastCheckedText = pipelineStatusApplies && pipelineStatus?.generatedAt
     ? new Date(pipelineStatus.generatedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
     : null;
 
@@ -464,21 +480,26 @@ const DataTableView = React.memo(function DataTableView({ data, metrics, metricS
           </div>
           <div className="rounded-xl border border-theme bg-muted-surface p-3">
             <p className="text-[11px] uppercase tracking-[0.08em] text-muted">Latest month</p>
-            <p className="mt-1 text-xl font-semibold text-main">{pipelineStatus?.latestDataMonth ?? 'N/A'}</p>
+            <p className="mt-1 text-xl font-semibold text-main">{pipelineStatusApplies ? pipelineStatus?.latestDataMonth ?? 'N/A' : 'N/A'}</p>
           </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          {pipelineStatus?.status === 'FAIL' && (
+          {!pipelineStatusApplies && (
+            <span className="rounded-full border border-theme bg-muted-surface px-3 py-1 text-xs font-medium text-muted">
+              Bundled snapshot — pipeline status not applicable
+            </span>
+          )}
+          {pipelineStatusApplies && pipelineStatus?.status === 'FAIL' && (
             <span className="rounded-full bg-[color:var(--color-brand-primary)]/10 px-3 py-1 text-xs font-medium text-[color:var(--color-brand-primary)]">
               Needs attention
             </span>
           )}
-          {pipelineStatus?.status === 'PASS' && statusIsStale && (
+          {pipelineStatusApplies && pipelineStatus?.status === 'PASS' && statusIsStale && (
             <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-600">
               Stale — pipeline may be stopped
             </span>
           )}
-          {pipelineStatus?.status === 'PASS' && !statusIsStale && (
+          {pipelineStatusApplies && pipelineStatus?.status === 'PASS' && !statusIsStale && (
             <span className="rounded-full bg-green-500/10 px-3 py-1 text-xs font-medium text-green-600">
               Healthy
             </span>
@@ -489,7 +510,7 @@ const DataTableView = React.memo(function DataTableView({ data, metrics, metricS
             </span>
           )}
         </div>
-        {pipelineStatus?.topAlerts && pipelineStatus.topAlerts.length > 0 && (
+        {pipelineStatusApplies && pipelineStatus?.topAlerts && pipelineStatus.topAlerts.length > 0 && (
           <div className="mt-3 rounded-lg border border-theme bg-muted-surface p-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted">What needs attention</p>
             <ul className="mt-2 space-y-1.5 text-xs text-main">
