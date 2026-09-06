@@ -16,51 +16,6 @@ observed directly — commands and outputs are recorded as evidence.
 
 ## Active Risks
 
-### R1a (P1) — Nothing detects a pipeline that stops running
-
-**This is the unresolved half of R1** (the outage itself is fixed — see Resolved).
-The 21-day outage was invisible because every check in this repo and in the
-watchtower pack keys on a run that *fails*. A workflow that is
-`disabled_manually`, or a cron schedule that stops firing, produces no failed run
-and therefore no signal. The dashboard kept rendering a `PASS` badge the whole
-time.
-
-Re-enabling the workflows restored the data but did **not** close this. The exact
-same outage can recur tomorrow and would again go unnoticed for weeks.
-
-- Domain: pipeline health / observability
-- Evidence: between 2026-07-03 and 2026-07-24 the repo produced zero alerts, zero
-  auto-filed issues, and zero watchtower barks while publicly serving stale data.
-  `send-validation-alert.mjs` and the "Data validation alert" issue flow both hang
-  off `steps.validate.outcome == 'failure'`, which requires the job to have run.
-- Next mitigation: a wall-clock freshness check that runs *outside* the refresh
-  job — fail CI when `data_status.json.generatedAt` is older than ~4 days, so any
-  push surfaces it, and make the in-app health badge render stale-PASS as
-  unhealthy. See backlog task 2.
-- Verification: backdate `generatedAt` in a fixture → check fails.
-
-### R3 (P2) — CI never typechecks, and a type error is already live on `main`
-
-`npm run build` is `vite build`, which transpiles without typechecking. No
-`tsc --noEmit` exists in any script or workflow. A real error is currently on
-`main` and ships undetected.
-
-- Domain: CI / build health
-- Evidence:
-  ```
-  $ npx tsc --noEmit
-  src/components/DashboardView.tsx(458,21): error TS2322:
-    Type '(props: any) => ReactNode' is not assignable to type 'ImplicitLabelType | undefined'.
-  ```
-  `npm run build` exits 0 on the same tree.
-- Impact: type regressions in a 2,292-module React app reach production silently.
-  `tsconfig.json` already sets `noImplicitAny` and `strictNullChecks`, so the
-  intent to typecheck exists — only the gate is missing.
-- Next mitigation: fix the `DashboardView.tsx:458` label-renderer typing, add a
-  `"typecheck": "tsc --noEmit"` script, and add it to `ci.yml`. Fix and gate in
-  the same change, or CI goes red on merge.
-- Verification: `npx tsc --noEmit` exits 0; CI shows a typecheck step.
-
 ### R4 (P2) — The Pages deploy is not gated on CI; failing tests do not stop a publish
 
 `ci.yml` and `deploy.yml` both trigger on push to `main` and are independent —
@@ -85,6 +40,14 @@ A push whose tests fail still deploys, because `deploy.yml` only runs
 - Verification: push a commit with a deliberately failing test to a scratch
   branch merged to `main` in a test repo, or inspect that the deploy job's run
   list shows the gate.
+- **Blocked 2026-09-06, tried and reverted:** added the `npm test` step to
+  `.github/workflows/deploy.yml`'s `build` job and pushed it. GitHub rejected
+  the push outright: *"refusing to allow a Personal Access Token to create or
+  update workflow `.github/workflows/deploy.yml` without `workflow` scope"* —
+  the same PAT limitation already on file for R5's CI wiring and the
+  `check:deployed` handoff (`docs/agent-backlog.md`). Reverted locally before
+  it ever left the machine; the one-line diff is filed `[→ paul]` in the
+  backlog for a human to add by hand.
 
 ### R5 (P2) — No lint gate of any kind
 
@@ -102,9 +65,44 @@ Sibling pack repos (`mission-control`) carry `eslint.config.js` and gate on it.
   `@eslint/js` + `typescript-eslint` + `eslint-plugin-react-hooks`, a `lint`
   script, and a CI step. Land it *after* R3 so CI isn't red on two axes at once.
   New dev dependencies — flag per the hard rules.
+- **Blocked 2026-09-02, tried and reverted:** R3's fix (same PR) added
+  `typescript@^7.0.2` as a dev dependency. `typescript-eslint@8.69.0` (`latest`,
+  and `canary` is only `8.69.1-alpha.0`) refuses to run at all against TS 7 —
+  not a peer-range warning, a hard exit: *"typescript-eslint does not support TS
+  7.0"* ([tracking issue](https://github.com/typescript-eslint/typescript-eslint/issues/10940),
+  open, unresolved). Installed with `--legacy-peer-deps` to get past the peer
+  conflict, wrote the standard flat config (matches
+  `our-family-lizard/eslint.config.js`), and `npx eslint .` errored before
+  linting a single file. R3 and R5 are no longer independent: landing R3 first
+  is what breaks R5's own stated mitigation. Options for whoever picks this up:
+  wait on typescript-eslint's TS 7 support, or split `typescript` into a
+  lint-only lower major via a second install (messy, not attempted). Reverted
+  cleanly — no eslint deps or config left in the tree.
 - Verification: `npm run lint` exits 0; CI shows a lint step.
 
 ## Resolved
+
+### R3 (P2) — CI never typechecks, and a type error is already live on `main` — RESOLVED 2026-08-30
+
+`npm run build` is `vite build`, which transpiles without typechecking, so a
+real type error (`DashboardView.tsx:458` — the reference-label renderer
+declared a `React.ReactNode` return type but Recharts' `ReferenceArea.label`
+callback requires `React.ReactElement`; the implementation always returns a
+`<RenderLabel>` element) had been shipping undetected.
+
+- Fix: narrowed the `renderReferenceLabel` prop type to `React.ReactElement`
+  (`src/components/DashboardView.tsx`); added TypeScript as a dev dependency
+  with a `"typecheck": "tsc --noEmit"` script (`package.json`); folded it into
+  the local gate in `docs/agent-operating-loop.md`.
+- **Not wired into `ci.yml` in this change** — `git push` was rejected:
+  *"refusing to allow a Personal Access Token to create or update workflow
+  `.github/workflows/ci.yml` without `workflow` scope"*, the same class of
+  blocker `[→ paul]` already covers for `deploy.yml`'s `check:deployed` job.
+  Filed `[→ paul]` in `docs/agent-backlog.md` with the exact one-line diff to
+  add by hand (`- run: npm run typecheck`, after `npm test`); the script
+  itself ships and runs manually (`npm run typecheck`) in the meantime.
+- Verification: `npx tsc --noEmit` exits 0; `npm test` (33 passed / 4 files);
+  `npm run build` green.
 
 ### R2 (P1) — Validation failure did not block the commit, push, or deploy of bad data — RESOLVED 2026-07-24
 
@@ -180,9 +178,43 @@ Verified end to end:
 
 **What this did not fix:** R1a (nothing detects a *stopped* pipeline) and, at the
 time, R2 (validation failure did not block publish, and re-enabling armed it).
-R2 was closed later the same day — see above. **R1a remains open and is now the
-highest-severity item in the repo:** the pipeline is running and fail-closed, but
-nothing would notice if it stopped running altogether.
+R2 was closed later the same day — see above. R1a was closed two days later,
+2026-07-26 — see Resolved below; this paragraph is left as it was written, as
+a record of what was true at the time.
+
+### R1a (P1) — Nothing detects a pipeline that stops running — RESOLVED 2026-07-26
+
+**This was the unresolved half of R1.** The 21-day outage was invisible because
+every check in this repo and in the watchtower pack keyed on a run that
+*fails*. A workflow that is `disabled_manually`, or a cron schedule that stops
+firing, produces no failed run and therefore no signal. The dashboard kept
+rendering a `PASS` badge the whole time. Re-enabling the workflows (R1)
+restored the data but did not close this — the exact same outage could recur
+and again go unnoticed for weeks.
+
+**Fix (PR [#17](https://github.com/browningtons/economic-dashboard/pull/17)):**
+`scripts/check-data-freshness.mjs` reads `data_status.json`'s `generatedAt` on
+the wall clock — outside the refresh job, so it runs on *any* CI trigger
+including `ci.yml`'s own daily `45 14 * * *` cron, not only when the refresh
+pipeline happens to fire. `npm run check:freshness` fails when the snapshot is
+older than 4 days. The in-app health badge got the same treatment separately:
+`src/utils/staleness.ts`'s `isStatusStale` renders a stale `PASS` as unhealthy
+rather than healthy, wired into `App.tsx` and `DataTableView.tsx`.
+
+**Verification:** `scripts/check-data-freshness.test.mjs` backdates
+`generatedAt` in a fixture and asserts the check fails; the current committed
+file passes. Confirmed live this session (2026-08-26) — `data_status.json`'s
+`generatedAt` is same-day, and `ci.yml`'s daily cron run is green.
+
+**This section was stale for a month.** Active Risks and the R1 note above
+both kept saying R1a was open, even though two later entries in this same file
+(Trust-surface review, 2026-07-30, and R6, 2026-08-12) already referred to
+"R1a's fix" as landed — the fix and the register disagreed with each other for
+weeks and nobody reconciled them until this visit. Same root cause as the
+backlog's task-1/task-3 drift found the same session: **a register that only
+gets written forward drifts the same way a runner-copy prompt does** — grep
+for a risk's ID across the whole file, not just its own Active-Risks heading,
+before trusting its placement.
 
 ## Trust-surface review — clean, 2026-07-30 (Trust Ledger)
 

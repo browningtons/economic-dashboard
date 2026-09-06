@@ -30,6 +30,7 @@ import ClipsView from './components/ClipsView';
 import { DASHBOARD_PRESETS } from './presets';
 import { isStatusStale } from './utils/staleness';
 import { fallbackWarning, pipelineFreshnessAppliesTo, type CsvSource } from './utils/dataSource';
+import { parseCsvData } from './utils/parseCsvData';
 import type { DashboardPreset } from './presets';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useToast } from './components/Toast';
@@ -49,8 +50,6 @@ import type {
 } from './types/dashboard';
 
 // --- Types & Interfaces ---
-
-type CsvEntry = Partial<DataPoint> & Record<string, string | number | undefined>;
 
 interface TooltipEntry {
   name?: string;
@@ -677,33 +676,6 @@ const getYieldCurveStatus = (data: DataPoint[]): YieldCurveStatus | null => {
   };
 };
 
-// --- Parsing Helper ---
-const parseLine = (line: string): string[] => {
-  const result: string[] = [];
-  let current = '';
-  let inQuotes = false;
-  
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      // Handle escaped quotes inside quoted fields ("")
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (char === ',' && !inQuotes) {
-      result.push(current.trim());
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-  result.push(current.trim());
-  return result;
-};
-
 const toGoogleCsvUrl = (url: string): string => {
   if (url.includes('/gviz/tq?tqx=out:csv') || url.includes('/export?format=csv')) {
     return url;
@@ -943,79 +915,14 @@ export default function App() {
         if (cancelled) return;
         setCsvSource(csvDataSource);
 
-        const lines = csvData.split('\n');
-        if (lines.length < 2) {
-          setDataError('CSV appears empty. Expected header + at least one row.');
-          return;
-        }
-        
-        const headers = parseLine(lines[0]);
-        const missingColumns = REQUIRED_COLUMNS.filter((column) => !headers.includes(column));
-        if (missingColumns.length > 0) {
-          setDataError(`Missing required columns: ${missingColumns.join(', ')}`);
-          return;
-        }
-        
-        const parsedData: DataPoint[] = [];
-        let badRowCount = 0;
-
-        for (let i = 1; i < lines.length; i++) {
-          if (!lines[i].trim()) continue;
-          
-          const values = parseLine(lines[i]);
-          if (values.length !== headers.length) {
-            badRowCount++;
-            continue;
-          }
-
-          const entry: CsvEntry = {};
-          
-          headers.forEach((header, index) => {
-            let value = values[index]?.replace(/^,|,$/g, '') || ''; 
-            
-            if (value) {
-              value = value.replace(/"/g, '').replace(/,/g, ''); 
-            }
-            
-            if (header === 'Observed Date' && value) {
-              const parsedDate = new Date(value);
-              if (!Number.isNaN(parsedDate.getTime())) {
-                entry.date = value;
-                entry.timestamp = parsedDate.getTime();
-                entry.year = parsedDate.getFullYear();
-              }
-            } else if (!isNaN(Number(value)) && value !== '') {
-              entry[header] = Number(value);
-            } else {
-              entry[header] = undefined;
-            }
-          });
-
-          if (!entry.date || entry.timestamp === undefined || entry.year === undefined) {
-            badRowCount++;
-            continue;
-          }
-
-          if (entry['Stock Market (b)'] !== undefined && entry['GDP'] !== undefined) {
-            entry.buffettValue = (Number(entry['Stock Market (b)']) / Number(entry['GDP'])) * 100;
-          }
-
-          if (entry['10Y Treasury'] !== undefined && entry['2Y Treasury'] !== undefined) {
-            entry['Yield Spread'] = Number(entry['10Y Treasury']) - Number(entry['2Y Treasury']);
-          }
-
-          parsedData.push(entry as DataPoint);
-        }
-        
-        // Sort data chronologically just in case
-        parsedData.sort((a, b) => a.timestamp - b.timestamp);
+        const { data: parsedData, badRowCount, error: parseError } = parseCsvData(csvData, REQUIRED_COLUMNS);
         if (cancelled) return;
-        
-        if (parsedData.length === 0) {
-          setDataError('CSV validation failed: no valid rows were found.');
+
+        if (parseError) {
+          setDataError(parseError);
           return;
         }
-        
+
         setData(parsedData);
         setDateRange([0, parsedData.length - 1]);
 
