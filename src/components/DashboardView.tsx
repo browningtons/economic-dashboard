@@ -195,6 +195,7 @@ const DashboardView = React.memo(function DashboardView({
   // Local UI state — kept here to avoid re-rendering sibling tabs
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [metricSearch, setMetricSearch] = useState('');
+  const [r2InfoOpen, setR2InfoOpen] = useState(false);
 
   const metricsByCategory = useMemo(() => {
     const groups: Record<string, MetricConfig[]> = {};
@@ -369,11 +370,25 @@ const DashboardView = React.memo(function DashboardView({
 
             {activeMetrics.length === 2 && rSquared && (
               <div className="group relative flex items-center gap-2 bg-secondary px-3 py-1.5 rounded-lg shadow-sm border border-theme">
-                <span className="text-sm font-bold text-main">
-                  R<sup>2</sup> = {rSquared}
-                </span>
-                <HelpCircle className="w-4 h-4 text-muted hover:text-[color:var(--color-brand-primary)] transition-colors" />
-                <div className="absolute right-0 top-full mt-2 w-64 p-4 bg-main text-inverse text-xs rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none transform translate-y-1 group-hover:translate-y-0 z-30">
+                <button
+                  type="button"
+                  onClick={() => setR2InfoOpen((prev) => !prev)}
+                  aria-expanded={r2InfoOpen}
+                  aria-label="Explain R-squared"
+                  className="flex items-center gap-2"
+                >
+                  <span className="text-sm font-bold text-main">
+                    R<sup>2</sup> = {rSquared}
+                  </span>
+                  <HelpCircle className="w-4 h-4 text-muted hover:text-[color:var(--color-brand-primary)] transition-colors" />
+                </button>
+                <div
+                  className={`absolute right-0 top-full mt-2 w-64 p-4 bg-main text-inverse text-xs rounded-xl shadow-xl transition-all duration-200 transform z-30 ${
+                    r2InfoOpen
+                      ? 'opacity-100 translate-y-0 pointer-events-auto'
+                      : 'opacity-0 translate-y-1 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0'
+                  }`}
+                >
                   <div className="font-bold text-sm mb-2 text-link">R² made simple</div>
                   <p className="mb-2 text-inverse-muted leading-relaxed">R² shows how much these two lines move together in your selected time range.</p>
                   <div className="space-y-2">
