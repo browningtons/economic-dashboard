@@ -40,6 +40,14 @@ A push whose tests fail still deploys, because `deploy.yml` only runs
 - Verification: push a commit with a deliberately failing test to a scratch
   branch merged to `main` in a test repo, or inspect that the deploy job's run
   list shows the gate.
+- **Blocked 2026-09-06, tried and reverted:** added the `npm test` step to
+  `.github/workflows/deploy.yml`'s `build` job and pushed it. GitHub rejected
+  the push outright: *"refusing to allow a Personal Access Token to create or
+  update workflow `.github/workflows/deploy.yml` without `workflow` scope"* —
+  the same PAT limitation already on file for R5's CI wiring and the
+  `check:deployed` handoff (`docs/agent-backlog.md`). Reverted locally before
+  it ever left the machine; the one-line diff is filed `[→ paul]` in the
+  backlog for a human to add by hand.
 
 ### R5 (P2) — No lint gate of any kind
 

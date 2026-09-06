@@ -42,6 +42,15 @@ Score = Impact + Confidence + Risk Reduction - Effort
   blocked. Add a `verify` job to `.github/workflows/deploy.yml`, `needs:
   deploy`, that checks out, sets up Node 22, and runs `npm run check:deployed`
   (see this PR's description for the exact diff). Filed to Meseeks 2026-08-26.
+- `[→ paul]` **Gate the Pages deploy on tests (R4) — same PAT blocker, confirmed
+  again.** Tried adding a `- name: Run tests` / `run: npm test` step to
+  `.github/workflows/deploy.yml` before the build step (closes R4). `git push`
+  rejected it with the identical *"refusing to allow a Personal Access Token to
+  create or update workflow `.github/workflows/deploy.yml` without `workflow`
+  scope"* error as the `check:deployed` wiring above. Add this one step by hand
+  — `npm test` right after `npm ci` and before `Build` in the `build` job — so a
+  failing test blocks the artifact instead of only the advisory `ci.yml` run.
+  Filed 2026-09-06.
 - `[→ paul]` **Wire `npm run typecheck` into `ci.yml` — same PAT `workflow`
   scope blocker as above.** `git push` rejected pushing this branch's
   `.github/workflows/ci.yml` edit with the identical error. `tsc --noEmit`
@@ -124,21 +133,35 @@ Score = Impact + Confidence + Risk Reduction - Effort
 - Note: new dev dependencies — flag per the operating loop's hard rules. Land
   after task 1 so CI isn't red on two axes at once.
 
-### 3. Add a smoke test for the dashboard render path
-
-- Domain: test coverage
-- Impact: 3 · Confidence: 3 · Risk reduction: 2 · Effort: 3
-- Context: the only test file in the repo is
-  `scripts/validate-economic-data.test.mjs` (10 cases, all data-validator). All
-  of `src/` is untested, including CSV parsing and preset selection.
-  `vitest.config.mjs` already includes `src/**/*.test.{ts,tsx,mjs}`, so the
-  wiring exists — but `environment: 'node'` means a DOM test needs jsdom.
-- Done criteria: one test that parses a small fixture CSV through the app's real
-  parsing path and asserts the derived series, *without* adding jsdom if it can
-  be avoided. Prefer testing the pure data layer over rendering.
-- Verify: `npm test` shows the new case.
-
 ## Completed
+
+### 2026-09-06 — Add a smoke test for the dashboard render path (Launch Shield)
+
+- Extracted the CSV-to-`DataPoint` parsing App.tsx's `loadData` ran inline
+  (header validation, quoted-field splitting, Buffett-ratio and Yield-Spread
+  derivation, malformed-row skipping, chronological sort) into a new pure
+  module, `src/utils/parseCsvData.ts`, following the `dataSource.ts`/
+  `staleness.ts` precedent of moving DOM-adjacent logic somewhere `vitest`'s
+  `node` environment can reach it. `App.tsx` now calls `parseCsvData()` instead
+  of duplicating the logic; net -99/+6 lines there.
+- New `src/utils/parseCsvData.test.ts`, 8 cases: quoted/escaped CSV fields,
+  Buffett-ratio derivation, chronological sort on out-of-order input, malformed
+  row skipping (wrong column count, unparseable date), missing-required-column
+  error, empty/header-only CSV error, and the all-rows-malformed error path.
+- Verify: `npm test` → 43 passed / 5 files (was 35/4). `npx tsc --noEmit` → 0
+  errors. `npm run build` → green, 2,295 modules. `npm run audit:deps` → 0
+  vulnerabilities. Built `dist/` before and after the refactor and diffed it:
+  only the content-hashed JS filename changed (expected — the bundle's bytes
+  moved), every literal error string (`CSV appears empty`, `Missing required
+  columns`, `no valid rows were found`) is present in both bundles — the
+  extraction is behavior-preserving, not just green-on-paper.
+- Also confirmed, while checking whether R4/R5's remaining mitigations were
+  pushable: **R4's `npm test` step hits the identical PAT-workflow-scope
+  rejection R5 and the `check:deployed` wiring already hit** — pushing a
+  `deploy.yml` edit was rejected with the same *"refusing to allow a Personal
+  Access Token to create or update workflow ... without `workflow` scope"*
+  error. Reverted the local commit (never left the machine) and filed
+  `[→ paul]` above rather than re-describing R4 as merely "not yet attempted."
 
 ### 2026-08-30 — Fix the live type error and add a typecheck gate (closes R3)
 
