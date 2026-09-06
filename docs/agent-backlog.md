@@ -143,6 +143,36 @@ Score = Impact + Confidence + Risk Reduction - Effort
 
 ## Completed
 
+### 2026-09-06 — R² explainer was unreachable on touch devices
+
+- Second User Journey visit. No bark, no `[→ user-journey]` handoff, no open
+  P0 — all open risks (R1a, R3, R4, R5) are pipeline/CI work in other lanes —
+  so this was another first-run walk of the deployed journey, traced in
+  source, focused on "understanding the result" and the mobile-width screen
+  per the lane's standing checklist.
+- Found: `DashboardView.tsx`'s R² badge (shown whenever a preset compares two
+  metrics — the default landing state) has a `HelpCircle` icon promising an
+  explanation of what R² means and how to read it. The popover was triggered
+  *only* by CSS `group-hover`, with no `onClick`, no `focus` handling, and no
+  other trigger. Touch devices have no persistent `:hover` state, so a mobile
+  visitor — the audience `viewMode` already special-cases at `<768px`
+  (forces `relative` mode on mount) — could see "R² = 0.42" and a help icon
+  that visibly promised more, and get nothing when they tapped it. This is
+  the one on-screen attempt at explaining a statistic to a first-time
+  visitor, and it was desktop-only.
+- Fix: wrapped the trigger in a `<button>` with `onClick` toggling new local
+  state (`r2InfoOpen`) plus `aria-expanded`/`aria-label`; the popover shows
+  when `r2InfoOpen` is true *or* on `group-hover` (desktop mouse behavior
+  unchanged), so mouse users keep hover-to-preview and touch/keyboard users
+  get tap/Enter-to-toggle. No other `group-hover`-only trigger exists
+  elsewhere in the component (`grep -n "group-hover" src/components/DashboardView.tsx`
+  returns only this one).
+- Verify: `npm test` → 26 passed / 3 files. `npm run build` → green, 4 clip
+  pages pre-rendered. `grep -o "Explain R-squared" dist/assets/*.js` matches
+  — the accessible label is compiled into the shipped bundle.
+- Not verified in a live browser — this wolf cannot drive one; argued from
+  source and the compiled bundle, same limitation noted on R6's fix.
+
 ### 2026-08-12 — Make the embedded-CSV fallback visible (closes R6)
 
 - First User Journey visit to this repo. No bark, no `[→ user-journey]` handoff,
