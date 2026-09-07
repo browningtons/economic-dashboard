@@ -22,6 +22,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      # R3: Vite only transpiles; tsc --noEmit is the only thing that typechecks.
+      - run: npm run typecheck
       - run: npm run build
       # R1a: fail CI when the committed data snapshot is older than the
       # allowed window — surfaces a silently-stopped refresh pipeline.
