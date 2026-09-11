@@ -26,6 +26,14 @@ Score = Impact + Confidence + Risk Reduction - Effort
 
 ## Handoffs
 
+- `[→ paul]` **P0 — flip GitHub Pages' Source to "GitHub Actions" (Settings → Pages → Build and
+  deployment → Source).** It is currently "Deploy from a branch: main," so GitHub's own legacy
+  builder republishes the raw unbuilt `index.html` on every push and clobbers `deploy.yml`'s
+  real artifact — the live site is provably not the built app right now (see R7 in the risk
+  register for the curl evidence). The pack's token gets a 403 trying to change this via the
+  API; it needs a human in the browser. No workflow edit needed afterward — `deploy.yml` already
+  does the right thing, it just isn't being listened to. Filed to Meseeks as high-priority
+  2026-09-11.
 - ~~`[→ launch-shield]` **Nothing checks that the deployed site actually serves
   `data/economic_indicators.csv`.**~~ **Closed 2026-08-26 by Launch Shield.**
   `scripts/check-deployed-data.mjs` fetches the live CSV, asserts HTTP 200, and
@@ -102,16 +110,14 @@ Score = Impact + Confidence + Risk Reduction - Effort
 
 - Domain: deploy readiness
 - Impact: 4
-- Confidence: 4 — the publish path is no longer ambiguous, on two independent
-  confirmations: the register's R4 entry (2026-07-24, run `30143917658`) and
-  this visit (2026-08-26) diffing the live `index.html`'s hashed asset
-  filenames against a local `npm run build` — they match byte-for-byte, and
-  don't match raw unbuilt `main`-branch source. `deploy.yml`'s `deploy` job
-  (`actions/deploy-pages@v4`) is the real publisher; `gh-pages` branch and
-  `pages-build-deployment` are stale vestiges from before the Actions
-  migration, not the live path — this task's old "investigate first" line was
-  itself stale, since R4 answered the question a month ago and nobody updated
-  this entry to match.
+- Confidence: 4 for the mitigation itself (a test/typecheck gate in
+  `deploy.yml`'s `build` job is correct regardless of what serves Pages).
+  **The "publish path confirmed" claim this bullet used to make is wrong —
+  see R7 (2026-09-11).** Pages' Source is the legacy branch builder, not
+  `deploy.yml`'s `actions/deploy-pages@v4`; the live site is provably the raw
+  unbuilt source right now. Gating `deploy.yml` on tests is still worth doing
+  (it's dead weight until R7 is fixed, but free and ready the moment it is),
+  just don't read this task as evidence R7 doesn't exist.
 - Risk reduction: 3
 - Effort: 2
 - Done criteria: `deploy.yml`'s `build` job runs `npm test` and
@@ -134,6 +140,37 @@ Score = Impact + Confidence + Risk Reduction - Effort
   after task 1 so CI isn't red on two axes at once.
 
 ## Completed
+
+### 2026-09-11 — Retry the post-deploy verify against CDN propagation delay; found the real outage underneath it (Launch Shield)
+
+- Picked up via the liveness check (`gh run list`): `Deploy Vite React App to
+  GitHub Pages` had failed on 09-07 (×2), 09-08, and again minutes before this
+  visit (09-11) — all on the same `check:deployed` 404. Started as a flaky-CI
+  fix and found something bigger underneath.
+- Shipped: `scripts/check-deployed-data.mjs` now retries a transient failure
+  (unreachable / non-2xx) up to 6 times, 15s apart, before failing — `deploy-
+  pages@v4` can report success before every CDN edge node serves the new
+  path, and one immediate check can't tell that apart from a real outage. A
+  genuinely stale CSV does **not** retry — waiting can't fix old data, so that
+  failure mode still fails on the first attempt. New exported
+  `checkDeployedDataWithRetry()`, 3 new test cases (retries-then-succeeds,
+  exhausts-then-fails, stale-does-not-retry).
+- **Ran the fixed check against the real live URL to confirm it actually
+  helps — it didn't.** Six retries over 90s, still 404. That's not
+  propagation lag, so this run kept going instead of shipping a fix that
+  wouldn't fix anything: **filed R7 — GitHub Pages' Source is set to "Deploy
+  from a branch," not "GitHub Actions," so the live site is the raw unbuilt
+  `index.html`/`main.tsx`, not `deploy.yml`'s artifact, and never has been
+  since whatever flipped it.** See R7 in the risk register for the full
+  evidence and the `[→ paul]` handoff above for the fix (needs repo-admin
+  access the pack's token doesn't have — confirmed via a 403 on `gh api -X PUT
+  .../pages`). Filed to Meseeks as high-priority.
+- The retry fix ships anyway: it's a real, tested improvement to a check that
+  will matter again the moment R7 is fixed and genuine CDN propagation lag
+  becomes the only failure mode left.
+- Verify: `npx vitest run scripts/check-deployed-data.test.mjs` → 10 passed
+  (was 7). `npm test` → 46 passed / 5 files. `npx tsc --noEmit` → 0 errors.
+  `npm run build` → green.
 
 ### 2026-09-06 — Add a smoke test for the dashboard render path (Launch Shield)
 
