@@ -15,6 +15,8 @@
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 export const DEFAULT_MAX_AGE_DAYS = 40;
 export const DEFAULT_URL = 'https://browningtons.github.io/economic-dashboard/data/economic_indicators.csv';
+export const DEFAULT_MAX_RETRIES = 6;
+export const DEFAULT_RETRY_DELAY_MS = 15000;
 
 function parseLastObservedDate(csvText) {
   const lines = csvText.split('\n').filter((line) => line.trim().length > 0);
@@ -71,6 +73,34 @@ export async function checkDeployedData(url = DEFAULT_URL, options = {}) {
   };
 }
 
+// `deploy-pages@v4` reports success once the deployment record exists, not
+// once every edge node is serving it — the CDN can still 404 a just-published
+// path for a short window after. A single immediate check can't tell that
+// apart from a genuinely broken deploy, so it retries on the transient shapes
+// (unreachable / non-2xx) and gives up immediately on staleness, which more
+// waiting can't fix.
+function isTransient(message) {
+  return /^Fetch failed|^Deployed CSV returned HTTP/.test(message);
+}
+
+export async function checkDeployedDataWithRetry(url = DEFAULT_URL, options = {}) {
+  const maxRetries = options.maxRetries ?? DEFAULT_MAX_RETRIES;
+  const retryDelayMs = options.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS;
+  const sleep = options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+  const onRetry = options.onRetry ?? (() => {});
+
+  let result;
+  for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+    result = await checkDeployedData(url, options);
+    if (result.ok || !isTransient(result.message) || attempt === maxRetries) {
+      return result;
+    }
+    onRetry(attempt, result.message);
+    await sleep(retryDelayMs);
+  }
+  return result;
+}
+
 const invokedDirectly = process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop());
 if (invokedDirectly) {
   const url = process.argv[2] ?? DEFAULT_URL;
@@ -78,7 +108,11 @@ if (invokedDirectly) {
     ? Number(process.env.MAX_DEPLOYED_DATA_AGE_DAYS)
     : DEFAULT_MAX_AGE_DAYS;
 
-  const result = await checkDeployedData(url, { maxAgeDays });
+  const result = await checkDeployedDataWithRetry(url, {
+    maxAgeDays,
+    onRetry: (attempt, message) =>
+      console.log(`::warning::Attempt ${attempt} not live yet (${message}) — retrying in ${DEFAULT_RETRY_DELAY_MS / 1000}s.`),
+  });
   if (result.ok) {
     console.log(result.message);
   } else {
