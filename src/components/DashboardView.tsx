@@ -61,7 +61,7 @@ interface DashboardViewProps {
   getAxisId: (metricId: string) => 'left' | 'right';
   renderExtremaDot: (metric: MetricConfig, dotProps: ExtremaDotProps) => React.ReactNode;
   referenceZones: ReferenceZone[];
-  renderReferenceLabel: (props: { viewBox: { x: number; y: number; width: number; height: number } }, label: string, labelPos: ReferenceLabelPosition) => React.ReactNode;
+  renderReferenceLabel: (props: { viewBox: { x: number; y: number; width: number; height: number } }, label: string, labelPos: ReferenceLabelPosition) => React.ReactElement;
   dashboardTooltip: React.ReactElement;
   activeMetricConfidence: DashboardMetricConfidence[];
   presets: DashboardPreset[];
