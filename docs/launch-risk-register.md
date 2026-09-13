@@ -68,7 +68,7 @@ GitHub-managed `pages-build-deployment` workflow, which fires on the same push) 
   filenames matching a fresh `npm run build`; `curl .../data/economic_indicators.csv` → 200 with
   current data; `gh api repos/.../pages` → `"build_type": "workflow"`.
 
-### R4 (P2) — The Pages deploy is not gated on CI; failing tests do not stop a publish
+### R4 (P2) — RESOLVED 2026-09-13 — The Pages deploy is now gated on typecheck + tests
 
 `ci.yml` and `deploy.yml` both trigger on push to `main` and are independent —
 no `needs`, no workflow_run dependency, no required-check gate between them.
@@ -102,6 +102,19 @@ A push whose tests fail still deploys, because `deploy.yml` only runs
   `check:deployed` handoff (`docs/agent-backlog.md`). Reverted locally before
   it ever left the machine; the one-line diff is filed `[→ paul]` in the
   backlog for a human to add by hand.
+- **RESOLVED 2026-09-13.** By this visit, `main` already carried both the
+  `npm test` step and the post-deploy `verify` job (`check:deployed`) in
+  `deploy.yml` — applied by hand at some point after the 09-06/08-26 handoffs,
+  but never recorded here or in the backlog, so both stayed listed as blocked.
+  This visit closed the one remaining gap: `deploy.yml`'s `build` job now also
+  runs `npm run typecheck` before `npm test`/`npm run build`, matching
+  `ci.yml`'s gate and task 1's original done criteria in full
+  (`pack/launch-shield` @ `2823710`, CI green). **The `workflow`-scope PAT
+  block described above is gone** — this edit pushed on the first try. Don't
+  assume a fresh `workflow`-file edit is blocked without testing it first; the
+  restriction that produced three separate `[→ paul]` handoffs no longer
+  reproduces. R4 is closed; R7 (Pages Source setting) is unrelated and still
+  open — this does not touch it.
 
 ### R5 (P2) — No lint gate of any kind
 
