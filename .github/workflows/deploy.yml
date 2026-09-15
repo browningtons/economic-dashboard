@@ -31,7 +31,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # R4: a failing test must block the artifact, not just the advisory CI run.
+      # R4: a failing test or type error must block the artifact, not just the advisory CI run.
+      - name: Typecheck
+        run: npm run typecheck
+
       - name: Run tests
         run: npm test
 

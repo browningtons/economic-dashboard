@@ -16,7 +16,59 @@ observed directly — commands and outputs are recorded as evidence.
 
 ## Active Risks
 
-### R4 (P2) — The Pages deploy is not gated on CI; failing tests do not stop a publish
+### R7 (P0) — GitHub Pages is configured to build from the branch, not from `deploy.yml`; the live site serves raw unbuilt source
+
+**The site is not the app right now.** `gh api repos/browningtons/economic-dashboard/pages`
+returns `"build_type": "legacy"`, `"source": {"branch": "main", "path": "/"}` — Pages is set to
+GitHub's own branch-build pipeline, not "GitHub Actions." `deploy.yml`'s `build` and `deploy`
+jobs (`actions/deploy-pages@v4`) both report `success` on every run, but that success does not
+reach the CDN: the legacy builder rebuilds from `main`'s raw files on every push (via the
+GitHub-managed `pages-build-deployment` workflow, which fires on the same push) and republishes
+*that* instead, overwriting whatever `deploy.yml` just shipped.
+
+- Domain: deploy readiness
+- Evidence, live-checked 2026-09-11:
+  - `curl https://browningtons.github.io/economic-dashboard/` returns the **raw repo-root
+    `index.html`** — `<script type="module" src="./src/main.tsx">`, `%BASE_URL%` unresolved —
+    byte-identical to the unbuilt source file, not the Vite-bundled `dist/index.html` (which
+    references hashed `assets/index-*.js`). Its `last-modified` header matches the most recent
+    `deploy` job's `completedAt` to the second, confirming the legacy rebuild fires on the same
+    push, not on some unrelated stale cache.
+  - `curl .../economic-dashboard/data/economic_indicators.csv` → real, persistent HTTP 404 (not
+    a propagation blip — reproduced after 6 retries over 90s). `dist/data/economic_indicators.csv`
+    exists in a local `npm run build`, so the artifact is fine; it just never becomes the served
+    content.
+  - `curl .../economic-dashboard/src/main.tsx` → 200. A browser cannot execute that as a JS
+    module (JSX + type annotations aren't valid JS) — the public dashboard most likely renders
+    blank for real visitors right now, not just "shows stale data."
+- **This corrects R4's 2026-07-24 note below**, which declared the publish path settled
+  ("Pages source is the Actions artifact, not the stale `gh-pages` branch") based on one
+  successful `deploy` run. A `deploy` job succeeding is not evidence Pages is *sourced* from
+  Actions — the two are independent, and this register conflated them for seven weeks.
+- Impact: every deploy since this flipped is cosmetic; the public site's real content is
+  governed by GitHub's own branch builder, which `deploy.yml` cannot influence at all. **Likely
+  a recent regression, not a 7-week-old outage:** the 2026-08-26 backlog entry ran
+  `check:deployed` against the real live URL and got a 200 with fresh data, and the
+  `check:deployed` verify job (added to `deploy.yml` sometime after) first started failing on
+  2026-09-07 — consistent with something flipping Pages' source setting in that window, not
+  with this having been broken since R4's 07-24 claim. Nobody has found what changed or when;
+  worth checking Settings' audit log if GitHub exposes one, but the fix is the same either way.
+- **Blocked on repo admin — the pack's GitHub token cannot fix this.** `gh api -X PUT
+  repos/browningtons/economic-dashboard/pages -f build_type=workflow` → `403 Resource not
+  accessible by personal access token`, despite `admin: true` in this token's repo permissions
+  — Pages settings need a permission fine-grained PATs don't carry by default, the same shape of
+  gap as the `workflow`-scope blocker on `deploy.yml` edits (R4/R3 below).
+- **Fix (needs a human with the repo open in a browser):** Settings → Pages → Build and
+  deployment → Source → switch **"Deploy from a branch"** to **"GitHub Actions."** No workflow
+  change needed — `deploy.yml` already builds, tests, and calls `actions/deploy-pages@v4`
+  correctly; it just needs Pages configured to listen to it. After switching, clean up the now
+  fully-dead `gh-pages` branch. Filed `[→ paul]` in the backlog and to Meseeks as high-priority
+  (2026-09-11).
+- Verification once fixed: `curl .../economic-dashboard/` should return hashed `assets/*.js`
+  filenames matching a fresh `npm run build`; `curl .../data/economic_indicators.csv` → 200 with
+  current data; `gh api repos/.../pages` → `"build_type": "workflow"`.
+
+### R4 (P2) — RESOLVED 2026-09-13 — The Pages deploy is now gated on typecheck + tests
 
 `ci.yml` and `deploy.yml` both trigger on push to `main` and are independent —
 no `needs`, no workflow_run dependency, no required-check gate between them.
@@ -32,11 +84,13 @@ A push whose tests fail still deploys, because `deploy.yml` only runs
   whether the *build* fails; test failures are advisory.
 - Next mitigation: either run `npm test` inside the deploy job before the build,
   or convert `deploy.yml` to `on: workflow_run` completing successfully for CI.
-- Publish path **confirmed 2026-07-24**: `deploy.yml` is the real publisher.
-  Run `30143917658` (triggered by the refresh job) succeeded and republished the
-  site, so Pages source is the Actions artifact, not the stale `gh-pages` branch.
-  The earlier ambiguity from the active `pages-build-deployment` workflow is
-  resolved — this task no longer needs an investigation step.
+- Publish path **confirmed 2026-07-24, corrected 2026-09-11 — this was wrong.**
+  The 07-24 note inferred Pages' *source* from one `deploy.yml` run's *conclusion*,
+  which doesn't establish it: a `deploy` job can report `success` while Pages is
+  still configured to serve from the branch instead. **See R7 above — Pages'
+  `build_type` is `"legacy"`, and the live site is provably the raw unbuilt
+  source, not `deploy.yml`'s artifact.** The `pages-build-deployment` workflow
+  was never a "stale vestige"; it is the thing actually serving the site.
 - Verification: push a commit with a deliberately failing test to a scratch
   branch merged to `main` in a test repo, or inspect that the deploy job's run
   list shows the gate.
@@ -48,6 +102,19 @@ A push whose tests fail still deploys, because `deploy.yml` only runs
   `check:deployed` handoff (`docs/agent-backlog.md`). Reverted locally before
   it ever left the machine; the one-line diff is filed `[→ paul]` in the
   backlog for a human to add by hand.
+- **RESOLVED 2026-09-13.** By this visit, `main` already carried both the
+  `npm test` step and the post-deploy `verify` job (`check:deployed`) in
+  `deploy.yml` — applied by hand at some point after the 09-06/08-26 handoffs,
+  but never recorded here or in the backlog, so both stayed listed as blocked.
+  This visit closed the one remaining gap: `deploy.yml`'s `build` job now also
+  runs `npm run typecheck` before `npm test`/`npm run build`, matching
+  `ci.yml`'s gate and task 1's original done criteria in full
+  (`pack/launch-shield` @ `2823710`, CI green). **The `workflow`-scope PAT
+  block described above is gone** — this edit pushed on the first try. Don't
+  assume a fresh `workflow`-file edit is blocked without testing it first; the
+  restriction that produced three separate `[→ paul]` handoffs no longer
+  reproduces. R4 is closed; R7 (Pages Source setting) is unrelated and still
+  open — this does not touch it.
 
 ### R5 (P2) — No lint gate of any kind
 
