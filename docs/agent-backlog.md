@@ -105,6 +105,26 @@ Score = Impact + Confidence + Risk Reduction - Effort
 
 ## Completed
 
+### 2026-09-16 — Re-verify R7, rebase the stranded PR #26 onto three days of `main` (Launch Shield)
+
+- Picked up via staleness (oldest Launch Shield lane cell, 2026-07-26) and confirmed by a fresh
+  red: today's 17:37Z `Deploy Vite React App to GitHub Pages` run failed at the `verify` job —
+  the exact R7 symptom, not a new bug. Liveness check clean otherwise: all five workflows
+  active, `isArchived: false`.
+- Re-verified R7 directly: `gh api repos/browningtons/economic-dashboard/pages` still
+  `"build_type": "legacy"`; `curl .../data/economic_indicators.csv` still 404s. Unchanged since
+  09-13, still blocked on the Settings → Pages → Source toggle only Paul can flip.
+- `pack/launch-shield` (PR #26) had drifted 3 days behind `main` (daily data-bot commits only,
+  no conflicts with the branch's own changes) — rebased clean, no manual resolution. Re-ran the
+  full gate on the rebased branch: `tsc --noEmit` 0 errors, `vitest run` 46/46, `npm run build`
+  green, `npm audit --omit=dev` 0 vulnerabilities.
+- No code change needed — PR #26 already carries the fix (retry-with-backoff, typecheck gate);
+  it is ready to merge the moment Pages' Source is switched. Did not re-file the Meseeks item;
+  `cf00ea63` (filed 09-11) is still open/approved and describes the same fact.
+- Verify: `git log origin/pack/launch-shield -1` @ rebased SHA, CI green on that branch;
+  `gh api repos/browningtons/economic-dashboard/pages` → still `"legacy"` (the thing this visit
+  did *not* fix, by design — it's not ours to fix).
+
 ### 2026-09-13 — Gate the Pages deploy on typecheck too, not just tests; reconcile three stale `[→ paul]` handoffs (Launch Shield)
 
 - Liveness check (`gh workflow list` / `gh run list`) was clean: all five

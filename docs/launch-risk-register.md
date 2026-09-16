@@ -67,6 +67,13 @@ GitHub-managed `pages-build-deployment` workflow, which fires on the same push) 
 - Verification once fixed: `curl .../economic-dashboard/` should return hashed `assets/*.js`
   filenames matching a fresh `npm run build`; `curl .../data/economic_indicators.csv` → 200 with
   current data; `gh api repos/.../pages` → `"build_type": "workflow"`.
+- **Re-verified 2026-09-16, still open.** `gh api repos/browningtons/economic-dashboard/pages`
+  still returns `"build_type": "legacy"`; `curl .../data/economic_indicators.csv` still 404s.
+  Today's 17:37Z `deploy.yml` run failed at the `verify` job for exactly this reason — the gate
+  added 09-06/09-13 is doing its job, not misbehaving. `pack/launch-shield` (PR #26) rebased
+  clean onto `main` this visit, no code changes needed; still blocked on the same Settings →
+  Pages → Source toggle, still tracked in Meseeks (`cf00ea63`, approved 2026-09-11) and the
+  `[→ paul]` handoff below.
 
 ### R4 (P2) — RESOLVED 2026-09-13 — The Pages deploy is now gated on typecheck + tests
 
