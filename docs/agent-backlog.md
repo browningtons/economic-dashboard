@@ -111,6 +111,43 @@ actually walk in with.
   with the pipeline's run time — worth a look on your next visit to confirm the
   copy reads honestly in that state. Filed 2026-08-12 by User Journey.
 
+- `[→ paul]` **Wire `npm run check:deployed` into `deploy.yml` — the pack's PAT
+  can't push workflow-file edits.** `git push` rejected with *"refusing to
+  allow a Personal Access Token to create or update workflow
+  `.github/workflows/deploy.yml` without `workflow` scope"* — the same class of
+  blocker Learning Loop and Launch Shield already hit on `appkit` (A8) and
+  `mission-control`'s Actions checkout. The check itself is on `main` via this
+  PR (`scripts/check-deployed-data.mjs`, `npm run check:deployed`), tested and
+  verified against the live site — only the four-line workflow addition is
+  blocked. Add a `verify` job to `.github/workflows/deploy.yml`, `needs:
+  deploy`, that checks out, sets up Node 22, and runs `npm run check:deployed`
+  (see this PR's description for the exact diff). Filed to Meseeks 2026-08-26.
+- `[→ paul]` **Gate the Pages deploy on tests (R4) — same PAT blocker, confirmed
+  again.** Tried adding a `- name: Run tests` / `run: npm test` step to
+  `.github/workflows/deploy.yml` before the build step (closes R4). `git push`
+  rejected it with the identical *"refusing to allow a Personal Access Token to
+  create or update workflow `.github/workflows/deploy.yml` without `workflow`
+  scope"* error as the `check:deployed` wiring above. Add this one step by hand
+  — `npm test` right after `npm ci` and before `Build` in the `build` job — so a
+  failing test blocks the artifact instead of only the advisory `ci.yml` run.
+  Filed 2026-09-06.
+- `[→ paul]` **Wire `npm run typecheck` into `ci.yml` — same PAT `workflow`
+  scope blocker as above.** `git push` rejected pushing this branch's
+  `.github/workflows/ci.yml` edit with the identical error. `tsc --noEmit`
+  is fixed and the script ships on `main` via this PR (closes R3) — only a
+  one-line workflow addition is blocked. Add, after the existing `npm test`
+  step in `.github/workflows/ci.yml`:
+  ```yaml
+        - run: npm run typecheck
+  ```
+  (before `npm run build`, so a type error fails fast). Filed to Meseeks
+  2026-08-30.
+- ~~`[→ trust-ledger]` **Re-read the freshness surface after R6.**~~ **Closed
+  2026-09-13 by Trust Ledger.** Claimed via this PR: the Data Table tab's
+  Data Health card (08-26) and the Dashboard tab's headline metric cards
+  (09-02) carried the identical false-freshness claim R6 removed from the
+  header; both now gate on `pipelineFreshnessAppliesTo(csvSource)`. Filed
+  2026-08-12 by User Journey.
 - ~~`[→ paul]` Decide whether to re-enable the two disabled workflows (R1).~~
   **Closed 2026-07-24** — Paul authorized; both workflows re-enabled, refresh
   dispatched and passed, site republished on fresh data. See R1 under Resolved.
@@ -285,6 +322,55 @@ actually walk in with.
   Access Token to create or update workflow ... without `workflow` scope"*
   error. Reverted the local commit (never left the machine) and filed
   `[→ paul]` above rather than re-describing R4 as merely "not yet attempted."
+
+### 2026-09-02 — Dashboard tab's headline metric cards made the same false claim, a third time
+
+- Same visit, same open `pack/trust-ledger` PR — found while re-reading the
+  08-26 fix for other instances before landing it, not from a new handoff.
+- Found: `App.tsx`'s `activeMetricConfidence` (the per-metric confidence
+  badge and "Current through <month>" text on the Dashboard tab's headline
+  cards, `DashboardView.tsx:517-554` — the most prominent view in the app,
+  not a secondary tab) read `pipelineStatus` directly with no `csvSource`
+  gate, unlike the sibling `lastUpdatedText` memo four lines above it in the
+  same file, which already carries this exact comment: *"On the embedded
+  fallback the status file can be fresh and PASS while the chart is the
+  bundled snapshot — reporting `generatedAt` there would put today's
+  timestamp on old data."* On the fallback this rendered a green **"Fresh"**
+  badge and `Current through ${pipeline.csvLatest}` — the live pipeline's
+  month — over headline values drawn from up to 11-month-stale bundled data.
+  Third occurrence of the identical hole R6 (header) and the 08-26 entry
+  above (Data Table tab) already closed elsewhere in this same file.
+- Change: `activeMetricConfidence` now short-circuits to `level: 'unknown'`,
+  `label: 'Unknown'`, `detail: 'Not applicable — showing the snapshot
+  bundled with this build.'` when `!pipelineFreshnessAppliesTo(csvSource)`,
+  before touching `pipelineStatus` at all — same gate, same wording as the
+  08-26 fix, `csvSource` added to the memo's dependency array.
+- Verification: `npm run build` green (incl. clip pre-render); `npm test`
+  26/26 passing (no regression; same missing jsdom/testing-library gap as
+  the 08-26 entry — no component test to extend).
+- Grepped the rest of `src/` for other direct `pipelineStatus` reads after
+  this: only `App.tsx` and `DataTableView.tsx` reference it, and every read
+  in both files is now gated. No fourth instance found this visit.
+
+### 2026-08-26 — Data Table tab's "Data Health" card made the same false claim R6 fixed elsewhere
+
+- Claimed the `[→ trust-ledger]` handoff User Journey filed 2026-08-12 asking
+  for a re-read of the freshness surface after R6.
+- Found: `DataTableView.tsx`'s Data Health card (PASS/FAIL/stale badge, "All
+  data sources are up to date", "Last checked <time>", per-series health
+  counts, "Latest month", top alerts) reads `pipelineStatus` directly with no
+  `csvSource` check — so on the embedded fallback it still shows a green
+  "Healthy" badge and a fresh "Last checked" timestamp over data that can be
+  up to 11 months stale, exactly the claim R6 removed from the header one
+  component over.
+- Change: `DataTableView` now takes a required `pipelineStatusApplies` prop
+  (`pipelineFreshnessAppliesTo(csvSource)`, wired from `App.tsx`); every
+  pipeline-status-derived string and badge in the card is gated on it and
+  reads "Not applicable — showing the snapshot bundled with this build" on
+  the fallback instead of asserting health.
+- Verification: `npm run build` green; `npm test` 26/26 passing (no
+  component-level test to extend — this repo has no jsdom/testing-library,
+  a standing gap noted in R6's own verification section).
 
 ### 2026-08-30 — Fix the live type error and add a typecheck gate (closes R3)
 
