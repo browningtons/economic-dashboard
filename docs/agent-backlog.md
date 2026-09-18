@@ -24,44 +24,86 @@ Use this score:
 Score = Impact + Confidence + Risk Reduction - Effort
 ```
 
+## Radical bets
+
+*(Filed by Learning Loop, 2026-W36 Pathfinder pass — Jobs-to-be-done lens. Proposals
+for Paul to select, NOT auto-build. `economic-dashboard` is the last Tier-A repo to
+get a Pathfinder pass — see `portfolio.md`'s Pathfinder log in `mission-control`.)*
+
+**The job (as built):** the site is a "pick a lens, eyeball a chart" tool for a
+visitor who already knows what they're looking for — `src/presets.ts` pairs 2-4 FRED
+series per named narrative, `DashboardView.tsx` renders a dual-axis chart plus an R²
+stat. That's closer to *"see if two macro series still move together"* than to
+*"tell me if I should be worried about the economy,"* which is the job most visitors
+actually walk in with.
+
+1. **🌶 Give every chart a one-sentence plain-English verdict.** The site already
+   computes the R² correlation; the missing piece isn't data, it's narration — an
+   R² number means nothing to a lay reader, but *"Housing and mortgage rates have
+   decoupled since 2023 — buyers stopped waiting for rates to drop"* does. Why now:
+   this is the single biggest gap between what the app computes and what a visitor
+   can use, and it's the cheapest to test — no backend change. Smallest slice:
+   hand-write one static interpretive caption for each of the 5 existing presets,
+   shown under the chart title (no LLM, no dynamic generation yet). Risk: medium —
+   stale or wrong interpretive copy ages worse than a raw chart, and getting the
+   tone wrong on public economic commentary is reputationally sensitive; needs a
+   review cadence tied to data updates, not a one-time write.
+
+2. **Give the site memory — a "since you last checked" diff.** The only
+   `localStorage` use anywhere in `src/` today is `ClipRemixer.tsx`'s producer-side
+   draft autosave; there's no visitor-facing bookmark, watchlist, or return-visit
+   state at all, so every visit re-derives the same read from scratch. Smallest
+   slice: a single home-page banner comparing the latest data point on the default
+   preset to its value on the visitor's last recorded visit (timestamp in
+   `localStorage`), browser-only, no auth/backend needed. Risk: low-medium — FRED
+   revises historical values between visits, so a naive diff could show a "change"
+   that's actually a data revision, not new information; needs to diff against the
+   *as-of-last-visit* vintage, not just re-read today's series.
+
+3. **Retire the pipeline-health badge as the UI's organizing metaphor.**
+   `docs/launch-risk-register.md` R6 (resolved 2026-08-12) found the app could
+   render an 11-month-stale embedded CSV under a fresh-looking green "PASS" badge —
+   evidence the UX is built around *"did the pipeline succeed"* (the operator's
+   question) rather than *"is this number current"* (the visitor's question), even
+   after the specific bug closed. Smallest slice: restyle the existing freshness
+   badge to speak the visitor's question directly ("Updated through July 2026 —
+   normal"), driven by the same underlying check, instead of exposing internal
+   pipeline state as the primary trust signal. Risk: low — presentation-only change
+   over an already-correct check.
+
 ## Handoffs
 
+- `[→ paul]` **P0 — flip GitHub Pages' Source to "GitHub Actions" (Settings → Pages → Build and
+  deployment → Source).** It is currently "Deploy from a branch: main," so GitHub's own legacy
+  builder republishes the raw unbuilt `index.html` on every push and clobbers `deploy.yml`'s
+  real artifact — the live site is provably not the built app right now (see R7 in the risk
+  register for the curl evidence). The pack's token gets a 403 trying to change this via the
+  API; it needs a human in the browser. No workflow edit needed afterward — `deploy.yml` already
+  does the right thing, it just isn't being listened to. Filed to Meseeks as high-priority
+  2026-09-11.
 - ~~`[→ launch-shield]` **Nothing checks that the deployed site actually serves
   `data/economic_indicators.csv`.**~~ **Closed 2026-08-26 by Launch Shield.**
   `scripts/check-deployed-data.mjs` fetches the live CSV, asserts HTTP 200, and
   fails when the last row is older than 40 days. See Completed for why it
   isn't wired into `deploy.yml` yet — `[→ paul]` below.
-- `[→ paul]` **Wire `npm run check:deployed` into `deploy.yml` — the pack's PAT
-  can't push workflow-file edits.** `git push` rejected with *"refusing to
-  allow a Personal Access Token to create or update workflow
-  `.github/workflows/deploy.yml` without `workflow` scope"* — the same class of
-  blocker Learning Loop and Launch Shield already hit on `appkit` (A8) and
-  `mission-control`'s Actions checkout. The check itself is on `main` via this
-  PR (`scripts/check-deployed-data.mjs`, `npm run check:deployed`), tested and
-  verified against the live site — only the four-line workflow addition is
-  blocked. Add a `verify` job to `.github/workflows/deploy.yml`, `needs:
-  deploy`, that checks out, sets up Node 22, and runs `npm run check:deployed`
-  (see this PR's description for the exact diff). Filed to Meseeks 2026-08-26.
-- `[→ paul]` **Gate the Pages deploy on tests (R4) — same PAT blocker, confirmed
-  again.** Tried adding a `- name: Run tests` / `run: npm test` step to
-  `.github/workflows/deploy.yml` before the build step (closes R4). `git push`
-  rejected it with the identical *"refusing to allow a Personal Access Token to
-  create or update workflow `.github/workflows/deploy.yml` without `workflow`
-  scope"* error as the `check:deployed` wiring above. Add this one step by hand
-  — `npm test` right after `npm ci` and before `Build` in the `build` job — so a
-  failing test blocks the artifact instead of only the advisory `ci.yml` run.
-  Filed 2026-09-06.
-- `[→ paul]` **Wire `npm run typecheck` into `ci.yml` — same PAT `workflow`
-  scope blocker as above.** `git push` rejected pushing this branch's
-  `.github/workflows/ci.yml` edit with the identical error. `tsc --noEmit`
-  is fixed and the script ships on `main` via this PR (closes R3) — only a
-  one-line workflow addition is blocked. Add, after the existing `npm test`
-  step in `.github/workflows/ci.yml`:
-  ```yaml
-        - run: npm run typecheck
-  ```
-  (before `npm run build`, so a type error fails fast). Filed to Meseeks
-  2026-08-30.
+- ~~`[→ paul]` **Wire `npm run check:deployed` into `deploy.yml` — the pack's PAT
+  can't push workflow-file edits.**~~ **Closed 2026-09-13 — already done.**
+  `deploy.yml`'s `verify` job (`needs: deploy`, runs `npm run check:deployed`)
+  was live on `main` by this visit, applied by hand at some unrecorded point
+  after the 08-26 filing. Filed 2026-08-26.
+- ~~`[→ paul]` **Gate the Pages deploy on tests (R4) — same PAT blocker, confirmed
+  again.**~~ **Closed 2026-09-13 by Launch Shield.** `deploy.yml`'s `npm test`
+  step was already live on `main` (applied by hand, unrecorded); this visit
+  added the missing `npm run typecheck` step alongside it, closing R4 in full
+  (`pack/launch-shield` @ `2823710`, CI green). **The PAT `workflow`-scope
+  block is gone as of this run** — the edit pushed on the first try, no
+  `refusing to allow...without workflow scope` error. See R4 in the risk
+  register. Filed 2026-09-06.
+- ~~`[→ paul]` **Wire `npm run typecheck` into `ci.yml` — same PAT `workflow`
+  scope blocker as above.**~~ **Closed 2026-09-13 — already done.** `ci.yml`
+  runs `npm run typecheck` between `npm test` and `npm run build`; live on
+  `main` by this visit (landed via #22/#25, never reconciled here). Filed to
+  Meseeks 2026-08-30.
 - `[→ trust-ledger]` **Re-read the freshness surface after R6.** Your 2026-07-30
   review checked `isStatusStale` against the live site and correctly called it
   clean; R6 is the case that review could not see, because it only appears when
@@ -98,31 +140,7 @@ Score = Impact + Confidence + Risk Reduction - Effort
 > never moved to Resolved in the register — both fixed this visit; see
 > Completed and the register's R1a entry.
 
-### 1. Gate the Pages deploy on tests (closes R4)
-
-- Domain: deploy readiness
-- Impact: 4
-- Confidence: 4 — the publish path is no longer ambiguous, on two independent
-  confirmations: the register's R4 entry (2026-07-24, run `30143917658`) and
-  this visit (2026-08-26) diffing the live `index.html`'s hashed asset
-  filenames against a local `npm run build` — they match byte-for-byte, and
-  don't match raw unbuilt `main`-branch source. `deploy.yml`'s `deploy` job
-  (`actions/deploy-pages@v4`) is the real publisher; `gh-pages` branch and
-  `pages-build-deployment` are stale vestiges from before the Actions
-  migration, not the live path — this task's old "investigate first" line was
-  itself stale, since R4 answered the question a month ago and nobody updated
-  this entry to match.
-- Risk reduction: 3
-- Effort: 2
-- Done criteria: `deploy.yml`'s `build` job runs `npm test` and
-  `npm run typecheck` (now in `package.json`, closed 2026-08-30) before
-  `npm run build`, so a broken test or type error fails the workflow before
-  `upload-pages-artifact` runs.
-- Verify: a failing test blocks a publish (push a temporarily-broken test on a
-  throwaway branch/dispatch, confirm the `build` job goes red before
-  `deploy-pages` runs, then revert).
-
-### 2. Add an ESLint flat config and a lint gate (closes R5)
+### 1. Add an ESLint flat config and a lint gate (closes R5)
 
 - Domain: CI / build health
 - Impact: 2 · Confidence: 4 · Risk reduction: 2 · Effort: 2
@@ -130,10 +148,85 @@ Score = Impact + Confidence + Risk Reduction - Effort
   `eslint-plugin-react-hooks`; `"lint"` script; CI step; zero errors at the
   chosen rule set (warnings acceptable initially).
 - Verify: `npm run lint` exits 0.
-- Note: new dev dependencies — flag per the operating loop's hard rules. Land
-  after task 1 so CI isn't red on two axes at once.
+- Note: new dev dependencies — flag per the operating loop's hard rules.
 
 ## Completed
+
+### 2026-09-16 — Re-verify R7, rebase the stranded PR #26 onto three days of `main` (Launch Shield)
+
+- Picked up via staleness (oldest Launch Shield lane cell, 2026-07-26) and confirmed by a fresh
+  red: today's 17:37Z `Deploy Vite React App to GitHub Pages` run failed at the `verify` job —
+  the exact R7 symptom, not a new bug. Liveness check clean otherwise: all five workflows
+  active, `isArchived: false`.
+- Re-verified R7 directly: `gh api repos/browningtons/economic-dashboard/pages` still
+  `"build_type": "legacy"`; `curl .../data/economic_indicators.csv` still 404s. Unchanged since
+  09-13, still blocked on the Settings → Pages → Source toggle only Paul can flip.
+- `pack/launch-shield` (PR #26) had drifted 3 days behind `main` (daily data-bot commits only,
+  no conflicts with the branch's own changes) — rebased clean, no manual resolution. Re-ran the
+  full gate on the rebased branch: `tsc --noEmit` 0 errors, `vitest run` 46/46, `npm run build`
+  green, `npm audit --omit=dev` 0 vulnerabilities.
+- No code change needed — PR #26 already carries the fix (retry-with-backoff, typecheck gate);
+  it is ready to merge the moment Pages' Source is switched. Did not re-file the Meseeks item;
+  `cf00ea63` (filed 09-11) is still open/approved and describes the same fact.
+- Verify: `git log origin/pack/launch-shield -1` @ rebased SHA, CI green on that branch;
+  `gh api repos/browningtons/economic-dashboard/pages` → still `"legacy"` (the thing this visit
+  did *not* fix, by design — it's not ours to fix).
+
+### 2026-09-13 — Gate the Pages deploy on typecheck too, not just tests; reconcile three stale `[→ paul]` handoffs (Launch Shield)
+
+- Liveness check (`gh workflow list` / `gh run list`) was clean: all five
+  workflows active, most recent runs (CI, Dependency audit) green same-day.
+  R7 (P0, Pages Source misconfigured) re-verified still live via curl + `gh
+  api .../pages` — unchanged, still blocked on Paul, PR #26 already covers it
+  and remains open/mergeable/CI-green, so no new work there this visit.
+- While reading the backlog, found three `[→ paul]` handoffs whose blocker —
+  "PAT lacks `workflow` scope, can't push `.github/workflows/*.yml` edits" —
+  no longer matched reality: `deploy.yml`'s `npm test` step and `verify` job,
+  and `ci.yml`'s `typecheck` step, were all already live on `main`, just never
+  reconciled in these docs. Task 1 ("Gate the Pages deploy on tests") was
+  still listed Ready for the same reason.
+- Tested the premise before trusting three-visit-old text: added
+  `deploy.yml`'s missing `npm run typecheck` step (the one piece of task 1
+  actually not yet done) and pushed straight to `pack/launch-shield` —
+  succeeded on the first try, no `workflow`-scope rejection
+  (`pack/launch-shield` @ `2823710f`, CI green). The PAT restriction that
+  produced three separate handoffs is gone.
+- Closed R4 in the risk register, closed all three stale `[→ paul]` handoffs
+  above, removed task 1 (now fully done) from Ready Tasks.
+- Verify: `gh run list -R browningtons/economic-dashboard --branch
+  pack/launch-shield` shows CI `success` on `2823710f`; `deploy.yml` on that
+  branch runs `typecheck` → `test` → `build` in the `build` job.
+
+### 2026-09-11 — Retry the post-deploy verify against CDN propagation delay; found the real outage underneath it (Launch Shield)
+
+- Picked up via the liveness check (`gh run list`): `Deploy Vite React App to
+  GitHub Pages` had failed on 09-07 (×2), 09-08, and again minutes before this
+  visit (09-11) — all on the same `check:deployed` 404. Started as a flaky-CI
+  fix and found something bigger underneath.
+- Shipped: `scripts/check-deployed-data.mjs` now retries a transient failure
+  (unreachable / non-2xx) up to 6 times, 15s apart, before failing — `deploy-
+  pages@v4` can report success before every CDN edge node serves the new
+  path, and one immediate check can't tell that apart from a real outage. A
+  genuinely stale CSV does **not** retry — waiting can't fix old data, so that
+  failure mode still fails on the first attempt. New exported
+  `checkDeployedDataWithRetry()`, 3 new test cases (retries-then-succeeds,
+  exhausts-then-fails, stale-does-not-retry).
+- **Ran the fixed check against the real live URL to confirm it actually
+  helps — it didn't.** Six retries over 90s, still 404. That's not
+  propagation lag, so this run kept going instead of shipping a fix that
+  wouldn't fix anything: **filed R7 — GitHub Pages' Source is set to "Deploy
+  from a branch," not "GitHub Actions," so the live site is the raw unbuilt
+  `index.html`/`main.tsx`, not `deploy.yml`'s artifact, and never has been
+  since whatever flipped it.** See R7 in the risk register for the full
+  evidence and the `[→ paul]` handoff above for the fix (needs repo-admin
+  access the pack's token doesn't have — confirmed via a 403 on `gh api -X PUT
+  .../pages`). Filed to Meseeks as high-priority.
+- The retry fix ships anyway: it's a real, tested improvement to a check that
+  will matter again the moment R7 is fixed and genuine CDN propagation lag
+  becomes the only failure mode left.
+- Verify: `npx vitest run scripts/check-deployed-data.test.mjs` → 10 passed
+  (was 7). `npm test` → 46 passed / 5 files. `npx tsc --noEmit` → 0 errors.
+  `npm run build` → green.
 
 ### 2026-09-06 — R² explainer was unreachable on touch devices
 
