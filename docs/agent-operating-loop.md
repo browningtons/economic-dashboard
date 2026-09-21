@@ -108,6 +108,17 @@ over checks that only run inside the job that might not fire.
   about whether a run happened today. Read `generatedAt` first, `status` second.
 - **`public/data/*` is generated.** Don't hand-edit the CSV or
   `data_status.json`; change the script and regenerate.
+- **Expect a data-only conflict on any PR that stays open overnight, and do not
+  read it as drift.** `update-data.yml` commits `public/data/*.json|csv` to
+  `main` on a weekday schedule, so EVERY open branch here goes conflicted on a
+  rolling basis — usually within a day, and usually in those files only.
+  Resolve by taking `main`'s snapshot (the file is generated; your branch has
+  no opinion about it), re-run the suite, and move on. **The re-merge is
+  housekeeping, not the visit's work** — if it is all you did, the honest
+  report says the visit found nothing to fix, not that it fixed a conflict.
+  The 2026-09-16 Trust Ledger visit spent its entire run on exactly this: it
+  re-merged #21, re-ran 43/43, confirmed `mergeable: MERGEABLE`, and made no
+  correctness change, because none was needed.
 - **If a public claim and the code disagree, fix one or the other in the same
   change.** The health badge is a public claim.
 - **No new top-level dependencies without flagging it as a backlog item first.**
