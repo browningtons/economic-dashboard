@@ -73,14 +73,11 @@ actually walk in with.
 
 ## Handoffs
 
-- `[→ paul]` **P0 — flip GitHub Pages' Source to "GitHub Actions" (Settings → Pages → Build and
-  deployment → Source).** It is currently "Deploy from a branch: main," so GitHub's own legacy
-  builder republishes the raw unbuilt `index.html` on every push and clobbers `deploy.yml`'s
-  real artifact — the live site is provably not the built app right now (see R7 in the risk
-  register for the curl evidence). The pack's token gets a 403 trying to change this via the
-  API; it needs a human in the browser. No workflow edit needed afterward — `deploy.yml` already
-  does the right thing, it just isn't being listened to. Filed to Meseeks as high-priority
-  2026-09-11.
+- ~~`[→ paul]` **P0 — flip GitHub Pages' Source to "GitHub Actions".**~~ **Closed 2026-10-04 by
+  Launch Shield.** Already done by the time this visit checked — `gh api .../pages` now reads
+  `"build_type":"workflow"`, the live site serves hashed Vite assets, the CSV endpoint is 200,
+  and the dead `gh-pages` branch is gone. See R7 (RESOLVED) in the risk register for full
+  verification. Filed to Meseeks as high-priority 2026-09-11.
 - ~~`[→ launch-shield]` **Nothing checks that the deployed site actually serves
   `data/economic_indicators.csv`.**~~ **Closed 2026-08-26 by Launch Shield.**
   `scripts/check-deployed-data.mjs` fetches the live CSV, asserts HTTP 200, and
@@ -111,37 +108,6 @@ actually walk in with.
   with the pipeline's run time — worth a look on your next visit to confirm the
   copy reads honestly in that state. Filed 2026-08-12 by User Journey.
 
-- `[→ paul]` **Wire `npm run check:deployed` into `deploy.yml` — the pack's PAT
-  can't push workflow-file edits.** `git push` rejected with *"refusing to
-  allow a Personal Access Token to create or update workflow
-  `.github/workflows/deploy.yml` without `workflow` scope"* — the same class of
-  blocker Learning Loop and Launch Shield already hit on `appkit` (A8) and
-  `mission-control`'s Actions checkout. The check itself is on `main` via this
-  PR (`scripts/check-deployed-data.mjs`, `npm run check:deployed`), tested and
-  verified against the live site — only the four-line workflow addition is
-  blocked. Add a `verify` job to `.github/workflows/deploy.yml`, `needs:
-  deploy`, that checks out, sets up Node 22, and runs `npm run check:deployed`
-  (see this PR's description for the exact diff). Filed to Meseeks 2026-08-26.
-- `[→ paul]` **Gate the Pages deploy on tests (R4) — same PAT blocker, confirmed
-  again.** Tried adding a `- name: Run tests` / `run: npm test` step to
-  `.github/workflows/deploy.yml` before the build step (closes R4). `git push`
-  rejected it with the identical *"refusing to allow a Personal Access Token to
-  create or update workflow `.github/workflows/deploy.yml` without `workflow`
-  scope"* error as the `check:deployed` wiring above. Add this one step by hand
-  — `npm test` right after `npm ci` and before `Build` in the `build` job — so a
-  failing test blocks the artifact instead of only the advisory `ci.yml` run.
-  Filed 2026-09-06.
-- `[→ paul]` **Wire `npm run typecheck` into `ci.yml` — same PAT `workflow`
-  scope blocker as above.** `git push` rejected pushing this branch's
-  `.github/workflows/ci.yml` edit with the identical error. `tsc --noEmit`
-  is fixed and the script ships on `main` via this PR (closes R3) — only a
-  one-line workflow addition is blocked. Add, after the existing `npm test`
-  step in `.github/workflows/ci.yml`:
-  ```yaml
-        - run: npm run typecheck
-  ```
-  (before `npm run build`, so a type error fails fast). Filed to Meseeks
-  2026-08-30.
 - ~~`[→ trust-ledger]` **Re-read the freshness surface after R6.**~~ **Closed
   2026-09-13 by Trust Ledger.** Claimed via this PR: the Data Table tab's
   Data Health card (08-26) and the Dashboard tab's headline metric cards

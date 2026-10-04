@@ -16,7 +16,7 @@ observed directly — commands and outputs are recorded as evidence.
 
 ## Active Risks
 
-### R7 (P0) — GitHub Pages is configured to build from the branch, not from `deploy.yml`; the live site serves raw unbuilt source
+### R7 (P0) — GitHub Pages is configured to build from the branch, not from `deploy.yml`; the live site serves raw unbuilt source — RESOLVED 2026-10-04 (Launch Shield)
 
 **The site is not the app right now.** `gh api repos/browningtons/economic-dashboard/pages`
 returns `"build_type": "legacy"`, `"source": {"branch": "main", "path": "/"}` — Pages is set to
@@ -74,7 +74,18 @@ GitHub-managed `pages-build-deployment` workflow, which fires on the same push) 
   clean onto `main` this visit, no code changes needed; still blocked on the same Settings →
   Pages → Source toggle, still tracked in Meseeks (`cf00ea63`, approved 2026-09-11) and the
   `[→ paul]` handoff below.
-
+- **RESOLVED 2026-10-04 (Launch Shield).** Someone with repo-admin access flipped the toggle at
+  an unrecorded point between 09-16 and today — this run found it already fixed, not a
+  pack-driven change. Re-verified live, all three checks from the "once fixed" list above:
+  `gh api repos/browningtons/economic-dashboard/pages` → `"build_type":"workflow"`;
+  `curl .../economic-dashboard/` returns the hashed-asset shell (`assets/index-Jf475iEX.js`,
+  `assets/charts-vendor-eYKJarzl.js`, etc.), not raw `src/main.tsx`;
+  `curl -o /dev/null -w '%{http_code}' .../data/economic_indicators.csv` → `200`. The dead
+  `gh-pages` branch the fix note asked to clean up is also already gone (`gh api
+  repos/.../branches` lists no `gh-pages`). `deploy.yml`'s `verify` job (`npm run
+  check:deployed`) has been green on every run since at least 2026-09-28, consistent with the
+  flip landing before that window. No further action needed; closing the `[→ paul]` handoff in
+  the backlog.
 ### R4 (P2) — RESOLVED 2026-09-13 — The Pages deploy is now gated on typecheck + tests
 
 `ci.yml` and `deploy.yml` both trigger on push to `main` and are independent —
