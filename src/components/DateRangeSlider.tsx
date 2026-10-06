@@ -39,7 +39,7 @@ const DateRangeSlider = React.memo(function DateRangeSlider({ min, max, value, o
         <span>{formatLabel(value[1])}</span>
       </div>
 
-      <div className="relative h-6">
+      <div className="relative h-6 [@media(pointer:coarse)]:h-8">
         <div className="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 rounded-full" style={{ backgroundColor: 'color-mix(in oklab, var(--color-text-muted) 16%, transparent)' }} />
         <div
           className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full"

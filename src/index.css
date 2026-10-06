@@ -105,6 +105,22 @@ a:hover {
   cursor: ew-resize;
 }
 
+/* The 12px mouse-precision thumb above is the drag target itself, not just its
+   visual — a native range input hit-tests against the rendered thumb box, so a
+   touchscreen visitor gets a ~12px circle to grab. Enlarge for coarse (touch)
+   pointers only; fine (mouse/trackpad) input keeps the precise 12px thumb. */
+@media (pointer: coarse) {
+  .range-input::-webkit-slider-thumb {
+    width: 28px;
+    height: 28px;
+  }
+
+  .range-input::-moz-range-thumb {
+    width: 28px;
+    height: 28px;
+  }
+}
+
 /* Toast slide-in animation */
 @keyframes slideIn {
   from { opacity: 0; transform: translateX(1rem); }
