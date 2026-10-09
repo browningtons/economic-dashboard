@@ -11,7 +11,6 @@ This is one of the public examples behind [Golden Data](https://goldendata.app/)
 - Buffett Indicator view with market-cap-to-GDP context.
 - Data table with pipeline health, source status, and fallback visibility.
 - Shareable clip pages generated during production builds.
-- Optional refresh button that can call a secure workflow relay.
 
 ## Data Sources
 
@@ -99,9 +98,13 @@ RESEND_FROM_EMAIL
 RESEND_TO_EMAIL
 ```
 
-## Refresh Button Relay
+## Refresh Button Relay (not wired into the UI yet)
 
-The dashboard button always reloads the latest available browser data. To let it trigger the update workflow, point it at a secure webhook:
+The shipped dashboard has no refresh button and does not read `VITE_REFRESH_WEBHOOK_URL` —
+data updates only via the scheduled `update-data.yml` workflow. `api/refresh-dispatch.js`
+is a ready-to-deploy serverless relay for anyone adding a manual "refresh now" control: it
+accepts a POST and dispatches the update workflow without exposing a GitHub token to the
+browser. To use it, deploy the function, wire a button to `fetch` it, and set:
 
 ```bash
 VITE_REFRESH_WEBHOOK_URL="https://your-webhook-endpoint.example.com/refresh"
