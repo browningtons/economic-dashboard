@@ -165,6 +165,27 @@ Sibling pack repos (`mission-control`) carry `eslint.config.js` and gate on it.
   cleanly — no eslint deps or config left in the tree.
 - Verification: `npm run lint` exits 0; CI shows a lint step.
 
+### R8 (P2) — `api/refresh-dispatch.js` fails open with zero auth when deployed without env config — RESOLVED 2026-10-09 (Launch Shield)
+
+**Not wired into the UI yet, so real-world impact was low, but it was a landmine for the
+first deployer who wires a button to it.** The relay only checked `REFRESH_ALLOWED_ORIGIN`
+and `REFRESH_WEBHOOK_BEARER` when those vars were *set* — a deployer who followed the README's
+"to use it" steps but skipped the optional-looking env block got an endpoint that accepted any
+POST and dispatched `update-data.yml` using the server's `GITHUB_TRIGGER_TOKEN`, no proof of
+caller identity at all.
+
+- Domain: deploy readiness / security hardening
+- Found by Trust Ledger while reviewing PR #30's README changes (docs-only, out of that lane's
+  scope to fix); filed as a `[→ launch-shield]` Meseeks handoff 2026-10-09T18:56Z.
+- Fix: `REFRESH_WEBHOOK_BEARER` is now mandatory — the handler returns `500` ("Server is missing
+  REFRESH_WEBHOOK_BEARER configuration") when it is unset, instead of falling through to accept
+  every caller. `REFRESH_ALLOWED_ORIGIN` remains optional defense-in-depth on top of the bearer
+  check, per the README update.
+- Verification: `api/refresh-dispatch.test.mjs` (3 new cases) proves it both ways — no bearer
+  configured and no caller credentials at all → `500`, not `202`; configured but wrong bearer →
+  `401`; configured and correct bearer → `202`. `npm test` (49 passed), `npm run typecheck`,
+  `npm run build`, `npm run audit:deps` (0 vulnerabilities) all green.
+
 ## Resolved
 
 ### R3 (P2) — CI never typechecks, and a type error is already live on `main` — RESOLVED 2026-08-30

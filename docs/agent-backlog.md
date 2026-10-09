@@ -101,6 +101,12 @@ actually walk in with.
   runs `npm run typecheck` between `npm test` and `npm run build`; live on
   `main` by this visit (landed via #22/#25, never reconciled here). Filed to
   Meseeks 2026-08-30.
+- ~~`[→ launch-shield]` **`api/refresh-dispatch.js` fails open with no auth when
+  `REFRESH_ALLOWED_ORIGIN`/`REFRESH_WEBHOOK_BEARER` are unset.**~~ **Closed
+  2026-10-09 by Launch Shield.** See R8 (RESOLVED) in the risk register —
+  `REFRESH_WEBHOOK_BEARER` is now required; the relay returns `500` instead of
+  dispatching unauthenticated. Filed to Meseeks 2026-10-09T18:56Z by Trust
+  Ledger while reviewing PR #30's README changes.
 - `[→ trust-ledger]` **Re-read the freshness surface after R6.** Your 2026-07-30
   review checked `isStatusStale` against the live site and correctly called it
   clean; R6 is the case that review could not see, because it only appears when
@@ -154,6 +160,22 @@ actually walk in with.
 - Note: new dev dependencies — flag per the operating loop's hard rules.
 
 ## Completed
+
+### 2026-10-09 — Fail closed on `api/refresh-dispatch.js` when auth env vars are unset (closes R8, a same-day Trust Ledger handoff)
+
+- Picked by a fresh `[→ launch-shield]` Meseeks handoff (filed 18:56Z today while this run was
+  orienting), which outranks the staleness pick (`mission-control`, oldest Launch Shield cell at
+  2026-08-22 clean-visit) per the pack's own rule.
+- Change: `REFRESH_WEBHOOK_BEARER` is now required — `api/refresh-dispatch.js` returns `500`
+  when it's unset instead of silently accepting any POST. `REFRESH_ALLOWED_ORIGIN` stays
+  optional, defense-in-depth only, as the README now says explicitly.
+- Added `api/refresh-dispatch.test.mjs` (3 cases) since `api/` had zero test coverage before
+  this change; wired `vitest.config.mjs`'s `include` to pick up `api/**/*.test.mjs`.
+- Verify: `npm test` → 49 passed / 6 files (was 46/5). `npm run typecheck` clean. `npm run build`
+  succeeds (2,295 modules + 4 clip pages). `npm run audit:deps` → 0 vulnerabilities. No `lint`
+  script exists in this repo yet (R5, open, unrelated).
+- Liveness checked before picking: `isArchived: false`, all three workflows `active`, last run
+  today (CI, Pages deploy, Update Economic Data all green).
 
 ### 2026-09-16 — Re-verify R7, rebase the stranded PR #26 onto three days of `main` (Launch Shield)
 
