@@ -50,12 +50,13 @@ export default async function handler(req, res) {
   }
 
   const expectedBearer = process.env.REFRESH_WEBHOOK_BEARER?.trim();
-  if (expectedBearer) {
-    const auth = req.headers.authorization || '';
-    const token = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length) : '';
-    if (token !== expectedBearer) {
-      return unauthorized(res, 'Invalid bearer token');
-    }
+  if (!expectedBearer) {
+    return res.status(500).json({ ok: false, error: 'Server is missing REFRESH_WEBHOOK_BEARER configuration' });
+  }
+  const auth = req.headers.authorization || '';
+  const presentedBearer = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length) : '';
+  if (presentedBearer !== expectedBearer) {
+    return unauthorized(res, 'Invalid bearer token');
   }
 
   const owner = process.env.GITHUB_REPO_OWNER;
